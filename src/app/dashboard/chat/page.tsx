@@ -280,12 +280,18 @@ export default function ChatPage() {
                 {myClasses.map((c) => {
                   const key = `class:${c.id}`
                   return (
-                    <div key={c.id} className="flex items-center gap-1">
+                    <div key={c.id} className="group flex items-center gap-0.5">
                       <button onClick={() => setChannel(key)} className={`neo-chan flex-1 ${channel === key ? 'neo-chan--active' : ''}`}>
                         {c.emblem ? <Icon3D src={c.emblem} alt="" size={18} fallback="◆" /> : <span className="neo-aula-hash">#</span>}
                         <span className="truncate">{c.name}</span>
                       </button>
-                      <Link href={`/aula/${c.id}`} className="neo-chan !px-2" title="Abrir aula completa"><ExpandIcon size={14} /></Link>
+                      <Link
+                        href={`/aula/${c.id}`}
+                        className="flex-shrink-0 rounded-lg p-1.5 text-neutral-600 opacity-40 transition hover:bg-white/5 hover:text-accent-violet group-hover:opacity-100"
+                        title="Abrir aula completa"
+                      >
+                        <ExpandIcon size={13} />
+                      </Link>
                     </div>
                   )
                 })}
@@ -301,12 +307,18 @@ export default function ChatPage() {
                 {myGroups.map(({ group, classId }) => {
                   const key = `group:${classId}:${group.id}`
                   return (
-                    <div key={group.id} className="flex items-center gap-1">
+                    <div key={group.id} className="group flex items-center gap-0.5">
                       <button onClick={() => setChannel(key)} className={`neo-chan flex-1 ${channel === key ? 'neo-chan--active' : ''}`}>
                         <Icon3D src={group.icon} alt="" size={18} fallback="◆" />
                         <span className="truncate">{group.name}</span>
                       </button>
-                      <Link href={`/aula/${classId}?ch=${group.id}`} className="neo-chan !px-2" title="Abrir aula completa"><ExpandIcon size={14} /></Link>
+                      <Link
+                        href={`/aula/${classId}?ch=${group.id}`}
+                        className="flex-shrink-0 rounded-lg p-1.5 text-neutral-600 opacity-40 transition hover:bg-white/5 hover:text-accent-violet group-hover:opacity-100"
+                        title="Abrir aula completa"
+                      >
+                        <ExpandIcon size={13} />
+                      </Link>
                     </div>
                   )
                 })}
