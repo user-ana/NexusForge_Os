@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/backend/supabase'
 import type { GroupMode, LeaderMode } from '@/backend/services/classes'
+import type { ParcialCode } from '@/shared/parciales'
 
 export type RubricItem = { criterion: string; points: number }
 
@@ -19,6 +20,8 @@ export type Project = {
   teamSize: number
   groupMode: GroupMode
   leaderMode: LeaderMode
+  parcial: ParcialCode
+  briefUrl: string
   createdAt: number
 }
 
@@ -43,6 +46,8 @@ function mapRow(row: any): Project {
     teamSize: row.team_size ?? 4,
     groupMode: (row.group_mode ?? 'open') as GroupMode,
     leaderMode: (row.leader_mode ?? 'first') as LeaderMode,
+    parcial: (row.parcial ?? '') as ParcialCode,
+    briefUrl: row.brief_url ?? '',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
   }
 }
@@ -62,6 +67,21 @@ export async function loadProjects(classId: string): Promise<void> {
   dispatch()
 }
 
+/** Carga los proyectos de varias clases de una sola vez (para la Vista por Períodos). */
+export async function loadProjectsForClasses(classIds: string[]): Promise<void> {
+  if (!supabase || classIds.length === 0) return
+  const { data } = await supabase.from('projects').select('*').in('class_id', classIds)
+  const set = new Set(classIds)
+  cache = [...cache.filter((p) => !set.has(p.classId)), ...(data ?? []).map(mapRow)]
+  dispatch()
+}
+
+/** Proyectos (desde caché) de un conjunto de clases, más recientes primero. */
+export function getProjectsForClasses(classIds: string[]): Project[] {
+  const set = new Set(classIds)
+  return cache.filter((p) => set.has(p.classId)).sort((a, b) => b.createdAt - a.createdAt)
+}
+
 export async function createProject(input: Omit<Project, 'id' | 'createdAt'>): Promise<Project | null> {
   if (!supabase) return null
   const { data, error } = await supabase
@@ -77,6 +97,8 @@ export async function createProject(input: Omit<Project, 'id' | 'createdAt'>): P
       team_size: input.teamSize,
       group_mode: input.groupMode,
       leader_mode: input.leaderMode,
+      parcial: input.parcial,
+      brief_url: input.briefUrl,
     })
     .select('*')
     .single()
@@ -100,6 +122,19 @@ export function subscribeProjects(classId: string): () => void {
   return () => {
     sb.removeChannel(ch)
   }
+}
+
+/**
+ * Sube un archivo (PDF/Word) del enunciado al bucket 'project-briefs' de Storage
+ * y devuelve su URL pública, o null si falla (p. ej. el bucket no existe todavía).
+ */
+export async function uploadBrief(classId: string, file: File): Promise<string | null> {
+  if (!supabase) return null
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `${classId}/${crypto.randomUUID()}-${safeName}`
+  const { error } = await supabase.storage.from('project-briefs').upload(path, file, { upsert: false })
+  if (error) return null
+  return supabase.storage.from('project-briefs').getPublicUrl(path).data.publicUrl
 }
 
 export async function deleteProject(id: string): Promise<void> {

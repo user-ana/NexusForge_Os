@@ -232,9 +232,16 @@ export default function ClassesPage() {
                       </div>
                     )}
                   </div>
-                  <Link href={`/aula/${cls.id}`} className="neo-btn text-sm">
-                    {t('cls.enter')} →
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {isTeacher && (
+                      <Link href={`/dashboard/classes/${cls.id}`} className="neo-btn-ghost text-sm">
+                        {t('cls.projects')}
+                      </Link>
+                    )}
+                    <Link href={`/aula/${cls.id}`} className="neo-btn text-sm">
+                      {t('cls.enter')} →
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

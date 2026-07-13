@@ -47,7 +47,19 @@ export default function ProjectDetailPage({ params }: { params: { id: string; pi
           <div className="space-y-6 lg:col-span-2">
             {/* Enunciado */}
             <div className="neo-panel p-6">
-              <p className="neo-label mb-3">{t('proj.desc')}</p>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="neo-label">{t('proj.desc')}</p>
+                {project.briefUrl && (
+                  <a
+                    href={project.briefUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="neo-btn text-xs"
+                  >
+                    {t('proj.view_brief')} ↗
+                  </a>
+                )}
+              </div>
               <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-300">{project.description || '—'}</p>
             </div>
 

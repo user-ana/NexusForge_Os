@@ -175,6 +175,27 @@ alter table public.classes add column if not exists project_mode text default 'c
 alter table public.class_groups add column if not exists project_id uuid references public.projects(id) on delete set null;
 alter table public.class_groups add column if not exists archived boolean default false;
 
+-- Parcial (período de evaluación) al que pertenece cada proyecto:
+-- '' (sin parcial) | 'p1' (primero) | 'p2' (segundo) | 'p3' (tercero) | 'final'
+alter table public.projects add column if not exists parcial text default '';
+
+-- Enlace al enunciado del proyecto (Google Drive / PDF / Overleaf), opcional.
+-- Puede ser un link pegado o la URL de un PDF subido a Storage (bucket de abajo).
+alter table public.projects add column if not exists brief_url text default '';
+
+-- Storage: bucket público donde se guardan los PDFs de enunciados subidos.
+insert into storage.buckets (id, name, public)
+values ('project-briefs', 'project-briefs', true)
+on conflict (id) do nothing;
+
+drop policy if exists briefs_read on storage.objects;
+create policy briefs_read on storage.objects for select to public
+  using (bucket_id = 'project-briefs');
+
+drop policy if exists briefs_upload on storage.objects;
+create policy briefs_upload on storage.objects for insert to authenticated
+  with check (bucket_id = 'project-briefs');
+
 create index if not exists idx_enrollments_student on public.enrollments(student_id);
 create index if not exists idx_classes_code on public.classes(code);
 create index if not exists idx_messages_class_channel on public.messages(class_id, channel);

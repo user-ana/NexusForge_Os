@@ -17,6 +17,7 @@ const NAV_BY_ROLE: Record<Role, { href: string; key: string }[]> = {
   ],
   teacher: [
     { href: '/dashboard/classes', key: 'nav.classes' },
+    { href: '/dashboard/periods', key: 'nav.periods' },
   ],
   visitor: [
     { href: '/dashboard/classes', key: 'nav.classes' },

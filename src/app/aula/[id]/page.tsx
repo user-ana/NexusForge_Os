@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/frontend/components/auth/AuthGuard'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
+import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
 import { getClass, loadClasses, subscribeClasses, setProjectMode, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import {
@@ -86,6 +87,8 @@ function Aula({ id }: { id: string }) {
   const [showArchived, setShowArchived] = useState(false)
   const [groupSearch, setGroupSearch] = useState('') // buscar grupos por nombre
   const [groupPage, setGroupPage] = useState(0) // página de la lista de grupos
+  const [rosterSearch, setRosterSearch] = useState('') // buscar operadores por nombre
+  const [rosterPage, setRosterPage] = useState(0) // página de la lista de operadores
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -251,6 +254,21 @@ function Aula({ id }: { id: string }) {
   const groupPageCount = Math.max(1, Math.ceil(filteredGroups.length / GROUPS_PER_PAGE))
   const gPage = Math.min(groupPage, groupPageCount - 1)
   const pagedGroups = filteredGroups.slice(gPage * GROUPS_PER_PAGE, gPage * GROUPS_PER_PAGE + GROUPS_PER_PAGE)
+
+  // Opciones de proyecto para asignar desde la tarjeta de cada grupo (modo "el catedrático asigna").
+  const projectOptions = [
+    { value: '', label: 'Sin proyecto' },
+    ...projects.map((p) => ({ value: p.id, label: p.title })),
+  ]
+
+  // Operadores (estudiantes) con búsqueda + paginación
+  const ROSTER_PER_PAGE = 8
+  const filteredRoster = klass.roster.filter((r) =>
+    r.name.toLowerCase().includes(rosterSearch.trim().toLowerCase()),
+  )
+  const rosterPageCount = Math.max(1, Math.ceil(filteredRoster.length / ROSTER_PER_PAGE))
+  const rPage = Math.min(rosterPage, rosterPageCount - 1)
+  const pagedRoster = filteredRoster.slice(rPage * ROSTER_PER_PAGE, rPage * ROSTER_PER_PAGE + ROSTER_PER_PAGE)
 
   function submit() {
     if (!draft.trim()) return
@@ -497,32 +515,55 @@ function Aula({ id }: { id: string }) {
                   <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {pagedGroups.map((g, i) => {
                       const sel = selectedIds.includes(g.id)
+                      const assignedProj = projects.find((p) => p.id === g.projectId)
                       return (
                         <div
                           key={g.id}
-                          className={`neo-aula-gcard neo-card-in group relative flex items-center gap-3 !p-4 ${sel ? 'ring-2 ring-accent-violet' : ''}`}
+                          className={`neo-aula-gcard neo-card-in group relative flex flex-col gap-3 !p-4 ${sel ? 'ring-2 ring-accent-violet' : ''}`}
                           style={{ animationDelay: `${Math.min(i * 40, 320)}ms` }}
                         >
-                          <button
-                            onClick={() => toggleSel(g.id)}
-                            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition ${sel ? 'border-accent-violet bg-accent-violet text-white' : 'border-white/15 text-transparent hover:border-white/40'}`}
-                            title="Seleccionar"
-                          >
-                            <CheckMini />
-                          </button>
-                          <span className="h-11 w-1.5 flex-shrink-0 rounded-full" style={{ background: g.color }} />
-                          <Icon3D src={g.icon} alt="" size={34} fallback="◆" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[15px] font-semibold text-white">{g.name}</p>
-                            <p className="text-[11px] text-neutral-500">{g.members.length} integrantes</p>
+                          <div className="flex w-full items-center gap-3">
+                            <button
+                              onClick={() => toggleSel(g.id)}
+                              className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition ${sel ? 'border-accent-violet bg-accent-violet text-white' : 'border-white/15 text-transparent hover:border-white/40'}`}
+                              title="Seleccionar"
+                            >
+                              <CheckMini />
+                            </button>
+                            <span className="h-11 w-1.5 flex-shrink-0 rounded-full" style={{ background: g.color }} />
+                            <Icon3D src={g.icon} alt="" size={34} fallback="◆" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[15px] font-semibold text-white">{g.name}</p>
+                              <p className="text-[11px] text-neutral-500">{g.members.length} integrantes</p>
+                            </div>
+                            <button
+                              onClick={() => setDelGroup(g)}
+                              className="flex-shrink-0 text-neutral-600 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                              title="Eliminar grupo"
+                            >
+                              ✕
+                            </button>
                           </div>
-                          <button
-                            onClick={() => setDelGroup(g)}
-                            className="flex-shrink-0 text-neutral-600 opacity-0 transition hover:text-red-400 group-hover:opacity-100"
-                            title="Eliminar grupo"
-                          >
-                            ✕
-                          </button>
+
+                          {/* Asignación de proyecto (solo catedrático) */}
+                          {isTeacher && klass.projectMode === 'assigned' && (
+                            <NeoSelect
+                              value={g.projectId ?? ''}
+                              onChange={(v) => setGroupProject(id, g.id, v || null)}
+                              options={projectOptions}
+                            />
+                          )}
+                          {isTeacher && klass.projectMode === 'catalog' && (
+                            <span
+                              className="self-start truncate rounded-md px-2 py-1 text-xs"
+                              style={{
+                                background: assignedProj ? `${g.color}22` : 'rgba(255,255,255,0.04)',
+                                color: assignedProj ? '#e5e7eb' : '#9ca3af',
+                              }}
+                            >
+                              {assignedProj ? assignedProj.title : 'Sin elegir'}
+                            </span>
+                          )}
                         </div>
                       )
                     })}
@@ -598,23 +639,39 @@ function Aula({ id }: { id: string }) {
 
               {/* lista de estudiantes con su dropdown de grupo */}
               <div className="neo-panel p-5">
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <span className="neo-label">Operadores en el aula</span>
-                  <span className="text-[11px] uppercase tracking-wider text-neutral-500">
-                    Total: {klass.roster.length}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {klass.roster.length > ROSTER_PER_PAGE && (
+                      <input
+                        value={rosterSearch}
+                        onChange={(e) => { setRosterSearch(e.target.value); setRosterPage(0) }}
+                        placeholder="Buscar operador…"
+                        className="neo-input h-8 w-44 text-sm"
+                      />
+                    )}
+                    <span className="text-[11px] uppercase tracking-wider text-neutral-500">
+                      Total: {klass.roster.length}
+                    </span>
+                  </div>
                 </div>
                 {klass.roster.length === 0 ? (
                   <p className="text-sm text-neutral-500">
                     Aún no hay estudiantes inscritos. Comparte el código{' '}
                     <span className="font-mono text-accent-violet">{klass.code}</span>.
                   </p>
+                ) : filteredRoster.length === 0 ? (
+                  <p className="text-sm text-neutral-500">Ningún operador coincide con la búsqueda.</p>
                 ) : (
                   <div className="space-y-2.5">
-                    {klass.roster.map((st) => {
+                    {pagedRoster.map((st, i) => {
                       const g = groupOf(id, st.id)
                       return (
-                        <div key={st.id} className="neo-aula-row">
+                        <div
+                          key={st.id}
+                          className="neo-aula-row neo-card-in"
+                          style={{ animationDelay: `${Math.min(i * 45, 320)}ms` }}
+                        >
                           <div className="flex min-w-0 items-center gap-3">
                             <span className="neo-aula-mini">{st.name.charAt(0).toUpperCase()}</span>
                             <div className="min-w-0">
@@ -648,6 +705,15 @@ function Aula({ id }: { id: string }) {
                         </div>
                       )
                     })}
+                    {rosterPageCount > 1 && (
+                      <div className="flex items-center justify-center gap-1.5 pt-1">
+                        <button onClick={() => setRosterPage((p) => Math.max(0, p - 1))} disabled={rPage === 0} className="neo-btn-ghost !px-2.5 text-sm disabled:opacity-40" title="Anterior">‹</button>
+                        {Array.from({ length: rosterPageCount }, (_, n) => (
+                          <button key={n} onClick={() => setRosterPage(n)} className={`h-8 w-8 rounded-lg text-sm transition ${n === rPage ? 'bg-accent-violet text-white' : 'text-neutral-400 hover:bg-white/5'}`}>{n + 1}</button>
+                        ))}
+                        <button onClick={() => setRosterPage((p) => Math.min(rosterPageCount - 1, p + 1))} disabled={rPage === rosterPageCount - 1} className="neo-btn-ghost !px-2.5 text-sm disabled:opacity-40" title="Siguiente">›</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1214,25 +1280,29 @@ function TeacherProjectPanel({
   projects: Project[]
   groups: ClassGroup[]
 }) {
-  const projectOptions = [
-    { value: '', label: 'Sin proyecto' },
-    ...projects.map((p) => ({ value: p.id, label: p.title })),
-  ]
+  const [showCreate, setShowCreate] = useState(false)
 
   return (
     <div className="neo-panel space-y-4 p-5">
+      <CreateProjectModal classId={classId} open={showCreate} onClose={() => setShowCreate(false)} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="neo-label">Selección de proyecto</span>
-        <div className="w-60">
-          <NeoSelect
-            value={mode}
-            onChange={(v) => setProjectMode(classId, v as 'assigned' | 'catalog' | 'proposal')}
-            options={[
-              { value: 'assigned', label: PROJECT_MODE_LABELS.assigned },
-              { value: 'catalog', label: PROJECT_MODE_LABELS.catalog },
-              { value: 'proposal', label: PROJECT_MODE_LABELS.proposal },
-            ]}
-          />
+        <div className="flex items-center gap-2">
+          {mode !== 'proposal' && (
+            <button onClick={() => setShowCreate(true)} className="neo-btn text-sm">+ Proyecto</button>
+          )}
+          <div className="w-60">
+            <NeoSelect
+              value={mode}
+              onChange={(v) => setProjectMode(classId, v as 'assigned' | 'catalog' | 'proposal')}
+              options={[
+                { value: 'assigned', label: PROJECT_MODE_LABELS.assigned },
+                { value: 'catalog', label: PROJECT_MODE_LABELS.catalog },
+                { value: 'proposal', label: PROJECT_MODE_LABELS.proposal },
+              ]}
+            />
+          </div>
         </div>
       </div>
       <p className="text-xs text-neutral-500">{PROJECT_MODE_HELP[mode] ?? ''}</p>
@@ -1242,52 +1312,31 @@ function TeacherProjectPanel({
           En esta modalidad cada grupo define su propio proyecto desde su pestaña <span className="text-neutral-200">Proyecto</span>.
         </p>
       ) : projects.length === 0 ? (
-        <p className="rounded-xl bg-black/20 px-4 py-3 text-xs text-neutral-400">
-          Aún no hay proyectos en la clase. Créalos desde la página de la clase para poder asignarlos.
-        </p>
+        <div className="flex flex-col items-start gap-3 rounded-xl bg-black/20 px-4 py-3">
+          <p className="text-xs text-neutral-400">
+            Aún no hay proyectos en la clase. Créalos primero para poder asignarlos a los grupos.
+          </p>
+          <button onClick={() => setShowCreate(true)} className="neo-btn text-sm">
+            + Crear proyecto
+          </button>
+        </div>
+      ) : mode === 'assigned' ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => randomAssignProjects(classId, projects.map((p) => p.id))}
+            disabled={groups.length === 0}
+            className="neo-btn text-sm"
+          >
+            Repartir al azar
+          </button>
+          <p className="text-xs text-neutral-500">
+            Asigna el proyecto de cada grupo en sus tarjetas, arriba.
+          </p>
+        </div>
       ) : (
-        <>
-          {mode === 'assigned' && (
-            <button
-              onClick={() => randomAssignProjects(classId, projects.map((p) => p.id))}
-              disabled={groups.length === 0}
-              className="neo-btn text-sm"
-            >
-              Repartir al azar
-            </button>
-          )}
-
-          {groups.length === 0 ? (
-            <p className="text-xs text-neutral-500">Crea grupos para asignarles un proyecto.</p>
-          ) : (
-            <div className="space-y-2">
-              {groups.map((g) => {
-                const assigned = projects.find((p) => p.id === g.projectId)
-                return (
-                  <div key={g.id} className="flex items-center justify-between gap-3 rounded-xl bg-black/15 px-3 py-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Icon3D src={g.icon} alt="" size={20} fallback="◆" />
-                      <span className="truncate text-sm text-neutral-100">{g.name}</span>
-                    </div>
-                    {mode === 'assigned' ? (
-                      <div className="w-52 flex-shrink-0">
-                        <NeoSelect
-                          value={g.projectId ?? ''}
-                          onChange={(v) => setGroupProject(classId, g.id, v || null)}
-                          options={projectOptions}
-                        />
-                      </div>
-                    ) : (
-                      <span className="flex-shrink-0 text-xs text-neutral-400">
-                        {assigned ? assigned.title : 'Sin elegir'}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </>
+        <p className="rounded-xl bg-black/20 px-4 py-3 text-xs text-neutral-400">
+          Los grupos eligen su proyecto del catálogo desde su pestaña <span className="text-neutral-200">Proyecto</span>. Verás lo elegido en cada tarjeta, arriba.
+        </p>
       )}
     </div>
   )

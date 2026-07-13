@@ -1,35 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from '@/frontend/components/layout/Header'
 import { getSession, SESSION_EVENT, type Role } from '@/frontend/session/session'
-import { getClass, loadClasses, subscribeClasses, deleteClass, CLASSES_EVENT, type Klass, type GroupMode, type LeaderMode } from '@/backend/services/classes'
-import { getProjects, loadProjects, subscribeProjects, createProject, deleteProject, PROJECTS_EVENT, type Project, type RubricItem } from '@/backend/services/projects'
+import { getClass, loadClasses, subscribeClasses, deleteClass, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
+import { getProjects, loadProjects, subscribeProjects, deleteProject, PROJECTS_EVENT, type Project } from '@/backend/services/projects'
 import ConfirmDialog from '@/frontend/components/ui/ConfirmDialog'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { TrashIcon } from '@/frontend/components/ui/Icons'
-import NeoSelect from '@/frontend/components/ui/NeoSelect'
-import NeoDate from '@/frontend/components/ui/NeoDate'
+import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
 import { useT } from '@/frontend/hooks/useT'
-
-type Draft = {
-  title: string
-  description: string
-  objectives: string
-  deliverables: string
-  dueDate: string
-  teamSize: number
-  groupMode: GroupMode
-  leaderMode: LeaderMode
-  rubric: RubricItem[]
-}
-const EMPTY: Draft = {
-  title: '', description: '', objectives: '', deliverables: '', dueDate: '',
-  teamSize: 4, groupMode: 'open', leaderMode: 'first', rubric: [{ criterion: '', points: 0 }],
-}
+import { parcialLabel } from '@/shared/parciales'
 
 export default function ClassDetailPage({ params }: { params: { id: string } }) {
   const { t } = useT()
@@ -39,13 +22,10 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
   const [role, setRole] = useState<Role>('student')
   const [copied, setCopied] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [d, setD] = useState<Draft>(EMPTY)
   const [delProject, setDelProject] = useState<Project | null>(null)
   const [delClass, setDelClass] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
     const sync = () => {
       setKlass(getClass(params.id))
       setProjects(getProjects(params.id))
@@ -71,24 +51,6 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
     navigator.clipboard?.writeText(klass.code)
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
-  }
-
-  async function submitProject() {
-    if (!d.title.trim()) return
-    await createProject({
-      classId: params.id,
-      title: d.title,
-      description: d.description,
-      objectives: d.objectives,
-      deliverables: d.deliverables,
-      rubric: d.rubric.filter((r) => r.criterion.trim()),
-      dueDate: d.dueDate,
-      teamSize: d.teamSize,
-      groupMode: d.groupMode,
-      leaderMode: d.leaderMode,
-    })
-    setD(EMPTY)
-    setCreating(false)
   }
 
   if (!klass) {
@@ -161,94 +123,10 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
             )}
           </div>
 
-          {/* Formulario crear proyecto (modal flotante) */}
-          {isTeacher && creating && mounted &&
-            createPortal(
-              <div className="neo-modal-backdrop" onClick={() => setCreating(false)}>
-                <div className="neo-modal neo-modal--lg space-y-4" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-semibold text-white">{t('proj.create_title')}</h4>
-                    <button onClick={() => setCreating(false)} className="text-neutral-500 hover:text-white">✕</button>
-                  </div>
-              <Field label={t('proj.name')}>
-                <input value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} placeholder={t('proj.name_ph')} className="neo-input w-full" />
-              </Field>
-              <Field label={t('proj.desc')}>
-                <textarea rows={3} value={d.description} onChange={(e) => setD({ ...d, description: e.target.value })} placeholder={t('proj.desc_ph')} className="neo-input w-full resize-none" />
-              </Field>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label={t('proj.objectives')}>
-                  <textarea rows={3} value={d.objectives} onChange={(e) => setD({ ...d, objectives: e.target.value })} className="neo-input w-full resize-none" />
-                </Field>
-                <Field label={t('proj.deliverables')}>
-                  <textarea rows={3} value={d.deliverables} onChange={(e) => setD({ ...d, deliverables: e.target.value })} className="neo-input w-full resize-none" />
-                </Field>
-              </div>
-
-              {/* Rúbrica */}
-              <Field label={t('proj.rubric')}>
-                <div className="space-y-2">
-                  {d.rubric.map((r, i) => (
-                    <div key={i} className="flex gap-2">
-                      <input
-                        value={r.criterion}
-                        onChange={(e) => setD({ ...d, rubric: d.rubric.map((x, j) => (j === i ? { ...x, criterion: e.target.value } : x)) })}
-                        placeholder={t('proj.criterion')}
-                        className="neo-input flex-1"
-                      />
-                      <input
-                        type="number"
-                        value={r.points}
-                        onChange={(e) => setD({ ...d, rubric: d.rubric.map((x, j) => (j === i ? { ...x, points: +e.target.value } : x)) })}
-                        placeholder={t('proj.points')}
-                        className="neo-input w-20"
-                      />
-                      <button onClick={() => setD({ ...d, rubric: d.rubric.filter((_, j) => j !== i) })} className="neo-btn-ghost px-3">✕</button>
-                    </div>
-                  ))}
-                  <button onClick={() => setD({ ...d, rubric: [...d.rubric, { criterion: '', points: 0 }] })} className="text-xs text-accent-violet hover:text-accent-violetBright">
-                    {t('proj.add_criterion')}
-                  </button>
-                </div>
-              </Field>
-
-              {/* Fechas + modalidades */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <Field label={t('proj.due')}>
-                  <NeoDate value={d.dueDate} onChange={(v) => setD({ ...d, dueDate: v })} />
-                </Field>
-                <Field label={t('proj.team_size')}>
-                  <input type="number" min={1} max={8} value={d.teamSize} onChange={(e) => setD({ ...d, teamSize: +e.target.value })} className="neo-input w-full" />
-                </Field>
-                <Field label={t('proj.group_mode')}>
-                  <NeoSelect
-                    value={d.groupMode}
-                    onChange={(v) => setD({ ...d, groupMode: v as GroupMode })}
-                    options={[
-                      { value: 'open', label: t('cls.gm_open') },
-                      { value: 'assign', label: t('cls.gm_assign') },
-                      { value: 'hybrid', label: t('cls.gm_hybrid') },
-                    ]}
-                  />
-                </Field>
-                <Field label={t('proj.leader_mode')}>
-                  <NeoSelect
-                    value={d.leaderMode}
-                    onChange={(v) => setD({ ...d, leaderMode: v as LeaderMode })}
-                    options={[
-                      { value: 'teacher', label: t('cls.lm_teacher') },
-                      { value: 'group', label: t('cls.lm_group') },
-                      { value: 'first', label: t('cls.lm_first') },
-                    ]}
-                  />
-                </Field>
-              </div>
-
-                  <button onClick={submitProject} className="neo-btn w-full justify-center">{t('proj.create')}</button>
-                </div>
-              </div>,
-              document.body,
-            )}
+          {/* Formulario crear proyecto (modal reutilizable) */}
+          {isTeacher && (
+            <CreateProjectModal classId={params.id} open={creating} onClose={() => setCreating(false)} />
+          )}
 
           {/* Lista de proyectos */}
           {projects.length === 0 ? (
@@ -263,6 +141,7 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
                     <div className="flex items-start justify-between gap-3">
                       <h4 className="font-semibold text-white">{p.title}</h4>
                       <div className="flex flex-shrink-0 items-center gap-2">
+                        {p.parcial && <span className="neo-chip neo-chip--gold">{parcialLabel(p.parcial)}</span>}
                         <span className="neo-chip neo-chip--progress">{p.teamSize} integrantes</span>
                         {isTeacher && (
                           <button
@@ -349,15 +228,6 @@ function Info({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl bg-black/20 p-3 shadow-[inset_2px_2px_6px_rgba(0,0,0,0.4)]">
       <p className="text-[11px] uppercase tracking-wider text-neutral-600">{label}</p>
       <p className="mt-1 text-sm font-semibold text-neutral-100">{value}</p>
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <label className="neo-label">{label}</label>
-      {children}
     </div>
   )
 }
