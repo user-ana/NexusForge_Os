@@ -1,6 +1,6 @@
 import Sidebar from '@/frontend/components/layout/Sidebar'
 import AuthGuard from '@/frontend/components/auth/AuthGuard'
-import LiveChat from '@/frontend/components/layout/LiveChat'
+import AssistantWidget from '@/frontend/components/layout/AssistantWidget'
 import PageTransition from '@/frontend/components/layout/PageTransition'
 
 export default function DashboardLayout({
@@ -13,7 +13,7 @@ export default function DashboardLayout({
       <div className="neo-app flex h-screen">
         <Sidebar />
         <PageTransition>{children}</PageTransition>
-        <LiveChat />
+        <AssistantWidget />
       </div>
     </AuthGuard>
   )

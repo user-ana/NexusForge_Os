@@ -1844,6 +1844,277 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .neo-squad-card, .neo-squad-glow, .neo-squad-title { animation: none !important; }
 }
+
+/* ── Enlace destacado "Buscar" (asistente IA) en el sidebar ── */
+.neo-search-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.8rem;
+  font-weight: 600;
+  color: #ece9ff;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.18), rgba(96, 165, 250, 0.1));
+  border: 1px solid rgba(167, 139, 250, 0.32);
+  box-shadow: 0 0 18px -6px rgba(167, 139, 250, 0.55);
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, border-color 0.2s ease;
+}
+.neo-search-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.12) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: neo-search-shine 4.5s ease-in-out infinite;
+}
+@keyframes neo-search-shine {
+  0%, 60% { transform: translateX(-120%); }
+  80%, 100% { transform: translateX(120%); }
+}
+.neo-search-nav:hover {
+  transform: translateY(-1px);
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 0 28px -6px rgba(167, 139, 250, 0.85);
+}
+.neo-search-nav--active {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(96, 165, 250, 0.2));
+  border-color: rgba(167, 139, 250, 0.6);
+}
+.neo-ia-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #b9b4e8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .neo-search-nav::before { animation: none; }
+}
+
+/* ── Asistente flotante (orbe + panel grande) ── */
+.neo-assistant-orb {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 71;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, #7c6cf0, #5b57d6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.25s ease, background 0.2s ease;
+}
+.neo-assistant-orb:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.7); }
+.neo-assistant-orb--open { background: #2a2d32; }
+
+.neo-assistant-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 92px;
+  z-index: 72;
+  width: min(760px, calc(100vw - 40px));
+  height: min(80vh, 780px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  background: rgba(22, 24, 28, 0.95);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  transform-origin: bottom right;
+  animation: neo-assistant-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes neo-assistant-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.neo-assistant-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.neo-assistant-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  color: #b9b4e8;
+  background: rgba(255, 255, 255, 0.06);
+}
+.neo-assistant-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.neo-assistant-body::-webkit-scrollbar { width: 6px; }
+.neo-assistant-body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+.neo-assistant-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.neo-assistant-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, #7c6cf0, #5b57d6);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.neo-assistant-send:hover { transform: scale(1.05); }
+.neo-assistant-send:disabled { opacity: 0.4; }
+
+/* Acento animado en el borde superior del panel (elegante, tenue) */
+.neo-assistant-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.55), rgba(96, 165, 250, 0.55), transparent);
+  background-size: 200% 100%;
+  animation: neo-a-accent 5s linear infinite;
+}
+@keyframes neo-a-accent {
+  from { background-position: 200% 0; }
+  to   { background-position: 0% 0; }
+}
+
+/* Entrada escalonada de tarjetas + hover elegante */
+.neo-a-in { animation: neo-a-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes neo-a-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.neo-a-tile { transition: transform 0.18s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; }
+.neo-a-tile:hover { transform: translateY(-3px); box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.7); }
+
+/* Aura suave que respira detrás del icono del asistente */
+.neo-assistant-avatar { position: relative; }
+.neo-assistant-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 14px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.45), transparent 70%);
+  z-index: -1;
+  animation: neo-a-breathe 3.6s ease-in-out infinite;
+}
+@keyframes neo-a-breathe {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(1.18); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neo-assistant-panel { animation: none; }
+  .neo-assistant-panel::before,
+  .neo-a-in,
+  .neo-assistant-avatar::after { animation: none; }
+}
+
+/* Input con borde de gradiente animado (estilo "Ask me anything") */
+.neo-ai-input {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  padding: 1.5px;
+  background: linear-gradient(120deg, rgba(167, 139, 250, 0.9), rgba(99, 102, 241, 0.9), rgba(96, 165, 250, 0.9), rgba(167, 139, 250, 0.9));
+  background-size: 300% 100%;
+  animation: neo-ai-flow 7s linear infinite;
+  box-shadow: 0 10px 34px -12px rgba(99, 102, 241, 0.55);
+}
+@keyframes neo-ai-flow {
+  from { background-position: 0% 0; }
+  to   { background-position: 300% 0; }
+}
+.neo-ai-input-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 14.5px;
+  background: #1a1c20;
+  padding: 0.35rem 0.35rem 0.35rem 1rem;
+}
+.neo-ai-input-inner input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+.neo-ai-input-inner input::placeholder { color: #6b7280; }
+
+/* Chips de sugerencia / acciones rápidas */
+.neo-ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.neo-ai-chip:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Icono hero del asistente (con aura) */
+.neo-ai-hero-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  color: #c4b5fd;
+  background: rgba(167, 139, 250, 0.14);
+}
+.neo-ai-hero-icon::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 26px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.4), transparent 70%);
+  z-index: -1;
+  animation: neo-a-breathe 3.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .neo-ai-input { animation: none; }
+  .neo-ai-hero-icon::after { animation: none; }
+}
 .neo-avatar-option {
   aspect-ratio: 1;
   border-radius: 14px;

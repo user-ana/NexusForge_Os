@@ -58,6 +58,7 @@ export default function Sidebar() {
             item.href === '/dashboard'
               ? pathname === '/dashboard'
               : pathname.startsWith(item.href)
+
           return (
             <Link
               key={item.href}
