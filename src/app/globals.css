@@ -1820,6 +1820,30 @@ body {
   55%  { opacity: 1; }
   to   { opacity: 1; transform: translateY(0) scaleY(1); transform-origin: top center; }
 }
+
+/* ── Selector de escuadrón (vista estudiante) — efecto "wow" ── */
+@keyframes squad-pop {
+  0%   { opacity: 0; transform: translateY(28px) scale(0.9); }
+  60%  { opacity: 1; transform: translateY(-5px) scale(1.03); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.neo-squad-card { animation: squad-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes squad-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%      { opacity: 0.62; transform: scale(1.08); }
+}
+.neo-squad-glow { animation: squad-glow 3.4s ease-in-out infinite; }
+
+@keyframes squad-title {
+  from { opacity: 0; transform: translateY(-12px); letter-spacing: 0.2em; }
+  to   { opacity: 1; transform: translateY(0); letter-spacing: normal; }
+}
+.neo-squad-title { animation: squad-title 0.55s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .neo-squad-card, .neo-squad-glow, .neo-squad-title { animation: none !important; }
+}
 .neo-avatar-option {
   aspect-ratio: 1;
   border-radius: 14px;

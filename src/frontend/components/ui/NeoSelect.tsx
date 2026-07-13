@@ -16,7 +16,12 @@ export default function NeoSelect({
 }) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const [pos, setPos] = useState<{ left: number; width: number; top: number | null; bottom: number | null }>({
+    left: 0,
+    width: 0,
+    top: 0,
+    bottom: null,
+  })
   const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => setMounted(true), [])
@@ -26,7 +31,14 @@ export default function NeoSelect({
   function toggle() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      setPos({ top: r.bottom + 6, left: r.left, width: r.width })
+      const spaceBelow = window.innerHeight - r.bottom
+      const MENU_MAX = 260
+      // Si no cabe abajo y hay más espacio arriba, se abre hacia arriba.
+      if (spaceBelow < MENU_MAX && r.top > spaceBelow) {
+        setPos({ left: r.left, width: r.width, top: null, bottom: window.innerHeight - r.top + 6 })
+      } else {
+        setPos({ left: r.left, width: r.width, top: r.bottom + 6, bottom: null })
+      }
     }
     setOpen((o) => !o)
   }
@@ -45,7 +57,17 @@ export default function NeoSelect({
         createPortal(
           <>
             <div className="fixed inset-0 z-[95]" onClick={() => setOpen(false)} />
-            <div className="neo-sel-menu" style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: pos.width }}>
+            <div
+              className="neo-sel-menu"
+              style={{
+                position: 'fixed',
+                left: pos.left,
+                minWidth: pos.width,
+                maxHeight: 260,
+                overflowY: 'auto',
+                ...(pos.top !== null ? { top: pos.top } : { bottom: pos.bottom ?? 0 }),
+              }}
+            >
               {options.map((o) => (
                 <button
                   key={o.value}

@@ -168,6 +168,18 @@ export async function assignStudent(classId: string, studentId: string, groupId:
   await loadGroups(classId)
 }
 
+/**
+ * El estudiante se une por sí mismo a un grupo (modo auto-inscripción).
+ * Devuelve null si funcionó, o el mensaje de error (grupo lleno, ya tiene grupo,
+ * modo no activo…) que devuelve la función segura del servidor.
+ */
+export async function joinGroup(classId: string, groupId: string): Promise<string | null> {
+  if (!supabase) return 'Sin conexión'
+  const { error } = await supabase.rpc('join_class_group', { gid: groupId })
+  await loadGroups(classId)
+  return error ? error.message : null
+}
+
 /** Suscripción realtime a los grupos/miembros de una clase. */
 export function subscribeGroups(classId: string): () => void {
   if (!supabase) return () => {}

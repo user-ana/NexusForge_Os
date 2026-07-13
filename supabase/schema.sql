@@ -183,6 +183,9 @@ alter table public.projects add column if not exists parcial text default '';
 -- Puede ser un link pegado o la URL de un PDF subido a Storage (bucket de abajo).
 alter table public.projects add column if not exists brief_url text default '';
 
+-- Requisitos que el proyecto debe cumplir (ej. "basado en servidor web"), opcional.
+alter table public.projects add column if not exists requirements text default '';
+
 -- Storage: bucket público donde se guardan los PDFs de enunciados subidos.
 insert into storage.buckets (id, name, public)
 values ('project-briefs', 'project-briefs', true)
@@ -195,6 +198,59 @@ create policy briefs_read on storage.objects for select to public
 drop policy if exists briefs_upload on storage.objects;
 create policy briefs_upload on storage.objects for insert to authenticated
   with check (bucket_id = 'project-briefs');
+
+-- ----------------------------------------------------------------------
+--  FORMACIÓN DE GRUPOS: modo por clase + cupo, y auto-inscripción segura
+-- ----------------------------------------------------------------------
+-- group_formation: 'assigned' (el profe asigna) | 'open' (auto-inscripción)
+alter table public.classes add column if not exists group_formation text default 'assigned';
+-- max_team_size: cupo máximo de integrantes por grupo (usado en auto-inscripción)
+alter table public.classes add column if not exists max_team_size int default 5;
+
+-- El estudiante se une a un grupo por sí mismo. Función segura (security definer)
+-- que valida: modo auto-inscripción activo, inscrito en la clase, NO estar ya en un
+-- grupo de la clase (bloqueo), y que haya cupo. El estudiante NO puede escribir
+-- directamente en group_members (la RLS lo impide); solo a través de esta función.
+create or replace function public.join_class_group(gid uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  cid uuid;
+  formation text;
+  cap int;
+  taken int;
+begin
+  select class_id into cid from public.class_groups where id = gid;
+  if cid is null then raise exception 'El grupo no existe'; end if;
+
+  if not exists (select 1 from public.enrollments e where e.class_id = cid and e.student_id = auth.uid()) then
+    raise exception 'No estás inscrito en esta clase';
+  end if;
+
+  select coalesce(group_formation, 'assigned'), coalesce(max_team_size, 5)
+    into formation, cap from public.classes where id = cid;
+  if formation <> 'open' then
+    raise exception 'La auto-inscripción no está activa en esta clase';
+  end if;
+
+  if exists (
+    select 1 from public.group_members m
+    join public.class_groups g on g.id = m.group_id
+    where g.class_id = cid and m.student_id = auth.uid()
+  ) then
+    raise exception 'Ya estás en un grupo. Pide al catedrático para cambiar.';
+  end if;
+
+  select count(*) into taken from public.group_members where group_id = gid;
+  if taken >= cap then
+    raise exception 'Este grupo ya está lleno';
+  end if;
+
+  insert into public.group_members (group_id, student_id)
+  values (gid, auth.uid())
+  on conflict do nothing;
+end;
+$$;
+grant execute on function public.join_class_group(uuid) to authenticated;
 
 create index if not exists idx_enrollments_student on public.enrollments(student_id);
 create index if not exists idx_classes_code on public.classes(code);

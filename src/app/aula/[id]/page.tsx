@@ -8,7 +8,7 @@ import Icon3D from '@/frontend/components/ui/Icon3D'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
 import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
-import { getClass, loadClasses, subscribeClasses, setProjectMode, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
+import { getClass, loadClasses, subscribeClasses, setProjectMode, setGroupFormation, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import {
   getGroups,
   createGroup,
@@ -18,6 +18,7 @@ import {
   deleteGroups,
   setGroupsArchived,
   assignStudent,
+  joinGroup,
   setLeader,
   setGroupProject,
   randomAssignProjects,
@@ -89,6 +90,7 @@ function Aula({ id }: { id: string }) {
   const [groupPage, setGroupPage] = useState(0) // página de la lista de grupos
   const [rosterSearch, setRosterSearch] = useState('') // buscar operadores por nombre
   const [rosterPage, setRosterPage] = useState(0) // página de la lista de operadores
+  const [joinMsg, setJoinMsg] = useState('') // aviso al intentar unirse a un grupo
 
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -269,6 +271,14 @@ function Aula({ id }: { id: string }) {
   const rosterPageCount = Math.max(1, Math.ceil(filteredRoster.length / ROSTER_PER_PAGE))
   const rPage = Math.min(rosterPage, rosterPageCount - 1)
   const pagedRoster = filteredRoster.slice(rPage * ROSTER_PER_PAGE, rPage * ROSTER_PER_PAGE + ROSTER_PER_PAGE)
+
+  // Auto-inscripción: el estudiante sin grupo debe elegir escuadrón (modo "open")
+  const needsToPickGroup = !isTeacher && klass.groupFormation === 'open' && !groupOf(id, me)
+  async function handleJoinGroup(gid: string) {
+    setJoinMsg('')
+    const err = await joinGroup(id, gid)
+    if (err) setJoinMsg(err)
+  }
 
   function submit() {
     if (!draft.trim()) return
@@ -464,6 +474,40 @@ function Aula({ id }: { id: string }) {
                   </div>
                   <button onClick={() => setCreating(true)} className="neo-btn text-sm">+ Nuevo grupo</button>
                 </div>
+              </div>
+
+              {/* Formación de grupos: quién forma los equipos + cupo */}
+              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-black/20 px-4 py-3">
+                <span className="neo-label flex-shrink-0">Formación de grupos</span>
+                <div className="w-64">
+                  <NeoSelect
+                    value={klass.groupFormation}
+                    onChange={(v) => setGroupFormation(id, v as 'assigned' | 'open', klass.maxTeamSize)}
+                    options={[
+                      { value: 'assigned', label: 'El catedrático asigna' },
+                      { value: 'open', label: 'Auto-inscripción (los alumnos eligen)' },
+                    ]}
+                  />
+                </div>
+                {klass.groupFormation === 'open' && (
+                  <label className="flex items-center gap-2 text-xs text-neutral-400">
+                    Cupo por grupo
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      key={klass.maxTeamSize}
+                      defaultValue={klass.maxTeamSize}
+                      onBlur={(e) => setGroupFormation(id, 'open', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="neo-input !w-16 !py-1 text-center text-sm"
+                    />
+                  </label>
+                )}
+                <span className="text-xs text-neutral-500">
+                  {klass.groupFormation === 'open'
+                    ? 'Los estudiantes eligen su grupo y quedan bloqueados al unirse.'
+                    : 'Tú decides en qué grupo va cada estudiante.'}
+                </span>
               </div>
 
               {/* Barra de acciones en lote (aparece al seleccionar) */}
@@ -746,7 +790,66 @@ function Aula({ id }: { id: string }) {
               </div>
             )}
 
-            {activeGroup && !canViewGroup ? (
+            {active === 'general' && needsToPickGroup ? (
+              /* ── AUTO-INSCRIPCIÓN: el estudiante elige su escuadrón ── */
+              <div className="neo-aula-body neo-aula-scroll">
+                <div className="mx-auto w-full max-w-[1500px] space-y-7 px-2 py-8">
+                  <div className="neo-squad-title text-center">
+                    <h3 className="text-3xl font-extrabold tracking-tight text-white">Elige tu escuadrón</h3>
+                    <p className="mx-auto mt-2 max-w-xl text-sm text-neutral-400">
+                      Únete a un grupo para trabajar. Al unirte quedas fijo — si necesitas cambiar, pídelo al catedrático.
+                    </p>
+                  </div>
+                  {joinMsg && (
+                    <p className="mx-auto max-w-md rounded-lg bg-red-500/10 px-3 py-2 text-center text-sm text-red-400">{joinMsg}</p>
+                  )}
+                  {visibleGroups.length === 0 ? (
+                    <p className="text-center text-sm text-neutral-500">Aún no hay grupos. Espera a que el catedrático los cree.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                      {visibleGroups.map((g, gi) => {
+                        const full = g.members.length >= klass.maxTeamSize
+                        return (
+                          <div
+                            key={g.id}
+                            className="neo-squad-card group relative flex flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-5 text-center transition duration-200 hover:-translate-y-1.5"
+                            style={{ animationDelay: `${Math.min(gi * 55, 620)}ms`, boxShadow: `0 14px 36px -16px ${g.color}88` }}
+                          >
+                            <span className="absolute inset-x-0 top-0 h-1" style={{ background: g.color }} />
+                            <div className="relative mt-1">
+                              <span
+                                className="neo-squad-glow absolute -inset-3 rounded-full blur-xl"
+                                style={{ background: g.color }}
+                              />
+                              <Icon3D src={g.icon} alt="" size={56} fallback="◆" />
+                            </div>
+                            <p className="text-base font-bold text-white">{g.name}</p>
+                            <div className="flex items-center justify-center gap-1">
+                              {Array.from({ length: klass.maxTeamSize }).map((_, k) => (
+                                <span
+                                  key={k}
+                                  className="h-1.5 w-4 rounded-full"
+                                  style={{ background: k < g.members.length ? g.color : 'rgba(255,255,255,0.12)' }}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-[11px] text-neutral-500">{g.members.length}/{klass.maxTeamSize} integrantes</p>
+                            <button
+                              onClick={() => handleJoinGroup(g.id)}
+                              disabled={full}
+                              className="mt-1 w-full rounded-xl py-2.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                              style={{ background: full ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${g.color}, ${g.color}bb)` }}
+                            >
+                              {full ? 'LLENO' : 'Unirme'}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : activeGroup && !canViewGroup ? (
               /* ── ESCUADRÓN PRIVADO: no eres integrante ── */
               <div className="neo-aula-body neo-aula-scroll">
                 <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 py-16 text-center text-neutral-500">
@@ -1261,11 +1364,13 @@ const PROJECT_MODE_LABELS: Record<string, string> = {
   assigned: 'El catedrático asigna',
   catalog: 'Los estudiantes eligen de la lista',
   proposal: 'Los estudiantes crean el suyo',
+  mixed: 'Mixto: elegir o proponer',
 }
 const PROJECT_MODE_HELP: Record<string, string> = {
   assigned: 'Tú decides qué proyecto trabaja cada grupo (manualmente o al azar).',
   catalog: 'Cada grupo elige uno de los proyectos que publicaste en la clase.',
   proposal: 'Cada grupo propone y define su propio proyecto en su pestaña Proyecto.',
+  mixed: 'Cada grupo elige uno de tus proyectos O propone el suyo, desde su pestaña Proyecto.',
 }
 
 /** Panel del catedrático: modalidad de selección de proyecto + asignación por grupo. */
@@ -1295,11 +1400,12 @@ function TeacherProjectPanel({
           <div className="w-60">
             <NeoSelect
               value={mode}
-              onChange={(v) => setProjectMode(classId, v as 'assigned' | 'catalog' | 'proposal')}
+              onChange={(v) => setProjectMode(classId, v as 'assigned' | 'catalog' | 'proposal' | 'mixed')}
               options={[
                 { value: 'assigned', label: PROJECT_MODE_LABELS.assigned },
                 { value: 'catalog', label: PROJECT_MODE_LABELS.catalog },
                 { value: 'proposal', label: PROJECT_MODE_LABELS.proposal },
+                { value: 'mixed', label: PROJECT_MODE_LABELS.mixed },
               ]}
             />
           </div>
@@ -1311,7 +1417,7 @@ function TeacherProjectPanel({
         <p className="rounded-xl bg-black/20 px-4 py-3 text-xs text-neutral-400">
           En esta modalidad cada grupo define su propio proyecto desde su pestaña <span className="text-neutral-200">Proyecto</span>.
         </p>
-      ) : projects.length === 0 ? (
+      ) : projects.length === 0 && mode !== 'mixed' ? (
         <div className="flex flex-col items-start gap-3 rounded-xl bg-black/20 px-4 py-3">
           <p className="text-xs text-neutral-400">
             Aún no hay proyectos en la clase. Créalos primero para poder asignarlos a los grupos.
@@ -1335,7 +1441,9 @@ function TeacherProjectPanel({
         </div>
       ) : (
         <p className="rounded-xl bg-black/20 px-4 py-3 text-xs text-neutral-400">
-          Los grupos eligen su proyecto del catálogo desde su pestaña <span className="text-neutral-200">Proyecto</span>. Verás lo elegido en cada tarjeta, arriba.
+          {mode === 'mixed'
+            ? 'Cada grupo elige uno de tus proyectos O propone el suyo, desde su pestaña Proyecto. Verás lo elegido en cada tarjeta, arriba.'
+            : 'Los grupos eligen su proyecto del catálogo desde su pestaña Proyecto. Verás lo elegido en cada tarjeta, arriba.'}
         </p>
       )}
     </div>
@@ -1529,29 +1637,64 @@ function GroupProjectPanel({
                     </div>
                   )}
                 </div>
+                {assigned.requirements?.trim() && (
+                  <div className="rounded-xl border border-accent-violet/20 bg-black/15 p-3">
+                    <p className="neo-label mb-1 text-accent-violet">Requisitos</p>
+                    <p className="whitespace-pre-line text-xs leading-relaxed text-neutral-300">{assigned.requirements}</p>
+                  </div>
+                )}
                 {assigned.dueDate && (
                   <p className="text-xs text-neutral-500">Entrega: <span className="text-neutral-300">{assigned.dueDate}</span></p>
                 )}
+                {assigned.briefUrl?.trim() && (
+                  <a
+                    href={safeHref(assigned.briefUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="neo-btn w-fit text-xs"
+                  >
+                    Ver enunciado (PDF) ↗
+                  </a>
+                )}
               </>
-            ) : mode === 'catalog' ? (
+            ) : mode === 'catalog' || mode === 'mixed' ? (
               canEdit ? (
                 projects.length === 0 ? (
-                  <p className="text-sm text-neutral-500">El catedrático aún no ha publicado proyectos para elegir.</p>
+                  <p className="text-sm text-neutral-500">
+                    {mode === 'mixed'
+                      ? 'No hay proyectos en el catálogo. Propongan el suyo llenando “Nuestra entrega” abajo.'
+                      : 'El catedrático aún no ha publicado proyectos para elegir.'}
+                  </p>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-sm text-neutral-400">Elijan el proyecto en el que trabajará el equipo:</p>
+                    <p className="text-sm text-neutral-400">
+                      {mode === 'mixed'
+                        ? 'Elijan uno de estos proyectos, o propongan el suyo llenando “Nuestra entrega” abajo:'
+                        : 'Elijan el proyecto en el que trabajará el equipo:'}
+                    </p>
                     {projects.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => setGroupProject(group.classId, group.id, p.id)}
-                        className="neo-panel neo-panel--hover flex w-full items-start justify-between gap-3 p-3.5 text-left"
-                      >
+                      <div key={p.id} className="neo-panel flex w-full items-start justify-between gap-3 p-3.5">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-neutral-100">{p.title}</p>
                           {p.description.trim() && <p className="line-clamp-2 text-xs text-neutral-500">{p.description}</p>}
+                          {p.briefUrl?.trim() && (
+                            <a
+                              href={safeHref(p.briefUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1.5 inline-block text-xs text-accent-violet hover:text-accent-violetBright"
+                            >
+                              Ver enunciado (PDF) ↗
+                            </a>
+                          )}
                         </div>
-                        <span className="flex-shrink-0 text-xs text-accent-violet">Elegir</span>
-                      </button>
+                        <button
+                          onClick={() => setGroupProject(group.classId, group.id, p.id)}
+                          className="neo-btn flex-shrink-0 text-xs"
+                        >
+                          Elegir
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )
@@ -1573,7 +1716,7 @@ function GroupProjectPanel({
                 </p>
               </div>
             )}
-            {assigned && canEdit && mode === 'catalog' && (
+            {assigned && canEdit && (mode === 'catalog' || mode === 'mixed') && (
               <button onClick={() => setGroupProject(group.classId, group.id, null)} className="text-xs text-neutral-500 hover:text-accent-violet">
                 Cambiar proyecto
               </button>

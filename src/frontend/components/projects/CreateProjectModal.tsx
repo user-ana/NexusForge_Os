@@ -20,11 +20,12 @@ type Draft = {
   leaderMode: LeaderMode
   parcial: ParcialCode
   briefUrl: string
+  requirements: string
   rubric: RubricItem[]
 }
 const EMPTY: Draft = {
   title: '', description: '', objectives: '', deliverables: '', dueDate: '',
-  teamSize: 4, groupMode: 'open', leaderMode: 'first', parcial: '', briefUrl: '', rubric: [{ criterion: '', points: 0 }],
+  teamSize: 4, groupMode: 'open', leaderMode: 'first', parcial: '', briefUrl: '', requirements: '', rubric: [{ criterion: '', points: 0 }],
 }
 
 type BriefMode = 'pdf' | 'link' | 'text'
@@ -107,6 +108,7 @@ export default function CreateProjectModal({
       leaderMode: d.leaderMode,
       parcial: d.parcial,
       briefUrl: d.briefUrl.trim(),
+      requirements: d.requirements.trim(),
     })
     setSaving(false)
     if (created) {
@@ -231,6 +233,16 @@ export default function CreateProjectModal({
                 <textarea rows={3} value={d.deliverables} onChange={(e) => setD({ ...d, deliverables: nfc(e.target.value) })} className="neo-input w-full resize-none" />
               </Field>
             </div>
+
+            <Field label={t('proj.requirements')}>
+              <textarea
+                rows={2}
+                value={d.requirements}
+                onChange={(e) => setD({ ...d, requirements: nfc(e.target.value) })}
+                placeholder={t('proj.requirements_ph')}
+                className="neo-input w-full resize-none"
+              />
+            </Field>
 
             {/* Rúbrica */}
             <Field label={t('proj.rubric')}>

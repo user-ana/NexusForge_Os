@@ -235,6 +235,8 @@ const es: Dict = {
   'proj.brief_upload_err': 'No se pudo subir. ¿Ya creaste el bucket "project-briefs" en Supabase?',
   'proj.more_details': 'Más detalles (opcional)',
   'proj.title_required': 'Escribe un título para el proyecto.',
+  'proj.requirements': 'Requisitos',
+  'proj.requirements_ph': 'Qué debe cumplir el proyecto (ej. basado en servidor web). App o web, da igual, mientras cumpla.',
   // Vista por Períodos
   'per.title': 'Vista por Períodos',
   'per.sub': 'Tus proyectos organizados por parcial',
@@ -510,6 +512,8 @@ const en: Dict = {
   'proj.brief_upload_err': 'Upload failed. Did you create the "project-briefs" bucket in Supabase?',
   'proj.more_details': 'More details (optional)',
   'proj.title_required': 'Enter a title for the project.',
+  'proj.requirements': 'Requirements',
+  'proj.requirements_ph': 'What the project must meet (e.g. web-server based). App or web, as long as it complies.',
   // Periods View
   'per.title': 'Periods View',
   'per.sub': 'Your projects organized by term',

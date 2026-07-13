@@ -74,6 +74,13 @@ export default function ProjectDetailPage({ params }: { params: { id: string; pi
               </div>
             </div>
 
+            {project.requirements?.trim() && (
+              <div className="neo-panel border border-accent-violet/20 p-6">
+                <p className="neo-label mb-3 text-accent-violet">{t('proj.requirements')}</p>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-200">{project.requirements}</p>
+              </div>
+            )}
+
             {/* Rúbrica */}
             <div className="neo-panel p-6">
               <div className="mb-3 flex items-center justify-between">

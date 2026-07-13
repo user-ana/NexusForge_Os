@@ -7,8 +7,9 @@ import { supabase } from '@/backend/supabase'
 import { getSession } from '@/frontend/session/session'
 
 export type GroupMode = 'open' | 'assign' | 'hybrid'
-export type ProjectMode = 'assigned' | 'catalog' | 'proposal'
+export type ProjectMode = 'assigned' | 'catalog' | 'proposal' | 'mixed'
 export type LeaderMode = 'teacher' | 'group' | 'first'
+export type GroupFormation = 'assigned' | 'open' // cómo se forman los grupos
 
 export type Klass = {
   id: string
@@ -22,6 +23,8 @@ export type Klass = {
   students: string[] // nombres de los inscritos
   roster: { id: string; name: string }[] // inscritos con uuid (para asignar grupos)
   projectMode: ProjectMode // cómo se reparten los proyectos entre grupos
+  groupFormation: GroupFormation // el profe asigna vs auto-inscripción
+  maxTeamSize: number // cupo de integrantes por grupo (auto-inscripción)
   createdAt: number
 }
 
@@ -111,6 +114,8 @@ export async function loadClasses(): Promise<void> {
         students: roster.map((x) => x.name),
         roster,
         projectMode: (r.project_mode ?? 'catalog') as ProjectMode,
+        groupFormation: (r.group_formation ?? 'assigned') as GroupFormation,
+        maxTeamSize: r.max_team_size ?? 5,
         createdAt: r.created_at ? new Date(r.created_at).getTime() : 0,
       } as Klass
     })
@@ -174,6 +179,16 @@ export async function joinByCode(code: string): Promise<Klass | null> {
 export async function setProjectMode(classId: string, mode: ProjectMode): Promise<void> {
   if (!supabase) return
   await supabase.from('classes').update({ project_mode: mode }).eq('id', classId)
+  await loadClasses()
+}
+
+/** Cambia el modo de formación de grupos y el cupo por grupo (solo el catedrático). */
+export async function setGroupFormation(classId: string, formation: GroupFormation, maxTeamSize: number): Promise<void> {
+  if (!supabase) return
+  await supabase
+    .from('classes')
+    .update({ group_formation: formation, max_team_size: Math.max(1, maxTeamSize) })
+    .eq('id', classId)
   await loadClasses()
 }
 

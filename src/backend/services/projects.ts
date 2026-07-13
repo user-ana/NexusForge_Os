@@ -22,6 +22,7 @@ export type Project = {
   leaderMode: LeaderMode
   parcial: ParcialCode
   briefUrl: string
+  requirements: string
   createdAt: number
 }
 
@@ -48,6 +49,7 @@ function mapRow(row: any): Project {
     leaderMode: (row.leader_mode ?? 'first') as LeaderMode,
     parcial: (row.parcial ?? '') as ParcialCode,
     briefUrl: row.brief_url ?? '',
+    requirements: row.requirements ?? '',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
   }
 }
@@ -99,6 +101,7 @@ export async function createProject(input: Omit<Project, 'id' | 'createdAt'>): P
       leader_mode: input.leaderMode,
       parcial: input.parcial,
       brief_url: input.briefUrl,
+      requirements: input.requirements,
     })
     .select('*')
     .single()
