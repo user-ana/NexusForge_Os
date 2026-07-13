@@ -862,7 +862,7 @@ function Aula({ id }: { id: string }) {
               </div>
             ) : activeGroup && tab === 'board' ? (
               /* ── TABLERO KANBAN del escuadrón ── */
-              <GroupBoard group={activeGroup} canEdit={canPost} />
+              <GroupBoard group={activeGroup} canEdit={activeGroup.members.includes(me)} />
             ) : activeGroup && tab === 'project' ? (
               /* ── PROYECTO (showcase) del escuadrón ── */
               <GroupProjectPanel
