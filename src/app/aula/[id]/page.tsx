@@ -867,7 +867,7 @@ function Aula({ id }: { id: string }) {
               /* ── PROYECTO (showcase) del escuadrón ── */
               <GroupProjectPanel
                 group={activeGroup}
-                canEdit={activeGroup.members.includes(me) || isTeacher}
+                canEdit={activeGroup.members.includes(me)}
                 isTeacher={isTeacher}
                 mode={klass.projectMode}
                 projects={projects}
@@ -1613,6 +1613,13 @@ function GroupProjectPanel({
   return (
     <div className="neo-aula-body neo-aula-scroll">
       <div className="mx-auto w-full max-w-2xl space-y-5 p-1">
+        {isTeacher && (
+          <div className="flex items-center gap-2 rounded-xl border border-accent-violet/20 bg-accent-violet/5 px-4 py-2.5 text-xs text-neutral-400">
+            <ClipboardIcon size={15} />
+            Vista de catedrático: supervisas y evalúas la entrega del grupo (no la editas).
+          </div>
+        )}
+
         {/* ── Enunciado asignado (según la modalidad de la clase) ── */}
         {mode !== 'proposal' && (
           <div className="neo-panel space-y-3 p-5">
