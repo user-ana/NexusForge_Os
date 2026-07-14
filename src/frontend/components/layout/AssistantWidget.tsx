@@ -8,6 +8,7 @@ import { getSession, SESSION_EVENT, type Role } from '@/frontend/session/session
 import {
   searchStudents,
   getAssistantOverview,
+  getAssistantContext,
   type StudentDossier,
   type AssistantOverview,
   type QuickStudent,
@@ -16,6 +17,7 @@ import {
 
 type Entry =
   | { kind: 'query'; text: string }
+  | { kind: 'ai'; text: string }
   | { kind: 'result'; query: string; dossiers: StudentDossier[] }
   | { kind: 'quick'; label: string; color: string; students?: QuickStudent[]; groups?: QuickGroup[] }
 
@@ -34,6 +36,7 @@ export default function AssistantWidget() {
   const [loading, setLoading] = useState(false)
   const [entries, setEntries] = useState<Entry[]>([])
   const [ov, setOv] = useState<AssistantOverview | null>(null)
+  const [ctx, setCtx] = useState<string | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -54,6 +57,11 @@ export default function AssistantWidget() {
     if (open && meId && !ov) getAssistantOverview(meId).then(setOv)
   }, [open, meId, ov])
 
+  // Precarga el contexto (resumen de clases) para la IA
+  useEffect(() => {
+    if (open && meId && ctx == null) getAssistantContext(meId).then(setCtx)
+  }, [open, meId, ctx])
+
   useEffect(() => {
     if (open && entries.length) endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [entries, loading, open])
@@ -68,9 +76,28 @@ export default function AssistantWidget() {
     setInput('')
     setEntries((e) => [...e, { kind: 'query', text: q }])
     setLoading(true)
-    const dossiers = await searchStudents(meId, q)
-    setLoading(false)
-    setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
+    try {
+      // 1) Intentar con la IA (Llama vía Ollama), usando el resumen de clases
+      const context = ctx ?? (await getAssistantContext(meId))
+      if (ctx == null) setCtx(context)
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, context }),
+      })
+      const data = await res.json()
+      if (res.ok && data.answer) {
+        setEntries((e) => [...e, { kind: 'ai', text: data.answer }])
+        setLoading(false)
+        return
+      }
+      throw new Error(data.error || 'IA no disponible')
+    } catch {
+      // 2) Si la IA no está disponible, caer a la búsqueda estructurada por nombre
+      const dossiers = await searchStudents(meId, q)
+      setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
+      setLoading(false)
+    }
   }
 
   function pushQuick(label: string, color: string, students?: QuickStudent[], groups?: QuickGroup[]) {
@@ -116,8 +143,8 @@ export default function AssistantWidget() {
                 <div className="neo-a-in flex flex-col items-center gap-4">
                   <div className="neo-ai-hero-icon"><Spark /></div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">¿A quién buscamos hoy?</h3>
-                    <p className="mt-1 text-sm text-neutral-400">Escribe un nombre o usa una acción rápida.</p>
+                    <h3 className="text-xl font-bold text-white">¿En qué te ayudo hoy?</h3>
+                    <p className="mt-1 text-sm text-neutral-400">Pregúntame lo que sea sobre tus clases, o usa una acción rápida.</p>
                   </div>
                 </div>
 
@@ -241,6 +268,18 @@ function EntryView({ e, t }: { e: Entry; t: (k: string) => string }) {
     return (
       <div className="flex justify-end">
         <span className="rounded-2xl rounded-tr-sm bg-accent-violet px-3.5 py-2 text-sm text-white">{e.text}</span>
+      </div>
+    )
+  }
+  if (e.kind === 'ai') {
+    return (
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-accent-violet" style={{ background: 'rgba(167,139,250,0.14)' }}>
+          <Spark />
+        </span>
+        <div className="min-w-0 flex-1 whitespace-pre-line rounded-2xl rounded-tl-sm border border-white/8 bg-white/[0.03] px-3.5 py-2.5 text-sm leading-relaxed text-neutral-200">
+          {e.text}
+        </div>
       </div>
     )
   }

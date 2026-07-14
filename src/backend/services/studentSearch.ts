@@ -144,6 +144,97 @@ export async function getAssistantOverview(teacherId: string): Promise<Assistant
 }
 
 /**
+ * Resumen de texto de TODA la clase del catedrático, para dárselo como contexto
+ * al LLM (RAG). Compacto pero completo: clases, estudiantes y grupos con su estado.
+ */
+export async function getAssistantContext(teacherId: string): Promise<string> {
+  if (!supabase) return ''
+  const { data: classes } = await supabase.from('classes').select('id, name, section, code').eq('teacher_id', teacherId)
+  const classIds = (classes ?? []).map((c: any) => c.id)
+  if (!classIds.length) return 'El catedrático no tiene clases todavía.'
+  const classById = new Map<string, any>((classes ?? []).map((c: any) => [c.id, c]))
+
+  const [enrRes, groupsRes] = await Promise.all([
+    supabase.from('enrollments').select('class_id, student_id').in('class_id', classIds),
+    supabase.from('class_groups').select('id, class_id, name, project_id, leader_id, group_members(student_id)').in('class_id', classIds),
+  ])
+  const enr = enrRes.data ?? []
+  const groups = groupsRes.data ?? []
+  const studentIds = Array.from(new Set(enr.map((e: any) => e.student_id)))
+
+  const profById = new Map<string, any>()
+  if (studentIds.length) {
+    const { data: profs } = await supabase.from('profiles').select('id, full_name, username, email, career, account_number').in('id', studentIds)
+    ;(profs ?? []).forEach((p: any) => profById.set(p.id, p))
+  }
+  const projIds = Array.from(new Set(groups.map((g: any) => g.project_id).filter(Boolean)))
+  const projById = new Map<string, any>()
+  if (projIds.length) {
+    const { data: projs } = await supabase.from('projects').select('id, title').in('id', projIds)
+    ;(projs ?? []).forEach((p: any) => projById.set(p.id, p))
+  }
+  const groupIds = groups.map((g: any) => g.id)
+  const [gpRes, geRes, kanRes] = await Promise.all([
+    groupIds.length ? supabase.from('group_projects').select('group_id, title, repo_url, deploy_url, video_url').in('group_id', groupIds) : Promise.resolve({ data: [] as any[] }),
+    groupIds.length ? supabase.from('group_evaluations').select('group_id, grade, max_points').in('group_id', groupIds) : Promise.resolve({ data: [] as any[] }),
+    groupIds.length ? supabase.from('kanban_tasks').select('group_id, col').in('group_id', groupIds) : Promise.resolve({ data: [] as any[] }),
+  ])
+  const gpByGroup = new Map<string, any>((gpRes.data ?? []).map((r: any) => [r.group_id, r]))
+  const geByGroup = new Map<string, any>((geRes.data ?? []).map((r: any) => [r.group_id, r]))
+  const taskCount = new Map<string, { pend: number; done: number; total: number }>()
+  ;(kanRes.data ?? []).forEach((t: any) => {
+    const a = taskCount.get(t.group_id) ?? { pend: 0, done: 0, total: 0 }
+    a.total++
+    if (t.col === 'done') a.done++
+    else a.pend++
+    taskCount.set(t.group_id, a)
+  })
+
+  function groupOfStudent(sid: string, cid: string): any | undefined {
+    return groups.find((g: any) => g.class_id === cid && (g.group_members ?? []).some((m: any) => m.student_id === sid))
+  }
+  function hasSubmission(g: any): boolean {
+    const gp = gpByGroup.get(g.id)
+    return !!gp && !!((gp.title ?? '').trim() || (gp.repo_url ?? '').trim() || (gp.deploy_url ?? '').trim() || (gp.video_url ?? '').trim())
+  }
+
+  const lines: string[] = ['CLASES:']
+  ;(classes ?? []).forEach((c: any) => {
+    const gc = groups.filter((g: any) => g.class_id === c.id).length
+    const sc = enr.filter((e: any) => e.class_id === c.id).length
+    lines.push(`- ${c.name}${c.section ? ` (${c.section})` : ''} [código ${c.code}]: ${sc} estudiantes, ${gc} grupos`)
+  })
+
+  lines.push('', 'ESTUDIANTES:')
+  const seen = new Set<string>()
+  enr.forEach((e: any) => {
+    const key = `${e.student_id}|${e.class_id}`
+    if (seen.has(key)) return
+    seen.add(key)
+    const p = profById.get(e.student_id)
+    const name = p?.full_name || p?.username || p?.email || 'Estudiante'
+    const c = classById.get(e.class_id)
+    const g = groupOfStudent(e.student_id, e.class_id)
+    const proj = g?.project_id ? projById.get(g.project_id)?.title : null
+    const ge = g ? geByGroup.get(g.id) : null
+    const grade = ge?.grade != null ? `${ge.grade}${ge.max_points != null ? `/${ge.max_points}` : ''}` : 'sin calificar'
+    lines.push(`- ${name}${p?.career ? ` (${p.career})` : ''} | clase ${c?.name} | grupo ${g ? g.name + (g.leader_id === e.student_id ? ' (líder)' : '') : 'SIN GRUPO'} | proyecto ${proj || 'ninguno'} | nota ${grade}`)
+  })
+
+  lines.push('', 'GRUPOS:')
+  groups.forEach((g: any) => {
+    const c = classById.get(g.class_id)
+    const proj = g.project_id ? projById.get(g.project_id)?.title : null
+    const ge = geByGroup.get(g.id)
+    const grade = ge?.grade != null ? `${ge.grade}` : 'sin calificar'
+    const tc = taskCount.get(g.id)
+    lines.push(`- ${g.name} (clase ${c?.name}): proyecto ${proj || 'ninguno'}, ${(g.group_members ?? []).length} integrantes, entrega ${hasSubmission(g) ? 'sí' : 'no'}, nota ${grade}${tc ? `, tareas ${tc.done}/${tc.total} hechas` : ''}`)
+  })
+
+  return lines.join('\n')
+}
+
+/**
  * Busca estudiantes por nombre (o número de cuenta) dentro de las clases del
  * catedrático y devuelve su expediente completo por clase.
  */
