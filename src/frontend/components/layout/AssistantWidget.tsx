@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { useT } from '@/frontend/hooks/useT'
-import { getSession, SESSION_EVENT, type Role } from '@/frontend/session/session'
+import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
+import { getClasses, loadClasses, createClass, deleteClass } from '@/backend/services/classes'
+import { createGroupsBulk, GROUP_ICONS } from '@/backend/services/classGroups'
+import { createProject } from '@/backend/services/projects'
+import { type ParcialCode } from '@/shared/parciales'
 import {
   searchStudents,
   getAssistantOverview,
@@ -15,11 +19,32 @@ import {
   type QuickGroup,
 } from '@/backend/services/studentSearch'
 
+type ToolCall = { name: string; args: Record<string, unknown> }
+type ActionStatus = 'pending' | 'running' | 'done' | 'cancelled' | 'error'
+
 type Entry =
   | { kind: 'query'; text: string }
   | { kind: 'ai'; text: string }
   | { kind: 'result'; query: string; dossiers: StudentDossier[] }
   | { kind: 'quick'; label: string; color: string; students?: QuickStudent[]; groups?: QuickGroup[] }
+  | { kind: 'action'; toolCall: ToolCall; status: ActionStatus; message?: string; warning?: string }
+
+type Chat = { id: string; title: string; entries: Entry[]; at: number }
+const CHATS_KEY = 'nf_assistant_chats'
+function loadChats(): Chat[] {
+  try {
+    return JSON.parse(localStorage.getItem(CHATS_KEY) || '[]') as Chat[]
+  } catch {
+    return []
+  }
+}
+function saveChats(chats: Chat[]) {
+  try {
+    localStorage.setItem(CHATS_KEY, JSON.stringify(chats.slice(0, 20)))
+  } catch {
+    /* almacenamiento no disponible */
+  }
+}
 
 /**
  * Asistente flotante (catedrático): orbe que despliega un panel con saludo hero,
@@ -37,10 +62,38 @@ export default function AssistantWidget() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [ov, setOv] = useState<AssistantOverview | null>(null)
   const [ctx, setCtx] = useState<string | null>(null)
+  const [pending, setPending] = useState<{ toolCall: ToolCall; field: string } | null>(null)
+  const [chats, setChats] = useState<Chat[]>([])
+  const [activeId, setActiveId] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => setMounted(true), [])
+
+  // Cargar el historial de conversaciones al montar
+  useEffect(() => {
+    const c = loadChats()
+    setChats(c)
+    if (c.length) {
+      setActiveId(c[0].id)
+      setEntries(c[0].entries)
+    } else {
+      setActiveId(crypto.randomUUID())
+    }
+  }, [])
+
+  // Guardar la conversación activa cuando cambia (si tiene contenido)
+  useEffect(() => {
+    if (!activeId || entries.length === 0) return
+    const first = entries.find((e) => e.kind === 'query') as { text?: string } | undefined
+    const title = first?.text?.slice(0, 44) || 'Conversación'
+    setChats((prev) => {
+      const next = [{ id: activeId, title, entries, at: Date.now() }, ...prev.filter((c) => c.id !== activeId)]
+      saveChats(next)
+      return next
+    })
+  }, [entries, activeId])
 
   useEffect(() => {
     const sync = () => {
@@ -75,9 +128,22 @@ export default function AssistantWidget() {
     if (!q || loading || !meId) return
     setInput('')
     setEntries((e) => [...e, { kind: 'query', text: q }])
+    const fullUserText = [...entries.flatMap((e) => (e.kind === 'query' ? [e.text] : [])), q].join(' ')
+
+    // Si la app dejó un dato pendiente, usamos la respuesta DIRECTA (sin depender de la IA)
+    if (pending) {
+      const tc: ToolCall = { name: pending.toolCall.name, args: { ...pending.toolCall.args } }
+      tc.args[pending.field] = pending.field === 'cantidad' ? Number(q.match(/\d+/)?.[0]) || 0 : q
+      proceedWithAction(tc, fullUserText)
+      return
+    }
+
     setLoading(true)
     try {
-      // 1) Intentar con la IA (Llama vía Ollama), usando el resumen de clases
+      // Intentar con la IA (Llama vía Ollama), usando el resumen de clases.
+      // NO enviamos historial: cada comando es independiente (el modelo chico se
+      // confunde si arrastra comandos anteriores). La conversación multi-turno la
+      // maneja el flujo determinista de "pending", no el modelo.
       const context = ctx ?? (await getAssistantContext(meId))
       if (ctx == null) setCtx(context)
       const res = await fetch('/api/assistant', {
@@ -86,6 +152,11 @@ export default function AssistantWidget() {
         body: JSON.stringify({ question: q, context }),
       })
       const data = await res.json()
+      if (res.ok && data.toolCall) {
+        setLoading(false)
+        proceedWithAction(correctTool(data.toolCall as ToolCall, q), fullUserText)
+        return
+      }
       if (res.ok && data.answer) {
         setEntries((e) => [...e, { kind: 'ai', text: data.answer }])
         setLoading(false)
@@ -93,15 +164,137 @@ export default function AssistantWidget() {
       }
       throw new Error(data.error || 'IA no disponible')
     } catch {
-      // 2) Si la IA no está disponible, caer a la búsqueda estructurada por nombre
+      // Si la IA no está disponible, caer a la búsqueda estructurada por nombre
       const dossiers = await searchStudents(meId, q)
       setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
       setLoading(false)
     }
   }
 
+  // Valida la acción: si falta un dato, lo pregunta (queda pendiente); si está completa, muestra la confirmación.
+  function proceedWithAction(tc: ToolCall, userText: string) {
+    const missing = nextMissing(tc, userText)
+    if (missing) {
+      setEntries((e) => [...e, { kind: 'ai', text: missing.question }])
+      setPending({ toolCall: tc, field: missing.field })
+      return
+    }
+    setPending(null)
+    let warning: string | undefined
+    if (tc.name === 'crear_clase') {
+      const n = String(tc.args.nombre ?? '').trim()
+      if (n && findClass(n)) warning = `Ya existe una clase parecida a «${n}». ¿Seguro que quieres otra?`
+    } else if (tc.name === 'crear_grupos' || tc.name === 'crear_proyecto') {
+      const c = String(tc.args.clase ?? '').trim()
+      if (c && !findClass(c)) warning = `No encuentro una clase llamada «${c}». Revisa el nombre o créala primero.`
+    } else if (tc.name === 'eliminar_clase') {
+      const c = String(tc.args.clase ?? '').trim()
+      if (c && !findClass(c)) warning = `No encuentro una clase llamada «${c}».`
+    }
+    setEntries((e) => [...e, { kind: 'action', toolCall: tc, status: 'pending', warning }])
+  }
+
   function pushQuick(label: string, color: string, students?: QuickStudent[], groups?: QuickGroup[]) {
     setEntries((e) => [...e, { kind: 'quick', label, color, students, groups }])
+  }
+
+  function newChat() {
+    setEntries([])
+    setPending(null)
+    setActiveId(crypto.randomUUID())
+    setShowHistory(false)
+  }
+  function openChat(c: Chat) {
+    setActiveId(c.id)
+    setEntries(c.entries)
+    setPending(null)
+    setShowHistory(false)
+  }
+
+  function updateAction(i: number, patch: Partial<Extract<Entry, { kind: 'action' }>>) {
+    setEntries((es) => es.map((e, idx) => (idx === i && e.kind === 'action' ? { ...e, ...patch } : e)))
+  }
+
+  function findClass(name: string) {
+    const q = name.trim().toLowerCase()
+    if (!q) return undefined
+    return getClasses()
+      .filter((c) => c.teacher === meId)
+      .find((c) => c.name.toLowerCase().includes(q) || q.includes(c.name.toLowerCase()))
+  }
+
+  // Ejecuta la acción que pidió la IA, del lado del cliente (con los permisos del profe).
+  async function executeAction(i: number) {
+    const entry = entries[i]
+    if (entry?.kind !== 'action' || entry.status !== 'pending') return
+    updateAction(i, { status: 'running' })
+    const { name, args } = entry.toolCall
+    const teacherName = displayName(getSession())
+    try {
+      let msg = ''
+      if (name === 'crear_clase') {
+        const nombre = String(args.nombre ?? '').trim()
+        const k = await createClass({
+          name: nombre,
+          section: String(args.seccion ?? ''),
+          period: String(args.periodo ?? ''),
+          code: codeFromName(nombre),
+          emblem: GROUP_ICONS[Math.floor(Math.random() * GROUP_ICONS.length)],
+          teacherName,
+        })
+        msg = k ? `Clase «${k.name}» creada (código ${k.code}).` : 'No se pudo crear la clase.'
+      } else if (name === 'crear_grupos') {
+        await loadClasses()
+        const cls = findClass(String(args.clase ?? ''))
+        if (!cls) msg = `No encontré una clase llamada «${args.clase}».`
+        else {
+          const n = Math.max(1, Math.min(30, Number(args.cantidad) || 1))
+          await createGroupsBulk(cls.id, n)
+          msg = `Creé ${n} grupo(s) en «${cls.name}».`
+        }
+      } else if (name === 'crear_proyecto') {
+        await loadClasses()
+        const cls = findClass(String(args.clase ?? ''))
+        if (!cls) msg = `No encontré una clase llamada «${args.clase}».`
+        else {
+          const p = await createProject({
+            classId: cls.id,
+            title: String(args.titulo ?? '').trim(),
+            description: String(args.descripcion ?? ''),
+            objectives: '',
+            deliverables: '',
+            rubric: [],
+            dueDate: '',
+            teamSize: 4,
+            groupMode: 'open',
+            leaderMode: 'first',
+            parcial: normParcial(String(args.parcial ?? '')),
+            briefUrl: '',
+            requirements: '',
+          })
+          msg = p ? `Proyecto «${p.title}» creado en «${cls.name}».` : 'No se pudo crear el proyecto.'
+        }
+      } else if (name === 'eliminar_clase') {
+        await loadClasses()
+        const cls = findClass(String(args.clase ?? ''))
+        if (!cls) msg = `No encontré una clase llamada «${args.clase}».`
+        else {
+          await deleteClass(cls.id)
+          msg = `Clase «${cls.name}» eliminada.`
+        }
+      } else {
+        msg = 'No reconozco esa acción.'
+      }
+      updateAction(i, { status: 'done', message: msg })
+      setOv(null) // refresca el panorama
+      setCtx(null) // y el contexto de la IA
+    } catch {
+      updateAction(i, { status: 'error', message: 'Ocurrió un error al ejecutar la acción.' })
+    }
+  }
+
+  function cancelAction(i: number) {
+    updateAction(i, { status: 'cancelled' })
   }
 
   if (!mounted || role !== 'teacher') return null
@@ -128,16 +321,53 @@ export default function AssistantWidget() {
               <p className="text-[11px] text-neutral-500">{t('search.sub')}</p>
             </div>
             <span className="neo-ia-badge">IA</span>
-            {!home && (
-              <button onClick={() => setEntries([])} className="ml-1 text-xs text-neutral-500 hover:text-accent-violet" title="Inicio">
-                Inicio
-              </button>
-            )}
-            <button onClick={() => setOpen(false)} className="ml-1 text-neutral-500 hover:text-white" aria-label="Cerrar">✕</button>
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className={`ml-1 rounded-lg p-1.5 transition hover:bg-white/5 ${showHistory ? 'text-accent-violet' : 'text-neutral-500 hover:text-neutral-300'}`}
+              title="Historial"
+              aria-label="Historial"
+            >
+              <ClockGlyph />
+            </button>
+            <button
+              onClick={newChat}
+              className="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-300"
+              title="Nuevo chat"
+              aria-label="Nuevo chat"
+            >
+              <PlusGlyph />
+            </button>
+            <button onClick={() => setOpen(false)} className="ml-0.5 text-neutral-500 hover:text-white" aria-label="Cerrar">✕</button>
           </div>
 
           <div className="neo-assistant-body">
-            {home ? (
+            {showHistory ? (
+              /* ── HISTORIAL ── */
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="neo-label">Conversaciones</p>
+                  <button onClick={newChat} className="text-xs text-accent-violet hover:text-accent-violetBright">+ Nuevo</button>
+                </div>
+                {chats.length === 0 ? (
+                  <p className="text-sm text-neutral-500">Aún no hay conversaciones guardadas.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {chats.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => openChat(c)}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
+                          c.id === activeId ? 'border-accent-violet/30 bg-accent-violet/5' : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.05]'
+                        }`}
+                      >
+                        <span className="truncate text-sm text-neutral-200">{c.title}</span>
+                        <span className="flex-shrink-0 text-[11px] text-neutral-500">{fmtDate(c.at)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : home ? (
               /* ── HERO ── */
               <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-6 text-center">
                 <div className="neo-a-in flex flex-col items-center gap-4">
@@ -172,7 +402,13 @@ export default function AssistantWidget() {
             ) : (
               /* ── CONVERSACIÓN ── */
               <>
-                {entries.map((e, i) => <EntryView key={i} e={e} t={t} />)}
+                {entries.map((e, i) =>
+                  e.kind === 'action' ? (
+                    <ActionCard key={i} e={e} onConfirm={() => executeAction(i)} onCancel={() => cancelAction(i)} />
+                  ) : (
+                    <EntryView key={i} e={e} t={t} />
+                  ),
+                )}
                 {loading && (
                   <div className="flex items-center gap-2 text-sm text-neutral-400">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent-violet border-t-transparent" />
@@ -184,7 +420,7 @@ export default function AssistantWidget() {
             )}
           </div>
 
-          {!home && (
+          {!home && !showHistory && (
             <div className="px-4 py-3.5">
               <AssistantInput inputRef={inputRef} value={input} onChange={setInput} onSubmit={submit} disabled={loading} placeholder={t('search.placeholder')} />
             </div>
@@ -296,6 +532,7 @@ function EntryView({ e, t }: { e: Entry; t: (k: string) => string }) {
       </div>
     )
   }
+  if (e.kind !== 'quick') return null
   const items = e.students ?? e.groups ?? []
   return (
     <div className="neo-card-in rounded-xl border border-white/8 bg-white/[0.03] p-4">
@@ -409,6 +646,138 @@ function StudentCard({ d, t }: { d: StudentDossier; t: (k: string) => string }) 
         </div>
       )}
     </div>
+  )
+}
+
+/** ¿Un dato de la acción realmente aparece en el mensaje del catedrático? (evita que la IA invente). */
+function argInQuestion(arg: string, question: string): boolean {
+  const nq = question.toLowerCase()
+  const words = String(arg).toLowerCase().split(/\s+/).filter((w) => w.length > 2)
+  return words.length > 0 && words.some((w) => nq.includes(w))
+}
+
+/** Corrige la herramienta si contradice el verbo del catedrático (crear vs eliminar). */
+function correctTool(tc: ToolCall, q: string): ToolCall {
+  const s = q.toLowerCase()
+  const wantsDelete = /(elimin|borra|dar de baja|quita)/.test(s)
+  const wantsCreate = /(crea|crear|agrega|nuev|añad)/.test(s)
+  const nameMatch = q.match(/clase\s+(?:de\s+)?(.+)/i)
+  const name = nameMatch ? nameMatch[1].trim() : ''
+  if (wantsCreate && !wantsDelete && tc.name === 'eliminar_clase') {
+    return { name: 'crear_clase', args: { nombre: name } }
+  }
+  if (wantsDelete && !wantsCreate && tc.name.startsWith('crear')) {
+    return { name: 'eliminar_clase', args: { clase: name } }
+  }
+  return tc
+}
+
+/** Dato que falta en la acción (para preguntarlo), validando contra lo que dijo el profe. */
+function nextMissing(tc: ToolCall, userText: string): { field: string; question: string } | null {
+  if (tc.name === 'crear_clase') {
+    if (!argInQuestion(String(tc.args.nombre ?? ''), userText)) return { field: 'nombre', question: '¿Qué nombre le ponemos a la clase?' }
+  }
+  if (tc.name === 'crear_grupos') {
+    if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿En qué clase creo los grupos?' }
+    if (!(Number(tc.args.cantidad) > 0)) return { field: 'cantidad', question: '¿Cuántos grupos creo?' }
+  }
+  if (tc.name === 'crear_proyecto') {
+    if (!argInQuestion(String(tc.args.titulo ?? ''), userText)) return { field: 'titulo', question: '¿Cómo se llama el proyecto?' }
+    if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿En qué clase creo el proyecto?' }
+  }
+  if (tc.name === 'eliminar_clase') {
+    if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿Qué clase quieres eliminar?' }
+  }
+  return null
+}
+
+/** Código de clase estructurado a partir del nombre (ej. "Estructura de Datos" -> "ED-2026-K7"). */
+function codeFromName(name: string): string {
+  const words = name.toUpperCase().split(/\s+/).filter((w) => w.length > 2)
+  const initials = (words.map((w) => w[0]).join('') || 'CL').slice(0, 4)
+  const year = new Date(Date.now()).getFullYear()
+  const rand = Math.random().toString(36).slice(2, 4).toUpperCase()
+  return `${initials}-${year}-${rand}`
+}
+
+function normParcial(s: string): ParcialCode {
+  const x = s.toLowerCase()
+  if (/final/.test(x)) return 'final'
+  if (/3|terc/.test(x)) return 'p3'
+  if (/2|seg/.test(x)) return 'p2'
+  if (/1|prim/.test(x)) return 'p1'
+  return ''
+}
+
+function describeAction({ name, args }: ToolCall): string {
+  if (name === 'crear_clase')
+    return `Crear la clase «${args.nombre}»${args.seccion ? ` (sección ${args.seccion})` : ''}${args.periodo ? `, período ${args.periodo}` : ''}.`
+  if (name === 'crear_grupos') return `Crear ${args.cantidad} grupo(s) en la clase «${args.clase}».`
+  if (name === 'crear_proyecto')
+    return `Crear el proyecto «${args.titulo}» en la clase «${args.clase}»${args.parcial ? ` (${args.parcial})` : ''}.`
+  if (name === 'eliminar_clase')
+    return `Eliminar la clase «${args.clase}» y todo su contenido (grupos, proyectos, chats). Esto no se puede deshacer.`
+  return 'Acción desconocida.'
+}
+
+function ActionCard({ e, onConfirm, onCancel }: { e: Extract<Entry, { kind: 'action' }>; onConfirm: () => void; onCancel: () => void }) {
+  const danger = e.toolCall.name.startsWith('eliminar')
+  return (
+    <div className={`neo-card-in rounded-xl border p-4 ${danger ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/25 bg-amber-500/5'}`}>
+      <div className="mb-2 flex items-center gap-2">
+        <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${danger ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
+          <Spark />
+        </span>
+        <p className="text-sm font-semibold text-white">{danger ? 'La IA quiere ELIMINAR esto' : 'La IA quiere hacer esto'}</p>
+      </div>
+      <p className="text-sm text-neutral-200">{describeAction(e.toolCall)}</p>
+
+      {e.warning && e.status === 'pending' && (
+        <p className={`mt-2 rounded-lg px-3 py-2 text-xs ${danger ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'}`}>{e.warning}</p>
+      )}
+
+      {e.status === 'pending' && (
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={onConfirm}
+            className={danger ? 'rounded-lg bg-red-500/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500' : 'neo-btn text-sm'}
+          >
+            {danger ? 'Sí, eliminar' : 'Confirmar'}
+          </button>
+          <button onClick={onCancel} className="neo-btn-ghost text-sm">Cancelar</button>
+        </div>
+      )}
+      {e.status === 'running' && <p className="mt-2.5 text-xs text-neutral-400">Ejecutando…</p>}
+      {e.status === 'done' && <p className="mt-2.5 text-sm font-medium text-emerald-400">✓ {e.message}</p>}
+      {e.status === 'cancelled' && <p className="mt-2.5 text-xs text-neutral-500">Cancelado.</p>}
+      {e.status === 'error' && <p className="mt-2.5 text-sm text-red-400">{e.message}</p>}
+    </div>
+  )
+}
+
+function fmtDate(at: number): string {
+  const d = new Date(at)
+  const now = new Date(Date.now())
+  const sameDay = d.toDateString() === now.toDateString()
+  return sameDay
+    ? d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('es', { day: '2-digit', month: 'short' })
+}
+
+function ClockGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
+function PlusGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
   )
 }
 
