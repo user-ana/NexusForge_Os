@@ -1,0 +1,721 @@
+================================================================================
+INFORME DEL PROYECTO — NEXUSFORGE OS
+Plataforma web academica para la gestion de proyectos de ingenieria de software
+Autora: Ana Montes
+Catedra: Sistemas Abiertos 2
+================================================================================
+
+Este documento explica, de principio a fin, que es NexusForge OS, para que sirve,
+como funciona el sitio, como esta construido por dentro, que lenguajes y
+tecnologias use y por que tome cada decision. Esta escrito de forma que cualquier
+persona -tecnica o no- pueda entender como esta compuesto todo el sistema.
+
+Lo escribo en primera persona porque es mi proyecto y quiero explicarlo tal como lo
+pense y lo construi.
+
+
+--------------------------------------------------------------------------------
+INDICE
+--------------------------------------------------------------------------------
+
+1.  Resumen en una frase
+2.  El problema que quise resolver
+3.  A quien va dirigido: los roles
+4.  Recorrido funcional del sitio (que se puede hacer)
+5.  La jerarquia del ecosistema (como se organiza todo)
+6.  Los lenguajes que use y por que
+7.  El stack tecnologico completo y el porque de cada pieza
+8.  La arquitectura del codigo (las carpetas) y por que asi
+9.  El frontend en detalle
+10. El backend en detalle
+11. El modelo de datos (las tablas)
+12. La seguridad (autenticacion y RLS)
+13. El asistente de inteligencia artificial (a fondo)
+14. El tiempo real (chat en vivo)
+15. Otros detalles: idioma, sesion y diseno
+16. El despliegue (GitHub y Vercel)
+17. Como correr el proyecto en local
+18. Decisiones de diseno y buenas practicas
+19. Glosario de terminos
+20. Cierre y trabajo futuro
+
+
+--------------------------------------------------------------------------------
+1. RESUMEN EN UNA FRASE
+--------------------------------------------------------------------------------
+
+NexusForge OS es una plataforma web academica, tipo "fullstack", donde un
+catedratico gestiona sus clases, proyectos y evaluaciones, y los estudiantes se
+organizan en grupos, trabajan con tableros de tareas, se comunican en tiempo real
+y entregan sus proyectos; ademas incluye un asistente con inteligencia artificial
+propio y privado que responde preguntas y ejecuta acciones por lenguaje natural.
+
+Esta desarrollada con Next.js y TypeScript, usa Supabase (PostgreSQL) como base de
+datos, corre la IA localmente con Ollama y Llama 3, y esta publicada en Vercel.
+
+
+--------------------------------------------------------------------------------
+2. EL PROBLEMA QUE QUISE RESOLVER
+--------------------------------------------------------------------------------
+
+En las clases de ingenieria de software, la gestion de los proyectos suele estar
+dispersa: el enunciado va por un lado (a veces solo un PDF), los grupos se forman
+en papel o en un chat, las tareas no tienen orden, las entregas llegan por correo
+y la evaluacion se hace aparte. No hay un solo lugar donde todo viva junto.
+
+Mi idea fue construir un unico espacio donde:
+
+  - El catedratico crea la clase y sube los proyectos (igual que un ingeniero que
+    solo sube un PDF con la rubrica).
+  - Los estudiantes se inscriben con un codigo, forman sus grupos y ven claramente
+    que tienen que hacer.
+  - El trabajo se organiza en un tablero visual (Kanban).
+  - La comunicacion ocurre en el mismo sitio, en tiempo real.
+  - La entrega y la nota quedan registradas por periodo.
+  - Y, como valor agregado, un asistente de IA que le ahorra trabajo al catedratico
+    respondiendo consultas y creando cosas por comando.
+
+En resumen: ordenar todo el ciclo de vida de un proyecto academico en una sola
+plataforma, con un diseno profesional y una capa de inteligencia artificial.
+
+
+--------------------------------------------------------------------------------
+3. A QUIEN VA DIRIGIDO: LOS ROLES
+--------------------------------------------------------------------------------
+
+El sistema se ramifica segun el rol de la persona. El rol se define al registrarse
+y determina que ve y que puede hacer. Hay tres roles:
+
+  CATEDRATICO
+  Gestiona la parte docente: crea clases y proyectos, forma o supervisa los grupos,
+  asigna proyectos, supervisa el trabajo de cada grupo (en solo lectura) y evalua
+  por rubrica. Tiene acceso al asistente de IA. Su experiencia NO incluye la
+  gamificacion (monedas, experiencia, rangos): su panel es puramente de gestion.
+
+  ESTUDIANTE
+  Se une a la clase con un codigo, elige o recibe su grupo, lee el enunciado,
+  organiza las tareas en el tablero Kanban, se comunica con su equipo y con la
+  clase, y publica su entregable (repositorio, despliegue y video). El estudiante
+  si tiene una capa gamificada (monedas, experiencia, rango, recompensas) pensada
+  para motivar la participacion.
+
+  VISITANTE
+  Explora la plataforma en modo lectura, sin gestionar clases ni entregar
+  proyectos. Sirve para mostrar el sistema sin comprometer datos.
+
+Una decision importante fue que el catedratico y el estudiante tienen experiencias
+DISTINTAS (MVP diferenciado por rol), no la misma pantalla con cosas ocultas. Cada
+quien ve lo que su rol necesita.
+
+
+--------------------------------------------------------------------------------
+4. RECORRIDO FUNCIONAL DEL SITIO (QUE SE PUEDE HACER)
+--------------------------------------------------------------------------------
+
+Aqui explico, pantalla por pantalla, todo lo que el sitio permite hacer.
+
+  4.1 PAGINA DE INICIO (LANDING)
+  Es la puerta de entrada publica. Presenta el proyecto y lleva al registro o al
+  inicio de sesion.
+
+  4.2 REGISTRO E INICIO DE SESION (AUTENTICACION)
+  El usuario se registra o inicia sesion. Uso autenticacion real con Supabase
+  (correo y tambien inicio con proveedor). Tras registrarse, hay un paso de
+  "onboarding" donde se define el nombre, el avatar y el rol. Existe tambien una
+  ruta de "callback" que completa el inicio de sesion con proveedores externos.
+
+  4.3 PANEL PRINCIPAL (DASHBOARD)
+  Es la pantalla central despues de entrar. Muestra un resumen y da acceso a las
+  demas secciones a traves de una barra lateral. El contenido cambia segun el rol.
+
+  4.4 MIS CLASES
+  El catedratico crea clases (nombre, seccion, periodo) y obtiene un codigo unico
+  por clase para compartir. El estudiante usa ese codigo para inscribirse. Desde
+  aqui se entra al detalle de cada clase.
+
+  4.5 DETALLE DE CLASE Y AULA
+  Dentro de una clase esta el "aula": el espacio de trabajo donde viven los
+  proyectos, los grupos y los tableros. Aqui el catedratico:
+     - Crea proyectos (ver 4.6).
+     - Elige la modalidad de formacion de grupos (ver 4.7).
+     - Asigna proyectos a los grupos.
+     - Supervisa el trabajo de cada grupo en solo lectura.
+  Y el estudiante:
+     - Elige su escuadron (grupo) si la modalidad es auto-inscripcion.
+     - Ve el enunciado, el tablero y la entrega de su grupo.
+
+  4.6 PROYECTOS
+  Al crear un proyecto, el catedratico puede:
+     - Subir el enunciado como PDF, pegar un enlace (por ejemplo Overleaf o Drive)
+       o escribir el texto directamente.
+     - Definir los requisitos y la rubrica.
+     - Asignar el parcial al que pertenece (1, 2, 3 o final).
+  Esto imita el caso real en el que el ingeniero solo sube un PDF con varios
+  proyectos y su rubrica.
+
+  4.7 FORMACION DE GRUPOS
+  Hay dos modalidades configurables por el catedratico:
+     - ASIGNACION MANUAL: el catedratico coloca a cada estudiante en un grupo.
+     - AUTO-INSCRIPCION: los estudiantes eligen su grupo desde una vista epica
+       ("Elige tu escuadron"), con un cupo maximo por grupo y bloqueo al unirse
+       (una vez dentro, el estudiante queda fijo para evitar desorden).
+
+  4.8 TABLERO KANBAN
+  Cada grupo tiene un tablero con columnas "Por hacer", "En progreso" y "Hecho".
+  Los integrantes mueven las tarjetas para organizar el trabajo. El catedratico ve
+  el tablero pero no lo edita (solo lectura).
+
+  4.9 VISTA POR PERIODOS (PARCIALES)
+  Una vista que agrupa los proyectos por parcial (1, 2, 3 y final), para ver el
+  avance por periodo de evaluacion.
+
+  4.10 CHAT EN VIVO
+  Comunicacion en tiempo real. Hay chat por grupo, por clase (aula) y una
+  comunidad general. Los mensajes aparecen al instante para todos.
+
+  4.11 EVALUACION POR RUBRICA
+  El catedratico califica la entrega de cada grupo segun los criterios de la
+  rubrica. La nota queda registrada por parcial.
+
+  4.12 EL ENTREGABLE
+  El estudiante publica el resultado de su proyecto: enlace al repositorio, al
+  despliegue y al video de demostracion.
+
+  4.13 PERFIL, RECOMPENSAS Y AJUSTES
+     - Perfil: datos del usuario y su avatar.
+     - Recompensas: la capa gamificada del estudiante (monedas, experiencia, rango).
+       No aplica al catedratico.
+     - Ajustes: configuracion de la cuenta y preferencias.
+
+  4.14 EL ASISTENTE DE IA
+  Un orbe flotante presente en el dashboard. Se abre y se le escribe en lenguaje
+  natural. Puede consultar datos ("que grupos no han entregado") o ejecutar
+  acciones ("crea una clase de Redes"), siempre con confirmacion. Se explica a
+  fondo en la seccion 13.
+
+  4.15 LOS MANUALES (DOCUMENTACION VIVA)
+  Dentro de la propia plataforma hay una seccion de Manual de Usuario y Manual del
+  Programador, con tarjetas de concepto, inspectores de codigo (una terminal
+  flotante que muestra el codigo real explicado) y guias paso a paso.
+
+
+--------------------------------------------------------------------------------
+5. LA JERARQUIA DEL ECOSISTEMA (COMO SE ORGANIZA TODO)
+--------------------------------------------------------------------------------
+
+Todo el sistema esta pensado con una jerarquia clara, de lo mas general a lo mas
+concreto:
+
+     CLASE
+       -> MODULO / PROYECTO (por parcial: 1, 2, 3, final)
+            -> GRUPO (escuadron de estudiantes)
+                 -> TABLERO KANBAN (las tareas del grupo)
+                      -> ENTREGABLE (repositorio, despliegue, video) + NOTA
+
+Explicado en palabras: una CLASE contiene varios PROYECTOS organizados por parcial.
+Cada proyecto lo trabaja un GRUPO de estudiantes. Cada grupo organiza su trabajo en
+un TABLERO KANBAN y termina publicando un ENTREGABLE que el catedratico evalua.
+
+Ademas, el catedratico configura las MODALIDADES por clase: como se forman los
+grupos (el asigna o auto-inscripcion), como se seleccionan los proyectos y quien
+lidera. Esto hace que el sistema se adapte a la forma de trabajar de cada docente.
+
+
+--------------------------------------------------------------------------------
+6. LOS LENGUAJES QUE USE Y POR QUE
+--------------------------------------------------------------------------------
+
+  TYPESCRIPT (lenguaje principal)
+  Es JavaScript pero con TIPOS. Es decir, se declara de que tipo es cada dato
+  (texto, numero, objeto, etc.) y el editor avisa de los errores ANTES de ejecutar.
+  Lo elegi por eso: menos errores en tiempo de ejecucion y un codigo mas ordenado y
+  mantenible. Ademas lo configure en modo estricto (no permite variables ni
+  parametros sin usar), lo que obliga a mantener el codigo limpio.
+  Aclaracion: TypeScript no es exclusivo de Angular; funciona con cualquier
+  framework de JavaScript, y aqui lo uso con React/Next.js tanto en el frontend
+  como en el backend (las API).
+
+  JSX / TSX (la forma de escribir la interfaz)
+  Es la sintaxis de React donde se mezcla la estructura visual (parecida a HTML) con
+  la logica en TypeScript, dentro de archivos .tsx. Asi construyo los componentes
+  de la pantalla.
+
+  HTML y CSS (a traves de JSX y Tailwind)
+  El HTML se genera desde los componentes JSX. El CSS lo manejo principalmente con
+  Tailwind (clases de utilidad) mas unas reglas propias para el tema neomorfico
+  oscuro. No escribo HTML "suelto": todo pasa por componentes.
+
+  SQL (para la base de datos)
+  La base de datos es PostgreSQL, y su estructura, las reglas de seguridad y algunas
+  funciones estan escritas en SQL (en el archivo del esquema). Por ejemplo, la
+  funcion que permite a un estudiante unirse a un grupo de forma segura esta escrita
+  en SQL.
+
+En resumen: TypeScript para toda la logica (frontend y backend), JSX/TSX para la
+vista, Tailwind/CSS para los estilos y SQL para la base de datos.
+
+
+--------------------------------------------------------------------------------
+7. EL STACK TECNOLOGICO COMPLETO Y EL PORQUE DE CADA PIEZA
+--------------------------------------------------------------------------------
+
+  NEXT.JS 14 (App Router)
+  Es el framework principal. Esta construido sobre React y permite tener el frontend
+  y el backend en un mismo proyecto: las paginas y los endpoints de API conviven en
+  la carpeta "app". Lo elegi porque simplifica todo (un solo proyecto, un solo
+  despliegue) y se integra de forma nativa con Vercel.
+
+  REACT 18
+  La libreria para construir la interfaz por componentes reutilizables. Es la base
+  sobre la que trabaja Next.js.
+
+  TYPESCRIPT 5 (estricto)
+  Ya explicado en la seccion 6: tipos y verificacion estricta para un codigo mas
+  seguro y mantenible.
+
+  TAILWIND CSS 3
+  Framework de estilos por utilidades. Me permite construir el tema neomorfico
+  oscuro rapido y de forma consistente, con clases directamente en los componentes,
+  mas un conjunto de reglas propias (las clases "neo-*").
+
+  SUPABASE (@supabase/supabase-js 2)
+  Es mi backend de datos. Supabase ofrece:
+     - PostgreSQL: la base de datos relacional.
+     - Autenticacion: registro e inicio de sesion (incluye PKCE y proveedores).
+     - Realtime: actualizaciones en vivo (para el chat).
+     - Storage: almacenamiento de archivos (por ejemplo, los PDF de enunciados).
+     - Seguridad a nivel de fila (RLS): la seguridad vive dentro de la base.
+  Lo elegi porque me da todo eso gestionado, sin tener que montar un servidor
+  aparte, y con seguridad de verdad.
+
+  OLLAMA + LLAMA 3
+  El motor de inteligencia artificial. Ollama es un programa que descarga y corre
+  modelos de IA localmente; Llama 3 es el modelo (uso la version llama3.2, de unos
+  3.000 millones de parametros). La ventaja es que corre en la propia maquina: es
+  privado (los datos no salen a la nube), gratis por consulta y no depende de
+  servicios externos. Se explica a fondo en la seccion 13.
+
+  VERCEL
+  El servicio donde esta publicada la web. Ofrece despliegue continuo: cada vez que
+  subo cambios a GitHub, Vercel reconstruye y publica la pagina automaticamente.
+
+  emoji-picker-react
+  Una libreria pequena para el selector de emojis en el chat.
+
+
+--------------------------------------------------------------------------------
+8. LA ARQUITECTURA DEL CODIGO (LAS CARPETAS) Y POR QUE ASI
+--------------------------------------------------------------------------------
+
+Organice el codigo separando responsabilidades, porque el orden y la jerarquia son
+importantes (y porque asi cualquiera entiende donde va cada cosa). La estructura
+principal es:
+
+  src/
+    app/          -> El "routing" de Next.js: las paginas y los endpoints de API.
+                     Aqui vive, por ejemplo, /api/assistant (el backend de la IA).
+    frontend/     -> LA VISTA. Todo lo que ve el usuario:
+                       components/  -> los componentes de interfaz
+                       hooks/       -> logica reutilizable de React
+                       i18n/        -> los textos e idiomas
+                       session/     -> el manejo de la sesion del usuario
+    backend/      -> LOS DATOS Y SERVICIOS. La logica que habla con la base:
+                       supabase     -> el cliente de conexion
+                       services/    -> funciones por tema (clases, grupos, etc.)
+                       realtime/    -> el tiempo real (chat)
+                       external/    -> integraciones externas
+    shared/       -> Lo transversal que usan frontend y backend:
+                       types/       -> los tipos de TypeScript
+                       (y reglas como las de los parciales)
+
+  supabase/schema.sql  -> El esquema de la base de datos y su seguridad (RLS).
+
+La idea es sencilla: si busco algo de la vista, voy a frontend; si es logica de
+datos, voy a backend; si es un tipo o una regla compartida, a shared; y si es una
+pagina o una ruta, a app. Esta separacion hace el proyecto facil de leer y de
+mantener.
+
+Dentro de backend/services tengo un archivo por tema, por ejemplo:
+  classes.ts         -> crear/gestionar clases
+  classGroups.ts     -> grupos de una clase
+  groupProjects.ts   -> proyectos asignados a grupos
+  projects.ts        -> proyectos y subida de enunciados
+  kanban.ts          -> las tareas del tablero
+  aulaChat.ts        -> chat del aula
+  communityChat.ts   -> chat de la comunidad
+  groupEvaluations.ts-> evaluacion por rubrica
+  profiles.ts        -> perfiles de usuario
+  studentSearch.ts   -> busqueda y contexto para el asistente de IA
+
+
+--------------------------------------------------------------------------------
+9. EL FRONTEND EN DETALLE
+--------------------------------------------------------------------------------
+
+El frontend es todo lo que el usuario ve y toca. Esta hecho con React y Next.js,
+escrito en TypeScript (archivos .tsx) y con estilos de Tailwind.
+
+  COMPONENTES
+  La interfaz esta dividida en componentes reutilizables: la barra lateral, la barra
+  superior con el perfil, las tarjetas, los modales (ventanas emergentes), el orbe
+  del asistente, etc. Reutilizar componentes evita repetir codigo y mantiene la
+  apariencia consistente.
+
+  DISENO NEOMORFICO OSCURO
+  El estilo visual es "neomorfismo": superficies oscuras con sombras suaves que dan
+  sensacion de relieve, sin bordes chillones ni brillos de colores. Busque que se
+  viera profesional y serio (se presenta ante un catedratico), por eso tambien evite
+  los emojis en el codigo y en la interfaz, usando iconos SVG o texto.
+
+  IDIOMA (i18n)
+  Los textos estan centralizados para poder mostrar la interfaz en el idioma
+  correspondiente, en lugar de tenerlos escritos sueltos por todos lados.
+
+  SESION
+  El manejo de la sesion del usuario (quien esta conectado y su rol) esta en una
+  parte propia, de modo que cualquier componente puede saber quien es el usuario y
+  adaptar lo que muestra.
+
+
+--------------------------------------------------------------------------------
+10. EL BACKEND EN DETALLE
+--------------------------------------------------------------------------------
+
+El backend es la logica que trabaja con los datos. Tiene dos formas de ejecutarse:
+
+  A) SERVICIOS QUE CORREN EN EL NAVEGADOR
+  La mayoria de operaciones (crear una clase, unir a un grupo, mover una tarea) se
+  hacen con funciones de la carpeta backend/services que hablan con Supabase desde
+  el navegador, autenticadas como el usuario. Esto es seguro porque la base de datos
+  tiene RLS (seguridad a nivel de fila): aunque la llamada venga del navegador, la
+  base solo deja hacer lo que ese usuario tiene permitido.
+
+  B) ENDPOINTS DE API (EN EL SERVIDOR)
+  Algunas cosas necesitan correr en el servidor. El caso principal es el asistente
+  de IA: el endpoint /api/assistant corre en el servidor porque necesita alcanzar a
+  Ollama (que esta en la maquina) para hablar con el modelo Llama. Ver seccion 13.
+
+En pocas palabras: las operaciones de datos normales pasan por los servicios con la
+seguridad de la base; y lo que requiere el servidor (como la IA) vive en endpoints
+de API.
+
+
+--------------------------------------------------------------------------------
+11. EL MODELO DE DATOS (LAS TABLAS)
+--------------------------------------------------------------------------------
+
+La base de datos es PostgreSQL (via Supabase). Estas son las tablas principales y
+para que sirve cada una:
+
+  profiles            -> Los usuarios: su rol (catedratico/estudiante/visitante),
+                         nombre y avatar.
+  classes             -> Las clases del catedratico: codigo, periodo, y las
+                         modalidades (formacion de grupos, cupo por equipo).
+  enrollments         -> La inscripcion: que estudiante pertenece a que clase.
+  class_groups        -> Los grupos (escuadrones) de una clase: nombre y emblema.
+  group_members       -> Los integrantes de cada grupo y quien es el lider.
+  projects            -> Los proyectos: titulo, enunciado (PDF/enlace), requisitos,
+                         rubrica y parcial (1/2/3/final).
+  group_projects      -> Que proyecto tiene asignado cada grupo.
+  kanban_tasks        -> Las tarjetas del tablero de cada grupo (por hacer/en
+                         progreso/hecho).
+  group_evaluations   -> La evaluacion por rubrica y la nota de cada grupo.
+  messages            -> El chat en tiempo real por grupo/aula.
+  community_messages  -> El chat de la comunidad general.
+
+Todas las tablas tienen seguridad a nivel de fila (RLS): cada usuario solo puede ver
+y modificar lo que le corresponde.
+
+
+--------------------------------------------------------------------------------
+12. LA SEGURIDAD (AUTENTICACION Y RLS)
+--------------------------------------------------------------------------------
+
+La seguridad tiene dos capas:
+
+  AUTENTICACION (quien eres)
+  Uso la autenticacion de Supabase. El usuario se registra e inicia sesion (con
+  correo o proveedor). A partir de ahi, el sistema sabe quien es y cual es su rol.
+
+  RLS - ROW LEVEL SECURITY (que puedes hacer)
+  Esta es la parte importante. La seguridad no vive solo en la aplicacion, vive
+  dentro de la base de datos con reglas a nivel de fila. Por ejemplo: un estudiante
+  no puede escribir directamente en la tabla de integrantes de grupos; solo puede
+  unirse a traves de una funcion segura ("security definer") que valida las reglas
+  (que este inscrito en la clase, que la modalidad sea auto-inscripcion, que no este
+  ya en otro grupo y que haya cupo). Asi, aunque alguien intente saltarse la
+  interfaz, la base lo impide.
+
+Esta combinacion (autenticacion + RLS) hace que el sistema sea seguro de verdad, no
+solo "de apariencia".
+
+
+--------------------------------------------------------------------------------
+13. EL ASISTENTE DE INTELIGENCIA ARTIFICIAL (A FONDO)
+--------------------------------------------------------------------------------
+
+Esta es una de las partes de las que estoy mas orgullosa. El asistente es un modelo
+de lenguaje corriendo en la propia maquina, al que la aplicacion le manda una
+pregunta junto con un resumen de los datos de la clase, y responde en lenguaje
+natural o ejecuta acciones que el catedratico confirma. No se entrena ni se manda
+nada a la nube: es privado y local.
+
+  13.1 EL MOTOR: OLLAMA + LLAMA 3
+  Ollama es el programa que corre modelos de IA localmente. Instale Ollama y
+  descargue el modelo Llama 3.2 (unos 2 GB). Ollama queda corriendo como un servidor
+  local (en http://localhost:11434) con el que mi aplicacion habla.
+  Eleccion del modelo: probe con el de 8B (mas inteligente pero pesado) y me quede
+  con el de 3B (llama3.2) por velocidad, ya que cabe mejor en la maquina. Con el 3B
+  mas codigo de validacion alrededor, el asistente es confiable.
+
+  13.2 LA CONEXION (EL ENDPOINT /api/assistant)
+  Es un endpoint del servidor que recibe la pregunta y habla con Ollama. Le manda:
+     - model: llama3.2 (el modelo local).
+     - stream: false (recibe la respuesta completa de una vez).
+     - keep_alive: 30m (mantiene el modelo cargado en memoria para que responda
+       rapido y no arranque en frio cada vez).
+     - temperature: 0.2 (respuestas precisas y consistentes, poco "creativas", para
+       que no invente).
+     - num_predict: 400 (limita el largo de la respuesta, para que sea rapida).
+     - tools: las herramientas que puede usar (crear/eliminar).
+     - messages: un mensaje "system" con las instrucciones + los datos de la clase, y
+       un mensaje "user" con lo que escribio el catedratico.
+  Use variables de entorno (OLLAMA_BASE_URL y OLLAMA_MODEL) para poder cambiar el
+  servidor o el modelo sin tocar el codigo; el dia que mueva la IA a un servidor
+  Linux, solo cambio la URL.
+
+  13.3 RAG: DATOS REALES PARA QUE NO INVENTE
+  RAG significa "Retrieval-Augmented Generation" (generacion aumentada con
+  recuperacion de datos). La idea: antes de preguntarle a la IA, la app recupera los
+  datos reales de la clase y se los entrega como contexto. Asi la IA razona sobre
+  datos ciertos y no sobre suposiciones. Una funcion arma un resumen de texto con
+  las clases, los estudiantes y los grupos (con su estado), y ese resumen viaja en
+  el mensaje "system". Esto es lo que evita que "alucine".
+
+  13.4 AGENTICO: QUE LA IA PUEDA ACTUAR (TOOL-CALLING)
+  Ademas de responder, la IA puede ejecutar acciones. Esto se llama "tool-calling"
+  (llamada a herramientas). Le defini funciones que puede pedir usar:
+     - crear_clase
+     - crear_grupos
+     - crear_proyecto
+     - eliminar_clase
+  La IA lee la descripcion de cada herramienta y decide cual usar segun el comando.
+  Su respuesta puede ser de dos formas: TEXTO (una consulta, ej. "hay 7 grupos") o
+  un TOOL_CALL (quiere actuar, ej. crear_clase con el nombre "Redes").
+
+  13.5 DONDE SE EJECUTA LA ACCION (SEGURIDAD)
+  La accion NO se ejecuta en el servidor. El endpoint solo devuelve "la IA quiere
+  hacer X". Luego la app muestra una tarjeta de confirmacion; el catedratico
+  confirma; y recien entonces la app ejecuta la funcion real desde el navegador,
+  autenticado como el catedratico, respetando la seguridad (RLS). Asi la IA nunca
+  actua sola ni se salta permisos.
+
+  13.6 ROBUSTEZ: COMO LA HAGO CONFIABLE PESE AL MODELO PEQUENO
+  Como el modelo es pequeno y a veces se confunde, la confiabilidad viene de codigo
+  de validacion que programe alrededor:
+     1. Dato pendiente (determinista): si falta un dato (ej. el nombre de la clase),
+        la app lo pregunta y usa mi respuesta directa como valor, sin depender del
+        modelo. Es 100% confiable.
+     2. Correccion por verbo: si digo "crea" pero la IA elige "eliminar" (o al reves),
+        la app lo corrige segun mi verbo.
+     3. Aviso de duplicado: si la clase ya existe (o no existe para crear grupos),
+        avisa antes de confirmar.
+     4. Sin historial al modelo: cada comando se manda solo, sin arrastrar los
+        anteriores, para que el modelo chico no se ancle a lo previo.
+     5. Confirmacion siempre: ninguna accion se ejecuta sin mi OK; las destructivas
+        (eliminar) se marcan en rojo.
+     6. Historial local: las conversaciones se guardan en el navegador (localStorage),
+        como un chatbot normal.
+  Un punto importante que quiero dejar claro: el modelo ya viene pre-entrenado; yo no
+  lo entreno. Lo que hago es rodearlo de codigo robusto para que las acciones sean
+  seguras y predecibles.
+
+  13.7 EL FLUJO COMPLETO, EN ORDEN
+     1. Escribo un comando en el orbe.
+     2. La app arma el contexto real de la clase (RAG).
+     3. Manda al endpoint /api/assistant la pregunta + el contexto + las herramientas.
+     4. Llama responde: texto (consulta) o tool_call (accion).
+     5. Si es accion, aparece una tarjeta de confirmacion.
+     6. Al confirmar, se ejecuta la funcion real con mis permisos (RLS).
+
+
+--------------------------------------------------------------------------------
+14. EL TIEMPO REAL (CHAT EN VIVO)
+--------------------------------------------------------------------------------
+
+El chat funciona en tiempo real gracias a Realtime de Supabase. Cuando alguien
+escribe un mensaje, se guarda en la base y aparece al instante para los demas, sin
+tener que recargar la pagina. Hay chat por grupo, por clase (aula) y una comunidad
+general. La logica del tiempo real esta separada en la carpeta backend/realtime.
+
+
+--------------------------------------------------------------------------------
+15. OTROS DETALLES: IDIOMA, SESION Y DISENO
+--------------------------------------------------------------------------------
+
+  IDIOMA (i18n): los textos estan centralizados para poder mostrarse en el idioma
+  correspondiente, en lugar de estar escritos sueltos por el codigo.
+
+  SESION: el sistema mantiene quien esta conectado y su rol, para que cada pantalla
+  muestre lo que corresponde a esa persona.
+
+  DISENO: tema neomorfico oscuro, mate, sin brillos de colores ni emojis, con iconos
+  SVG. Busque una apariencia profesional y ordenada, coherente con un entorno
+  academico serio.
+
+
+--------------------------------------------------------------------------------
+16. EL DESPLIEGUE (GITHUB Y VERCEL)
+--------------------------------------------------------------------------------
+
+El codigo esta en un unico repositorio de GitHub (no separado en dos: frontend y
+backend van juntos porque el proyecto es fullstack). La publicacion es continua:
+cada vez que subo cambios a la rama principal (main) con "git push", Vercel detecta
+el cambio, reconstruye el proyecto y publica la nueva version automaticamente en la
+direccion del sitio.
+
+Las variables sensibles (como las claves de Supabase) NO van en el codigo; se
+configuran como variables de entorno tanto en local (archivo .env.local, que no se
+sube al repositorio) como en Vercel.
+
+
+--------------------------------------------------------------------------------
+17. COMO CORRER EL PROYECTO EN LOCAL
+--------------------------------------------------------------------------------
+
+  1) Instalar las dependencias:
+        npm install
+
+  2) Configurar el archivo .env.local con las claves. Las variables principales son:
+        NEXT_PUBLIC_SUPABASE_URL        (la URL del proyecto Supabase)
+        NEXT_PUBLIC_SUPABASE_ANON_KEY   (la clave publica del cliente)
+        OLLAMA_BASE_URL=http://localhost:11434   (el servidor de Ollama)
+        OLLAMA_MODEL=llama3.2                     (el modelo a usar)
+
+  3) Levantar el servidor de desarrollo:
+        npm run dev
+     Queda disponible en http://localhost:3000
+
+  4) (Opcional, para la IA) Tener Ollama con el modelo:
+        ollama pull llama3.2
+        ollama run llama3.2   (para probar por consola)
+
+
+--------------------------------------------------------------------------------
+18. DECISIONES DE DISENO Y BUENAS PRACTICAS
+--------------------------------------------------------------------------------
+
+  - Separacion clara de responsabilidades (frontend/backend/shared/app), para que el
+    codigo sea ordenado y facil de mantener.
+  - TypeScript en modo estricto, para atrapar errores antes de ejecutar.
+  - Seguridad en la base de datos (RLS), no solo en la aplicacion.
+  - IA local y privada, con validaciones deterministas para hacerla confiable.
+  - Experiencia diferenciada por rol (el catedratico no ve la gamificacion del
+    estudiante).
+  - Un solo repositorio y despliegue continuo, para simplificar el mantenimiento.
+  - Diseno profesional, sin emojis, coherente con un contexto academico.
+  - Documentacion viva dentro de la propia plataforma (los manuales).
+
+
+--------------------------------------------------------------------------------
+19. GLOSARIO DE TERMINOS
+--------------------------------------------------------------------------------
+
+  Fullstack          Un proyecto que incluye tanto el frontend como el backend.
+  Frontend           La parte visible: lo que el usuario ve y usa.
+  Backend            La parte que trabaja con los datos y la logica.
+  Framework          Un conjunto de herramientas que da una base para construir.
+  Componente         Una pieza reutilizable de la interfaz.
+  Endpoint / API     Una direccion del servidor que recibe peticiones (ej. la IA).
+  Aula               El espacio de trabajo de una clase (proyectos, grupos, tableros).
+  Escuadron / Grupo  Equipo de estudiantes que trabaja un proyecto.
+  Parcial            Periodo de evaluacion (1, 2, 3 o final).
+  Rubrica            Los criterios con los que se califica una entrega.
+  Enunciado          La consigna del proyecto (PDF, enlace o texto).
+  Kanban             Tablero de tareas con columnas por hacer / en progreso / hecho.
+  Auto-inscripcion   Modalidad donde los estudiantes eligen su grupo (con cupo).
+  Entregable         El resultado del proyecto (repositorio, despliegue, video).
+  RLS                Seguridad a nivel de fila: cada quien ve/edita solo lo suyo.
+  RAG                Darle datos reales a la IA para que responda con hechos.
+  Agentico           Que la IA no solo habla, sino que puede ejecutar acciones.
+  Tool-calling       El mecanismo por el que la IA pide usar una herramienta.
+  Ollama             Programa que corre modelos de IA localmente.
+  Llama 3            El modelo de IA de codigo abierto que uso (version 3.2).
+  Realtime           Actualizaciones en vivo (para el chat).
+  Despliegue continuo Publicar automaticamente cada vez que se suben cambios.
+
+
+--------------------------------------------------------------------------------
+20. CIERRE Y TRABAJO FUTURO
+--------------------------------------------------------------------------------
+
+NexusForge OS reune, en un solo lugar y con un diseno profesional, todo el ciclo de
+un proyecto academico de ingenieria de software: desde que el catedratico crea la
+clase y sube el enunciado, hasta que el grupo organiza sus tareas, se comunica y
+entrega, y el catedratico evalua. Encima de eso, agregue una capa de inteligencia
+artificial propia y privada que consulta y actua por lenguaje natural, con las
+protecciones necesarias para ser confiable.
+
+Como trabajo futuro tengo previsto:
+  - Mover el motor de IA (Ollama) a un servidor Linux para que el asistente funcione
+    tambien en la version publicada, no solo en local.
+  - Activar un modelo mas grande (8B) aprovechando la GPU.
+  - Un flujo de propuesta y aprobacion de proyectos por parte del catedratico.
+
+Con esto queda explicado el proyecto completo: que es, que hace, como esta
+construido, con que lo hice y por que tome cada decision.
+
+
+--------------------------------------------------------------------------------
+21. BITACORA DE DESARROLLO (LO QUE VOY DESARROLLANDO)
+--------------------------------------------------------------------------------
+
+En esta seccion voy anotando, en orden, lo que voy construyendo. La idea es que
+este documento sea el unico lugar donde registro el avance del proyecto, explicado
+en primera persona. Cada vez que desarrolle algo nuevo, lo agrego aqui.
+
+  AVANCE - Separacion de frontend y backend
+  Reorganice el codigo en src/ separando frontend (la vista), backend (los datos y
+  servicios), shared (lo transversal) y app (el routing). Lo hice porque el orden y
+  la jerarquia importan y asi cualquiera entiende donde va cada cosa.
+
+  AVANCE - Publicacion en Vercel con un solo repositorio
+  Subi el proyecto a un unico repositorio de GitHub (frontend y backend juntos,
+  porque es fullstack) y lo conecte a Vercel para despliegue continuo: cada push a
+  main publica la nueva version automaticamente.
+
+  AVANCE - Vista por periodos (parciales)
+  Agregue la vista que agrupa los proyectos por parcial (1, 2, 3 y final), para ver
+  el avance por periodo de evaluacion.
+
+  AVANCE - Creacion de proyectos mejorada
+  Hice que el catedratico pueda subir el enunciado como PDF, pegar un enlace o
+  escribir el texto, definir requisitos y rubrica, y asignar el parcial. Imita el
+  caso real del ingeniero que solo sube un PDF con la rubrica.
+
+  AVANCE - Formacion de grupos con modalidades
+  Implemente dos modalidades: asignacion manual por el catedratico, o
+  auto-inscripcion donde el estudiante elige su grupo (con cupo y bloqueo al unirse)
+  desde una vista epica ("Elige tu escuadron").
+
+  AVANCE - Vista del catedratico en solo lectura
+  Diferencie la vista del catedratico sobre el tablero y la entrega de un grupo: la
+  ve para supervisar y evaluar, pero no la edita. El catedratico no hace las tareas
+  por los alumnos.
+
+  AVANCE - Asistente de IA (Fase 3)
+  Construi el asistente con IA propia y privada (Ollama + Llama 3):
+     - Fase 3a: consulta en lenguaje natural sobre los datos reales (RAG).
+     - Fase 3b: acciones agenticas (crear/eliminar por comando), con memoria e
+       historial y confirmacion antes de ejecutar.
+
+  AVANCE - Manuales dentro de la plataforma
+  Agregue una seccion de Manual de Usuario y Manual del Programador dentro del
+  sitio, con tarjetas de concepto, una terminal flotante que muestra el codigo real
+  explicado, guias paso a paso, glosario y preguntas frecuentes.
+
+  (Siguiente avance: lo agrego aqui cuando lo desarrolle.)
+
+================================================================================
+FIN DEL INFORME
+================================================================================

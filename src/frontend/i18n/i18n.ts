@@ -40,6 +40,7 @@ const es: Dict = {
   'nav.projects': 'Mis Proyectos',
   'nav.gallery': 'Galería',
   'nav.settings': 'Ajustes',
+  'nav.manual': 'Manual',
   'nav.signout': 'Cerrar sesión',
   // Headers
   'head.dashboard.title': 'Panel',
@@ -353,6 +354,7 @@ const en: Dict = {
   'nav.projects': 'My Projects',
   'nav.gallery': 'Gallery',
   'nav.settings': 'Settings',
+  'nav.manual': 'Manual',
   'nav.signout': 'Sign Out',
   'head.dashboard.title': 'Dashboard',
   'head.dashboard.sub': 'Welcome back to your workspace',

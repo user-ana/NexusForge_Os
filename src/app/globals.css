@@ -689,6 +689,24 @@ body {
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Scrollbar fino y oscuro para todo el dashboard (reemplaza el blanco ancho del sistema) */
+.neo-app *::-webkit-scrollbar { width: 10px; height: 10px; }
+.neo-app *::-webkit-scrollbar-track { background: transparent; }
+.neo-app *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.neo-app *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: content-box;
+}
+.neo-app * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+}
 /* …pero los campos de texto sí permiten escribir/seleccionar */
 .neo-app input,
 .neo-app textarea,
@@ -1821,6 +1839,23 @@ body {
   to   { opacity: 1; transform: translateY(0) scaleY(1); transform-origin: top center; }
 }
 
+/* Inspector de código flotante (manual del programador) */
+.neo-inspector {
+  width: min(1060px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #16181c;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* Neomorfismo mate: profundidad marcada, sombra oscura, sin brillo de color */
+  box-shadow:
+    0 48px 100px -30px rgba(0, 0, 0, 0.95),
+    0 12px 30px -14px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  animation: neo-modal-strip 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Selector de escuadrón (vista estudiante) — efecto "wow" ── */
 @keyframes squad-pop {
   0%   { opacity: 0; transform: translateY(28px) scale(0.9); }
@@ -1898,8 +1933,8 @@ body {
 /* ── Asistente flotante (orbe + panel grande) ── */
 .neo-assistant-orb {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 34px;
+  bottom: 34px;
   z-index: 71;
   display: flex;
   align-items: center;
@@ -1919,8 +1954,8 @@ body {
 
 .neo-assistant-panel {
   position: fixed;
-  right: 24px;
-  bottom: 92px;
+  right: 34px;
+  bottom: 104px;
   z-index: 72;
   width: min(760px, calc(100vw - 40px));
   height: min(80vh, 780px);

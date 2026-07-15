@@ -19,14 +19,10 @@ export function generateTeacherCode(): string {
  * Guardamos solo el HASH SHA-256 de las claves válidas — el texto plano
  * NUNCA está en el código, así que nadie puede sacarlo del bundle.
  *
- * Clave por defecto: "UTH-DOCENTE-2026"  ← cámbiala en producción:
- *   1) elige tu clave secreta
- *   2) genera su hash:  printf 'TU-CLAVE' | sha256sum
- *   3) reemplaza el hash de abajo (o añade más, separados por coma)
- *
+ * Clave por defecto: "UTH-DOCENTE-2026"  
+ * 
  * NOTA: esto es una barrera del lado del cliente (suficiente para el MVP).
- * Lo ideal a futuro: validar la clave en el servidor (Supabase function/
- * tabla con RLS) para que ni el hash viaje al navegador.
+ *
  * ------------------------------------------------------------------ */
 const VALID_TEACHER_HASHES = new Set<string>([
   // SHA-256 de "UTH-DOCENTE-2026"
