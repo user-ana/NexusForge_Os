@@ -177,7 +177,7 @@ function StudentView({ t }: { t: T }) {
           {QUESTS.map((q) => {
             const done = claimed.includes(q.id)
             return (
-              <div key={q.id} className={`neo-quest ${done ? 'neo-quest--done' : ''}`}>
+              <div key={q.id} className={`neo-quest transition-all duration-200 hover:-translate-y-0.5 ${done ? 'neo-quest--done' : 'hover:border-accent-violet/25'}`}>
                 <div className="neo-quest-ic">
                   <Icon3D src={q.icon} alt="" size={34} fallback={q.emoji} />
                 </div>
