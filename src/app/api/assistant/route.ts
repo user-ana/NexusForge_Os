@@ -33,11 +33,19 @@ export async function POST(req: Request) {
   // llama3.2 (3B) cabe en GPUs de ~6GB (RTX 4050) -> respuestas rápidas.
   const model = process.env.OLLAMA_MODEL || 'llama3.2'
 
+  // ¿El mensaje pide de verdad una ACCIÓN (crear/eliminar)? Solo entonces le
+  // ofrecemos las herramientas al modelo. Así un saludo o una consulta no se
+  // convierte por error en "crear una clase" (el modelo pequeño se sesga con
+  // las herramientas presentes). Determinista y además más rápido (prompt corto).
+  const ACTION_RE = /\b(?:crea|cree|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|armar|genera|generar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|remueve|remover|haz)(?:me|nos|le|les|lo|la|los|las)?\b|\bnuev[oa]s?\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/i
+  const wantsAction = ACTION_RE.test(question)
+
   const system = [
     'Eres el asistente del catedrático dentro de NexusForge OS (plataforma académica).',
     'Consultas responden SOLO con base en los DATOS que te doy abajo sobre sus clases. No inventes.',
     'Además PUEDES CREAR clases, grupos y proyectos, y ELIMINAR una clase, usando las herramientas cuando el catedrático lo pida.',
     'Usa eliminar_clase SOLO cuando el catedrático diga explícitamente eliminar/borrar/dar de baja una clase.',
+    'Un saludo, un agradecimiento o una pregunta NO es una orden: respóndelo en TEXTO, nunca con una herramienta.',
     'REGLA CRÍTICA: NUNCA inventes datos. Solo usa lo que el catedrático escribió textualmente.',
     'Si NO dio un dato requerido (ej. el nombre de la clase, la cantidad de grupos, la clase destino), NO llames la herramienta: responde con una pregunta corta pidiendo ese dato exacto.',
     'Antes de crear algo, si en los DATOS ya existe algo con ese nombre, avísalo en vez de duplicar.',
@@ -113,21 +121,24 @@ export async function POST(req: Request) {
   ]
 
   try {
+    const payload: Record<string, unknown> = {
+      model,
+      stream: false,
+      keep_alive: '30m', // mantiene el modelo cargado en memoria (evita el arranque en frío)
+      options: { temperature: 0.2, num_predict: 400 }, // factual + respuesta acotada = más rápido
+      messages: [
+        { role: 'system', content: system },
+        ...history,
+        { role: 'user', content: question },
+      ],
+    }
+    // Solo ofrecemos herramientas si el mensaje pide una acción (crear/eliminar).
+    if (wantsAction) payload.tools = tools
+
     const r = await fetch(`${base}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        keep_alive: '30m', // mantiene el modelo cargado en memoria (evita el arranque en frío)
-        options: { temperature: 0.2, num_predict: 400 }, // factual + respuesta acotada = más rápido
-        tools,
-        messages: [
-          { role: 'system', content: system },
-          ...history,
-          { role: 'user', content: question },
-        ],
-      }),
+      body: JSON.stringify(payload),
       // el modelo puede tardar bastante en CPU (VM). Margen amplio.
       signal: AbortSignal.timeout(280_000),
     })
