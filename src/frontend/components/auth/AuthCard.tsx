@@ -19,7 +19,7 @@ const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
 export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mode }) {
   const router = useRouter()
-  const { t } = useT()
+  const { t, lang, setLang } = useT()
   const [mode, setMode] = useState<Mode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [showTeacherKey, setShowTeacherKey] = useState(false) // mostrar/ocultar clave docente
@@ -373,12 +373,18 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
 
       <div className="neo-frame w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 overflow-hidden">
         {/* ---------- Panel izquierdo: formulario ---------- */}
-        <div className="relative px-8 py-10 md:px-14 md:py-12 flex flex-col min-h-[600px]">
-          {/* Controles de ventana */}
-          <div className="flex items-center gap-2 mb-8">
-            <span className="neo-dot" />
-            <span className="neo-dot" />
-            <span className="neo-dot neo-dot--bright" />
+        <div className="relative px-8 py-10 md:px-12 md:py-10 flex flex-col min-h-[520px]">
+          {/* Controles de ventana + selector de idioma */}
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="neo-dot" />
+              <span className="neo-dot" />
+              <span className="neo-dot neo-dot--bright" />
+            </div>
+            <div className="flex gap-1 rounded-lg border border-white/8 bg-white/[0.03] p-0.5 text-[11px] font-semibold">
+              <button type="button" onClick={() => setLang('es')} className={`rounded-md px-2.5 py-1 transition ${lang === 'es' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>ES</button>
+              <button type="button" onClick={() => setLang('en')} className={`rounded-md px-2.5 py-1 transition ${lang === 'en' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>EN</button>
+            </div>
           </div>
 
           {/* key={mode} → reinicia la animación de entrada al alternar */}
