@@ -320,8 +320,10 @@ export default function ChatPage() {
 
         {/* Mensajes */}
         <section className="neo-panel flex flex-1 flex-col overflow-hidden p-0">
-          <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
-            <p className="font-semibold text-white"># {channelLabel}</p>
+          <div className="flex items-center justify-between border-b border-white/5 px-5 py-3.5">
+            <p className="flex items-center gap-1.5 text-[15px] font-bold text-white">
+              <span className="text-neutral-600">#</span> {channelLabel}
+            </p>
             <p className="flex items-center gap-1.5 text-[11px] text-neutral-500">
               <span className="neo-dot-status" style={{ background: '#34d399' }} /> {online.length} {t('chat.online_now')}
             </p>
@@ -383,9 +385,15 @@ export default function ChatPage() {
                   {typing.join(', ')} {typing.length === 1 ? 'está' : 'están'} escribiendo…
                 </p>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-2xl border border-white/8 bg-white/[0.04] px-2 py-1 transition-colors focus-within:border-accent-violet/40">
                 <EmojiButton onPick={(e) => setText((x) => x + e)} className="neo-chat-tool" />
-                <input value={text} onChange={(e) => { setText(e.target.value); typingRef.current?.notify() }} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder={t('chat.placeholder')} className="neo-input flex-1" />
+                <input
+                  value={text}
+                  onChange={(e) => { setText(e.target.value); typingRef.current?.notify() }}
+                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  placeholder={t('chat.placeholder')}
+                  className="flex-1 bg-transparent px-1 py-2 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none"
+                />
                 <button onClick={send} className="neo-chat-send" aria-label="Enviar"><SendIcon /></button>
               </div>
             </div>
