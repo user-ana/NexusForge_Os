@@ -213,9 +213,9 @@ function StudentView({ t }: { t: T }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-100">{q.label}</p>
-                  <p className="mt-0.5 flex items-center gap-2 text-xs">
-                    <span className="text-accent-violet">+{q.coins} monedas</span>
-                    <span className="text-emerald-400">+{q.xp} XP</span>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                    <span className="rounded-full bg-accent-violet/15 px-2 py-0.5 font-medium text-accent-violet">+{q.coins} monedas</span>
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-400">+{q.xp} XP</span>
                   </p>
                 </div>
                 <button onClick={() => claim(q)} disabled={done} className="neo-quest-btn">
