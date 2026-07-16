@@ -10,10 +10,6 @@ como funciona el sitio, como esta construido por dentro, que lenguajes y
 tecnologias use y por que tome cada decision. Esta escrito de forma que cualquier
 persona -tecnica o no- pueda entender como esta compuesto todo el sistema.
 
-Lo escribo en primera persona porque es mi proyecto y quiero explicarlo tal como lo
-pense y lo construi.
-
-
 --------------------------------------------------------------------------------
 INDICE
 --------------------------------------------------------------------------------
