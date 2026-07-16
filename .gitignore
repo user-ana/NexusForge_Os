@@ -46,3 +46,6 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Respaldo local de avatares originales (recortados a 512px en el repo)
+public/avatars/_orig/

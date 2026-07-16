@@ -45,11 +45,10 @@ export default function PresetAvatar({ src, index, size = 60, className = '' }: 
         width={size}
         height={size}
         onError={() => setFailed(true)}
-        className={`object-cover ${className}`}
-        // Los PNG son retratos con un marco circular + margen ya dibujado.
-        // Encuadramos en la cara (tercio superior) y hacemos un zoom moderado para
-        // que el personaje llene el círculo y el margen sobrante quede recortado.
-        style={{ width: px, height: px, objectPosition: '50% 30%', transform: 'scale(1.6)', transformOrigin: '50% 32%' }}
+        className={`object-cover object-center ${className}`}
+        // Los PNG ya vienen recortados a un cuadrado centrado en la cara, así que
+        // basta object-cover: llena el círculo (o el cuadrado) sin trucos de zoom.
+        style={{ width: px, height: px }}
       />
     )
   }
