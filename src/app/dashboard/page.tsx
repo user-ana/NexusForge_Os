@@ -8,7 +8,7 @@ import Icon3D from '@/frontend/components/ui/Icon3D'
 import { FlameIcon } from '@/frontend/components/ui/Icons'
 import { useT } from '@/frontend/hooks/useT'
 import { getSession, displayName, DEFAULT_COINS, DEFAULT_XP, SESSION_EVENT, normalizeStudentStats, type Role } from '@/frontend/session/session'
-import { syncStudentStats, earnReward } from '@/frontend/session/gamificationSync'
+import { syncStudentStats, earnReward, syncStudentGroup } from '@/frontend/session/gamificationSync'
 import { getClasses, loadClasses, subscribeClasses, joinByCode, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import { CGROUPS_EVENT } from '@/backend/services/classGroups'
 import { getClassLeaderboard, type BoardRow } from '@/backend/services/gamification'
@@ -81,6 +81,7 @@ function StudentView({ t }: { t: T }) {
   useEffect(() => {
     normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
     void syncStudentStats() // carga las stats reales de la tabla (si existe)
+    void syncStudentGroup() // detecta y refleja el escuadrón real del estudiante
     const sync = () => {
       const s = getSession()
       setMeId(s?.id ?? '')
@@ -122,6 +123,8 @@ function StudentView({ t }: { t: T }) {
 
   const rk = rankFromXp(xp)
   const lv = levelFromXp(xp)
+  // Refleja MIS monedas frescas de la sesión en mi fila del leaderboard (evita el desfase con 0)
+  const displayBoard = board.map((r) => (r.id === meId ? { ...r, coins } : r)).sort((a, b) => b.coins - a.coins)
 
   return (
     <>
@@ -251,7 +254,7 @@ function StudentView({ t }: { t: T }) {
                 <p className="py-6 text-center text-sm text-neutral-500">Únete a una clase para ver el ranking.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {board.slice(0, 5).map((row, i) => (
+                  {displayBoard.slice(0, 5).map((row, i) => (
                     <div key={row.id} className={`neo-rank-row ${row.id === meId ? 'neo-rank-row--me' : ''}`}>
                       <span className={`neo-rank-pos neo-rank-pos--${i + 1}`}>{i + 1}</span>
                       <span className="neo-member !mr-0">{row.name.charAt(0).toUpperCase()}</span>

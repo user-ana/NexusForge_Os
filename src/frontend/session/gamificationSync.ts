@@ -5,6 +5,8 @@
  */
 import { getSession, patchSession, addReward } from './session'
 import { loadStudentStats, addRewardRemote, recordSpinRemote } from '@/backend/services/gamification'
+import { loadClasses, getClasses } from '@/backend/services/classes'
+import { loadGroups, groupOf } from '@/backend/services/classGroups'
 
 /** Carga las stats reales del estudiante y las refleja en la sesión. */
 export async function syncStudentStats(): Promise<void> {
@@ -25,6 +27,26 @@ export async function earnReward(coins: number, xp: number): Promise<void> {
     }
   }
   addReward(coins, xp) // fallback local (sin tabla)
+}
+
+/**
+ * Detecta el grupo REAL del estudiante (en cualquiera de sus clases) y lo refleja
+ * en la sesión, para que la barra muestre su escuadrón en vez de "Sin grupo".
+ */
+export async function syncStudentGroup(): Promise<void> {
+  const s = getSession()
+  if (!s || s.role === 'teacher' || !s.id) return
+  await loadClasses()
+  let name: string | undefined
+  for (const c of getClasses()) {
+    await loadGroups(c.id)
+    const g = groupOf(c.id, s.id)
+    if (g) {
+      name = g.name
+      break
+    }
+  }
+  patchSession({ group: name }) // undefined = sin grupo (limpia el anterior)
 }
 
 /** Registra el giro de la ruleta (local siempre; remoto si hay tabla). */

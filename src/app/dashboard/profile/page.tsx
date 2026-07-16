@@ -21,7 +21,7 @@ import {
 import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
 import { getAssistantOverview, type AssistantOverview } from '@/backend/services/studentSearch'
-import { syncStudentStats } from '@/frontend/session/gamificationSync'
+import { syncStudentStats, syncStudentGroup } from '@/frontend/session/gamificationSync'
 import { RANKS, levelFromXp, rankFromXp } from '@/shared/gamification'
 
 const ACHIEVEMENTS = [
@@ -86,6 +86,7 @@ export default function ProfilePage() {
     else if (s?.role !== 'teacher') {
       normalizeStudentStats()
       void syncStudentStats() // stats reales de la tabla (si existe)
+      void syncStudentGroup() // escuadrón real del estudiante
     }
   }, [])
 
