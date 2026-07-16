@@ -392,29 +392,37 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               </p>
             </div>
 
-            {/* Username (solo registro) */}
-            {isSignup && (
-              <Field label={t('auth.username')} className="mb-4">
-                <input
-                  ref={usernameRef}
-                  id="username"
-                  name="nf-username"
-                  type="text"
-                  placeholder="comandante_nova"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="neo-input w-full"
-                />
-              </Field>
-            )}
-
-            {/* Identificador */}
+            {/* Registro: usuario + correo lado a lado. Login: un solo campo. */}
             {isSignup ? (
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center justify-between">
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label={t('auth.username')}>
+                  <input
+                    ref={usernameRef}
+                    id="username"
+                    name="nf-username"
+                    type="text"
+                    placeholder="comandante_nova"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="neo-input w-full"
+                  />
+                </Field>
+                <div className="space-y-2">
                   <label htmlFor="email" className="neo-label">{t('auth.email')}</label>
+                  <input
+                    ref={emailRef}
+                    id="email"
+                    name="nf-email"
+                    type="email"
+                    placeholder="tucuenta@uth.hn"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="neo-input w-full"
+                  />
                   {role === 'student' && email.length > 0 && (
                     isInstitutionalEmail(email) ? (
                       <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.email_ok')}</span>
@@ -423,18 +431,6 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                     )
                   )}
                 </div>
-                <input
-                  ref={emailRef}
-                  id="email"
-                  name="nf-email"
-                  type="email"
-                  placeholder="tucuenta@uth.hn"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="neo-input w-full"
-                />
               </div>
             ) : (
               <Field label={t('auth.identifier')} className="mb-5">
@@ -500,10 +496,9 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               )}
             </div>
 
-            {/* Confirmar password — espacio reservado para que el panel NO crezca al revelarse */}
-            <div className="mb-4 min-h-[84px]">
+            {/* Confirmar contraseña — aparece al cumplir los requisitos (sin hueco reservado) */}
             {showConfirm && (
-              <div className="neo-reveal space-y-2">
+              <div className="neo-reveal mb-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <label htmlFor="confirm" className="neo-label">{t('auth.confirm')}</label>
                   {confirmState === 'ok' && (
@@ -526,7 +521,6 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 />
               </div>
             )}
-            </div>
 
             {/* Rol (registro) */}
             {isSignup && (
