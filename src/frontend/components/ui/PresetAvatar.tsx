@@ -49,7 +49,7 @@ export default function PresetAvatar({ src, index, size = 60, className = '' }: 
         // Los PNG son retratos con un marco circular + margen ya dibujado.
         // Encuadramos en la cara (tercio superior) y hacemos un zoom moderado para
         // que el personaje llene el círculo y el margen sobrante quede recortado.
-        style={{ width: px, height: px, objectPosition: '50% 30%', transform: 'scale(1.38)', transformOrigin: '50% 30%' }}
+        style={{ width: px, height: px, objectPosition: '50% 30%', transform: 'scale(1.6)', transformOrigin: '50% 32%' }}
       />
     )
   }
