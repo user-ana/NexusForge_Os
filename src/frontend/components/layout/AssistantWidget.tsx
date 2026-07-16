@@ -164,7 +164,15 @@ export default function AssistantWidget() {
       }
       throw new Error(data.error || 'IA no disponible')
     } catch {
-      // Si la IA no está disponible, caer a la búsqueda estructurada por nombre
+      // La IA no respondió. Si el mensaje parecía un COMANDO de acción, no tiene
+      // sentido "buscar estudiantes": avisamos claro. Si parecía una búsqueda por
+      // nombre, degradamos a la búsqueda estructurada (funciona sin IA).
+      const looksLikeAction = /\b(crea|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|genera|nuev[oa]s?|elimina|eliminar|borra|borrar|quita|da de baja)\b/i.test(q)
+      if (looksLikeAction) {
+        setEntries((e) => [...e, { kind: 'ai', text: 'No pude conectar con el asistente de IA en este momento. Verifica que esté activo e inténtalo de nuevo.' }])
+        setLoading(false)
+        return
+      }
       const dossiers = await searchStudents(meId, q)
       setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
       setLoading(false)
