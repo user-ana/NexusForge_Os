@@ -353,7 +353,7 @@ export default function ChatPage() {
               {feedback === 'no' && <p className="text-sm text-[#f0a3a3]">{t('chat.wrong')}</p>}
             </div>
           ) : (
-            <div ref={listRef} className="neo-chat-scroll flex flex-1 flex-col gap-2.5 overflow-y-auto p-5">
+            <div ref={listRef} className="neo-chat-scroll flex flex-1 flex-col overflow-y-auto px-3 py-4">
               {msgs.length === 0 ? (
                 <p className="m-auto text-sm text-neutral-600">No hay mensajes aún. Sé el primero en escribir.</p>
               ) : (
@@ -432,12 +432,13 @@ function CommBubble({
   const name = prof?.name ?? m.name
   const avatar = prof?.avatar ?? m.avatar
   return (
-    <div className={`neo-bubble-row group ${mine ? 'neo-bubble-row--mine' : ''}`}>
-      {!mine &&
-        (grouped ? (
-          <span className="neo-bubble-spacer" />
+    <div className={`group relative flex gap-3 rounded-md px-3 transition-colors hover:bg-white/[0.035] ${grouped ? 'py-0.5' : 'mt-3 py-1'}`}>
+      {/* Columna del avatar (o la hora al pasar el mouse si va agrupado) */}
+      <div className="w-10 flex-shrink-0 pt-0.5">
+        {grouped ? (
+          <span className="hidden select-none text-[10px] leading-6 text-neutral-600 group-hover:block">{fmtTime(m.ts)}</span>
         ) : (
-          <span className="neo-aula-msg-av overflow-hidden" style={{ background: color }}>
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white" style={{ background: color }}>
             {avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
@@ -445,27 +446,36 @@ function CommBubble({
               name.charAt(0).toUpperCase()
             )}
           </span>
-        ))}
-      <div className="neo-bubble-col">
+        )}
+      </div>
+
+      {/* Contenido del mensaje */}
+      <div className="min-w-0 flex-1">
         {!grouped && (
-          <p className="neo-bubble-meta">
-            {!mine && <span className="font-semibold" style={{ color }}>{name}</span>}
-            {!mine && m.role === 'teacher' && <span className="neo-aula-badge">Catedrático</span>}
-            <span className="text-neutral-600">{fmtTime(m.ts)}</span>
+          <p className="flex items-center gap-2 leading-none">
+            <span className="text-sm font-semibold" style={{ color }}>{name}</span>
+            {m.role === 'teacher' && (
+              <span className="rounded bg-accent-violet/15 px-1.5 py-0.5 text-[10px] font-medium text-accent-violet">Catedrático</span>
+            )}
+            <span className="text-[11px] text-neutral-600">{fmtTime(m.ts)}</span>
           </p>
         )}
-        <div className="neo-bubble-wrap">
-          <div className={`neo-bubble ${mine ? 'neo-bubble--mine' : ''}`}>
-            {m.text}
-            {m.edited && <span className="neo-bubble-edited">(editado)</span>}
-          </div>
-          {mine && (
-            <div className="neo-bubble-actions">
-              <button onClick={onDelete} title="Eliminar" className="hover:text-red-400"><TrashIcon size={15} /></button>
-            </div>
-          )}
-        </div>
+        <p className={`whitespace-pre-wrap break-words text-[15px] leading-relaxed text-neutral-200 ${grouped ? '' : 'mt-1'}`}>
+          {m.text}
+          {m.edited && <span className="ml-1.5 text-[10px] text-neutral-600">(editado)</span>}
+        </p>
       </div>
+
+      {/* Borrar (solo mis mensajes, aparece al pasar el mouse) */}
+      {mine && (
+        <button
+          onClick={onDelete}
+          title="Eliminar"
+          className="absolute right-2 top-1 hidden rounded-md p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-red-400 group-hover:block"
+        >
+          <TrashIcon size={14} />
+        </button>
+      )}
     </div>
   )
 }
