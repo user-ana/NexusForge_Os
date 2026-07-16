@@ -7,6 +7,8 @@ import { NextResponse } from 'next/server'
  * Ollama definido por OLLAMA_BASE_URL (local: http://localhost:11434).
  */
 export const runtime = 'nodejs'
+// La IA puede correr en CPU (lenta). Damos margen para que Vercel no corte antes.
+export const maxDuration = 300
 
 export async function POST(req: Request) {
   let body: { question?: string; context?: string; history?: { role: string; content: string }[] }
@@ -126,8 +128,8 @@ export async function POST(req: Request) {
           { role: 'user', content: question },
         ],
       }),
-      // el modelo puede tardar en responder la primera vez
-      signal: AbortSignal.timeout(120_000),
+      // el modelo puede tardar bastante en CPU (VM). Margen amplio.
+      signal: AbortSignal.timeout(280_000),
     })
     if (!r.ok) {
       return NextResponse.json({ error: `El servidor de IA respondió ${r.status}.` }, { status: 502 })
