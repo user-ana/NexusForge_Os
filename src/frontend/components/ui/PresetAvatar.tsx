@@ -45,8 +45,11 @@ export default function PresetAvatar({ src, index, size = 60, className = '' }: 
         width={size}
         height={size}
         onError={() => setFailed(true)}
-        className={`object-cover object-top ${className}`}
-        style={{ width: px, height: px }}
+        className={`object-cover ${className}`}
+        // Los PNG son retratos con un marco circular + margen ya dibujado.
+        // Encuadramos en la cara y hacemos zoom para que el personaje llene el
+        // círculo y el margen sobrante quede recortado (sin el "aro" alrededor).
+        style={{ width: px, height: px, objectPosition: '50% 24%', transform: 'scale(1.42)', transformOrigin: '50% 24%' }}
       />
     )
   }

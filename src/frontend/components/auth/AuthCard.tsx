@@ -20,6 +20,8 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
   const router = useRouter()
   const [mode, setMode] = useState<Mode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
+  const [showTeacherKey, setShowTeacherKey] = useState(false) // mostrar/ocultar clave docente
+  const [teacherHelpOpen, setTeacherHelpOpen] = useState(false) // tarjeta "no tengo la clave"
 
   const [identifier, setIdentifier] = useState('') // email o username (sign in)
   const [username, setUsername] = useState('')
@@ -567,24 +569,59 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                   </div>
                 )}
                 {role === 'teacher' && (
-                  <div className="neo-reveal space-y-1.5 pt-1">
-                    <label htmlFor="tkey" className="neo-label flex items-center gap-1.5">
-                      <LockMini /> Clave de docente
-                    </label>
-                    <input
-                      id="tkey"
-                      ref={teacherKeyRef}
-                      name="nf-tkey"
-                      value={teacherKey}
-                      onChange={(e) => setTeacherKey(e.target.value)}
-                      placeholder="Clave que entrega tu institución"
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="neo-input w-full font-mono"
-                    />
+                  <div className="neo-reveal space-y-2 pt-1">
+                    <label htmlFor="tkey" className="neo-label">Clave de docente</label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
+                        <LockMini />
+                      </span>
+                      <input
+                        id="tkey"
+                        ref={teacherKeyRef}
+                        name="nf-tkey"
+                        type={showTeacherKey ? 'text' : 'password'}
+                        value={teacherKey}
+                        onChange={(e) => setTeacherKey(e.target.value)}
+                        placeholder="Clave que entrega tu institución"
+                        autoComplete="off"
+                        spellCheck={false}
+                        style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
+                        className="neo-input w-full font-mono tracking-wider"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showTeacherKey ? 'Ocultar clave' : 'Mostrar clave'}
+                        onClick={() => setShowTeacherKey((s) => !s)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 transition hover:text-accent-violet"
+                      >
+                        {showTeacherKey ? <EyeIcon /> : <EyeOffIcon />}
+                      </button>
+                    </div>
                     <p className="text-[10px] leading-relaxed text-neutral-500">
                       Solo el personal docente la tiene. Sin la clave correcta no podrás registrarte como catedrático.
                     </p>
+
+                    {/* Tarjeta desplegable: no tengo la clave */}
+                    <button
+                      type="button"
+                      onClick={() => setTeacherHelpOpen((o) => !o)}
+                      className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3.5 py-2.5 text-left transition-all duration-300 hover:border-accent-violet/30 hover:bg-white/[0.05]"
+                    >
+                      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent-violet/12 text-accent-violet transition-colors duration-300 group-hover:bg-accent-violet/20">
+                        <HelpMini />
+                      </span>
+                      <span className="flex-1 text-[12px] font-medium text-neutral-100">¿No tienes la clave de docente?</span>
+                      <ChevronMini className={`text-neutral-500 transition-transform duration-300 ${teacherHelpOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <div className={`grid transition-[grid-template-rows] duration-[350ms] ease-out ${teacherHelpOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                      <div className="overflow-hidden">
+                        <div className="rounded-xl border-l-2 border-accent-violet bg-accent-violet/[0.06] px-3.5 py-2.5 text-[11px] leading-relaxed text-neutral-300">
+                          Solicítala al <span className="font-semibold text-neutral-100">administrador de la plataforma</span> o a la{' '}
+                          <span className="font-semibold text-neutral-100">coordinación académica</span>. Es una clave única del
+                          personal docente. Si eres estudiante, elige <span className="font-semibold text-neutral-100">Estudiante</span>.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -703,9 +740,27 @@ function WarnIcon() {
 
 function LockMini() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+
+function HelpMini() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.8.4-1 .9-1 1.7" />
+      <path d="M12 17h.01" />
+    </svg>
+  )
+}
+
+function ChevronMini({ className = '' }: { className?: string }) {
+  return (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   )
 }

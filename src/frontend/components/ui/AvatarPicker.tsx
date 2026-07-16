@@ -6,7 +6,10 @@ import PresetAvatar from '@/frontend/components/ui/PresetAvatar'
 import { setAvatar } from '@/frontend/session/session'
 import { useT } from '@/frontend/hooks/useT'
 
-const PRESETS = Array.from({ length: 16 }, (_, i) => `/avatars/avatar-${i + 1}.png`)
+// Solo los avatares que existen en public/avatars/ (evita 404 en consola).
+// Para agregar más, sube el PNG y añade su número aquí.
+const AVATAR_IDS = [1, 2, 3, 4, 5, 9]
+const PRESETS = AVATAR_IDS.map((n) => ({ id: n, src: `/avatars/avatar-${n}.png` }))
 
 export default function AvatarPicker({
   current,
@@ -68,13 +71,13 @@ export default function AvatarPicker({
         </div>
 
         <div className="grid grid-cols-4 gap-3">
-          {PRESETS.map((src, i) => (
+          {PRESETS.map(({ id, src }) => (
             <button
               key={src}
               onClick={() => choose(src)}
               className={`neo-avatar-option ${current === src ? 'neo-avatar-option--active' : ''}`}
             >
-              <PresetAvatar src={src} index={i + 1} size={68} className="h-full w-full !rounded-xl" />
+              <PresetAvatar src={src} index={id} size={68} className="h-full w-full !rounded-xl" />
             </button>
           ))}
         </div>
