@@ -27,7 +27,7 @@ import { getClasses, loadClasses, CLASSES_EVENT, type Klass } from '@/backend/se
 import { loadGroups, groupOf, CGROUPS_EVENT, type ClassGroup } from '@/backend/services/classGroups'
 import EmojiButton from '@/frontend/components/ui/EmojiButton'
 import Icon3D from '@/frontend/components/ui/Icon3D'
-import { GlobeIcon, CodeIcon, BuildingIcon, GearIcon, TrophyIcon, TrashIcon, ExpandIcon } from '@/frontend/components/ui/Icons'
+import { GlobeIcon, TrophyIcon, TrashIcon, ExpandIcon } from '@/frontend/components/ui/Icons'
 import { useT } from '@/frontend/hooks/useT'
 
 type Chan = { key: string; icon: ReactNode; labelKey?: string; label?: string }
@@ -37,15 +37,6 @@ const CATS: { key: string; labelKey: string; channels: Chan[] }[] = [
     labelKey: 'chat.cat_main',
     channels: [
       { key: 'community', labelKey: 'chat.ch_community', icon: <GlobeIcon size={16} /> },
-      { key: 'soft', label: 'Software', icon: <CodeIcon size={16} /> },
-    ],
-  },
-  {
-    key: 'careers',
-    labelKey: 'chat.cat_careers',
-    channels: [
-      { key: 'civil', label: 'Civil', icon: <BuildingIcon size={16} /> },
-      { key: 'mech', label: 'Mecánica', icon: <GearIcon size={16} /> },
     ],
   },
   {
