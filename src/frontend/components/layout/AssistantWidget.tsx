@@ -6,8 +6,8 @@ import Icon3D from '@/frontend/components/ui/Icon3D'
 import { useT } from '@/frontend/hooks/useT'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
 import { getClasses, loadClasses, createClass, deleteClass } from '@/backend/services/classes'
-import { createGroupsBulk, GROUP_ICONS } from '@/backend/services/classGroups'
-import { createProject } from '@/backend/services/projects'
+import { createGroupsBulk, GROUP_ICONS, loadGroups, getGroups, setGroupProject } from '@/backend/services/classGroups'
+import { createProject, loadProjects, getProjects } from '@/backend/services/projects'
 import { type ParcialCode } from '@/shared/parciales'
 import {
   searchStudents,
@@ -167,7 +167,7 @@ export default function AssistantWidget() {
       // La IA no respondió. Si el mensaje parecía un COMANDO de acción, no tiene
       // sentido "buscar estudiantes": avisamos claro. Si parecía una búsqueda por
       // nombre, degradamos a la búsqueda estructurada (funciona sin IA).
-      const looksLikeAction = /\b(crea|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|genera|nuev[oa]s?|elimina|eliminar|borra|borrar|quita|da de baja)\b/i.test(q)
+      const looksLikeAction = /\b(crea|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|genera|asigna|asignar|nuev[oa]s?|elimina|eliminar|borra|borrar|quita|da de baja)\b/i.test(q)
       if (looksLikeAction) {
         setEntries((e) => [...e, { kind: 'ai', text: 'No pude conectar con el asistente de IA en este momento. Verifica que esté activo e inténtalo de nuevo.' }])
         setLoading(false)
@@ -192,7 +192,7 @@ export default function AssistantWidget() {
     if (tc.name === 'crear_clase') {
       const n = String(tc.args.nombre ?? '').trim()
       if (n && findClass(n)) warning = `Ya existe una clase parecida a «${n}». ¿Seguro que quieres otra?`
-    } else if (tc.name === 'crear_grupos' || tc.name === 'crear_proyecto') {
+    } else if (tc.name === 'crear_grupos' || tc.name === 'crear_proyecto' || tc.name === 'asignar_proyecto') {
       const c = String(tc.args.clase ?? '').trim()
       if (c && !findClass(c)) warning = `No encuentro una clase llamada «${c}». Revisa el nombre o créala primero.`
     } else if (tc.name === 'eliminar_clase') {
@@ -281,6 +281,23 @@ export default function AssistantWidget() {
             requirements: '',
           })
           msg = p ? `Proyecto «${p.title}» creado en «${cls.name}».` : 'No se pudo crear el proyecto.'
+        }
+      } else if (name === 'asignar_proyecto') {
+        await loadClasses()
+        const cls = findClass(String(args.clase ?? ''))
+        if (!cls) msg = `No encontré una clase llamada «${args.clase}».`
+        else {
+          await Promise.all([loadGroups(cls.id), loadProjects(cls.id)])
+          const gq = String(args.grupo ?? '').trim().toLowerCase()
+          const pq = String(args.proyecto ?? '').trim().toLowerCase()
+          const grp = getGroups(cls.id).find((g) => g.name.toLowerCase().includes(gq) || gq.includes(g.name.toLowerCase()))
+          const proj = getProjects(cls.id).find((p) => p.title.toLowerCase().includes(pq) || pq.includes(p.title.toLowerCase()))
+          if (!grp) msg = `No encontré el grupo «${args.grupo}» en «${cls.name}».`
+          else if (!proj) msg = `No encontré el proyecto «${args.proyecto}» en «${cls.name}».`
+          else {
+            await setGroupProject(cls.id, grp.id, proj.id)
+            msg = `Asigné el proyecto «${proj.title}» al grupo «${grp.name}».`
+          }
         }
       } else if (name === 'eliminar_clase') {
         await loadClasses()
@@ -693,6 +710,11 @@ function nextMissing(tc: ToolCall, userText: string): { field: string; question:
     if (!argInQuestion(String(tc.args.titulo ?? ''), userText)) return { field: 'titulo', question: '¿Cómo se llama el proyecto?' }
     if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿En qué clase creo el proyecto?' }
   }
+  if (tc.name === 'asignar_proyecto') {
+    if (!argInQuestion(String(tc.args.proyecto ?? ''), userText)) return { field: 'proyecto', question: '¿Qué proyecto quieres asignar?' }
+    if (!argInQuestion(String(tc.args.grupo ?? ''), userText)) return { field: 'grupo', question: '¿A qué grupo se lo asigno?' }
+    if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿En qué clase está ese grupo?' }
+  }
   if (tc.name === 'eliminar_clase') {
     if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿Qué clase quieres eliminar?' }
   }
@@ -723,6 +745,8 @@ function describeAction({ name, args }: ToolCall): string {
   if (name === 'crear_grupos') return `Crear ${args.cantidad} grupo(s) en la clase «${args.clase}».`
   if (name === 'crear_proyecto')
     return `Crear el proyecto «${args.titulo}» en la clase «${args.clase}»${args.parcial ? ` (${args.parcial})` : ''}.`
+  if (name === 'asignar_proyecto')
+    return `Asignar el proyecto «${args.proyecto}» al grupo «${args.grupo}» de la clase «${args.clase}».`
   if (name === 'eliminar_clase')
     return `Eliminar la clase «${args.clase}» y todo su contenido (grupos, proyectos, chats). Esto no se puede deshacer.`
   return 'Acción desconocida.'

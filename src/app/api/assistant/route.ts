@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   // ofrecemos las herramientas al modelo. Así un saludo o una consulta no se
   // convierte por error en "crear una clase" (el modelo pequeño se sesga con
   // las herramientas presentes). Determinista y además más rápido (prompt corto).
-  const ACTION_RE = /\b(?:crea|cree|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|armar|genera|generar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|remueve|remover|haz)(?:me|nos|le|les|lo|la|los|las)?\b|\bnuev[oa]s?\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/i
+  const ACTION_RE = /\b(?:crea|cree|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|armar|genera|generar|registra|registrar|asigna|asignar|asign[aá]|elimina|eliminar|borra|borrar|quita|quitar|remueve|remover|haz)(?:me|nos|le|les|lo|la|los|las)?\b|\bnuev[oa]s?\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/i
   const wantsAction = ACTION_RE.test(question)
 
   // En modo ACCIÓN el prompt es corto (sin el contexto RAG) para responder
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
     { type: 'function', function: { name: 'crear_clase', description: 'Crear una clase', parameters: { type: 'object', properties: { nombre: { type: 'string' }, seccion: { type: 'string' }, periodo: { type: 'string' } }, required: ['nombre'] } } },
     { type: 'function', function: { name: 'crear_grupos', description: 'Crear grupos en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, cantidad: { type: 'integer' } }, required: ['clase', 'cantidad'] } } },
     { type: 'function', function: { name: 'crear_proyecto', description: 'Crear un proyecto en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, titulo: { type: 'string' }, descripcion: { type: 'string' }, parcial: { type: 'string' } }, required: ['clase', 'titulo'] } } },
+    { type: 'function', function: { name: 'asignar_proyecto', description: 'Asignar un proyecto existente a un grupo de una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, grupo: { type: 'string' }, proyecto: { type: 'string' } }, required: ['clase', 'grupo', 'proyecto'] } } },
     { type: 'function', function: { name: 'eliminar_clase', description: 'Eliminar una clase', parameters: { type: 'object', properties: { clase: { type: 'string' } }, required: ['clase'] } } },
   ]
 
