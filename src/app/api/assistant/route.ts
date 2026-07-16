@@ -75,7 +75,9 @@ export async function POST(req: Request) {
       model,
       stream: false,
       keep_alive: '30m', // mantiene el modelo cargado en memoria (evita el arranque en frío)
-      options: { temperature: 0.2, num_predict: 400 }, // factual + respuesta acotada = más rápido
+      // Tope de tokens acotado: en CPU cada token es lento y el túnel gratis
+      // corta a los 100s. Acciones necesitan poco; consultas un poco más.
+      options: { temperature: 0.2, num_predict: wantsAction ? 100 : 200 },
       messages: [
         { role: 'system', content: system },
         ...history,
