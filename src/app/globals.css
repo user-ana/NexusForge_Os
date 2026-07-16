@@ -671,12 +671,11 @@ body {
 
 /* Transición al navegar entre páginas */
 .neo-page {
-  animation: neo-page 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: neo-page 0.2s ease-out both;
 }
 @keyframes neo-page {
-  from { opacity: 0; transform: translateY(12px) scale(0.992); filter: blur(7px); }
-  60%  { filter: blur(0); }
-  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
   .neo-page { animation: none !important; }
@@ -755,6 +754,10 @@ body {
   color: #eceef2;
   background: #2c2f35;
   transform: translateX(4px);
+}
+.neo-navlink:active {
+  background: #303338;
+  transform: translateX(4px) scale(0.985);
 }
 .neo-navlink--active {
   color: #ffffff;
