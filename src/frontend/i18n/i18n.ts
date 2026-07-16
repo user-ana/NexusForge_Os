@@ -111,6 +111,7 @@ const es: Dict = {
   'prof.t_students': 'Estudiantes',
   'prof.t_reviewed': 'Evaluados',
   'prof.t_rating': 'Valoración',
+  'prof.t_groups': 'Grupos',
   'nav.reviews': 'Evaluaciones',
   // Rewards
   'rw.your_rank': 'Tu rango',
@@ -420,6 +421,7 @@ const en: Dict = {
   'prof.t_students': 'Students',
   'prof.t_reviewed': 'Reviewed',
   'prof.t_rating': 'Rating',
+  'prof.t_groups': 'Groups',
   'nav.reviews': 'Reviews',
   'rw.your_rank': 'Your rank',
   'rw.wheel': 'Reward wheel',

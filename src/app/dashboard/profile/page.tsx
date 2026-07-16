@@ -19,6 +19,7 @@ import {
 } from '@/frontend/session/session'
 import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
+import { getAssistantOverview, type AssistantOverview } from '@/backend/services/studentSearch'
 
 const RANKS = [
   { key: 'bronze', label: 'Bronze' },
@@ -41,6 +42,7 @@ const ACHIEVEMENTS = [
 export default function ProfilePage() {
   const { t, lang, setLang } = useT()
   const [session, setSessionState] = useState<Session | null>(null)
+  const [ov, setOv] = useState<AssistantOverview | null>(null) // stats reales del catedrático
   const [picker, setPicker] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -81,6 +83,12 @@ export default function ProfilePage() {
     sync()
     window.addEventListener(SESSION_EVENT, sync)
     return () => window.removeEventListener(SESSION_EVENT, sync)
+  }, [])
+
+  // Stats reales del catedrático (clases, estudiantes, grupos, evaluados)
+  useEffect(() => {
+    const s = getSession()
+    if (s?.role === 'teacher' && s.id) getAssistantOverview(s.id).then(setOv)
   }, [])
 
   // Coloca el cursor en el nombre del catedrático (cuando ya está renderizado)
@@ -249,10 +257,10 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <Stat label={t('prof.t_classes')} value="4" />
-                  <Stat label={t('prof.t_students')} value="87" />
-                  <Stat label={t('prof.t_reviewed')} value="12" />
-                  <Stat label={t('prof.t_rating')} value="4.8 ★" />
+                  <Stat label={t('prof.t_classes')} value={String(ov?.classCount ?? 0)} />
+                  <Stat label={t('prof.t_students')} value={String(ov?.studentCount ?? 0)} />
+                  <Stat label={t('prof.t_groups')} value={String(ov?.groupCount ?? 0)} />
+                  <Stat label={t('prof.t_reviewed')} value={String(ov?.gradedCount ?? 0)} />
                 </div>
               )}
             </div>

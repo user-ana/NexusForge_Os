@@ -43,6 +43,7 @@ export type AssistantOverview = {
   studentCount: number
   groupCount: number
   ungradedCount: number
+  gradedCount: number // grupos con nota registrada
   freeStudents: QuickStudent[] // inscritos sin grupo
   groupsNoProject: QuickGroup[] // grupos sin proyecto asignado
   ungraded: QuickGroup[] // grupos con entrega pero sin nota
@@ -56,7 +57,7 @@ export type AssistantOverview = {
  */
 export async function getAssistantOverview(teacherId: string): Promise<AssistantOverview> {
   const empty: AssistantOverview = {
-    classCount: 0, studentCount: 0, groupCount: 0, ungradedCount: 0,
+    classCount: 0, studentCount: 0, groupCount: 0, ungradedCount: 0, gradedCount: 0,
     freeStudents: [], groupsNoProject: [], ungraded: [], noSubmission: [],
   }
   if (!supabase) return empty
@@ -136,6 +137,7 @@ export async function getAssistantOverview(teacherId: string): Promise<Assistant
     studentCount: studentIds.length,
     groupCount: groups.length,
     ungradedCount: ungraded.length,
+    gradedCount: gradedGroups.size,
     freeStudents,
     groupsNoProject,
     ungraded,
