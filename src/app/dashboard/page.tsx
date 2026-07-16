@@ -7,9 +7,11 @@ import Tilt3DCard from '@/frontend/components/ui/Tilt3DCard'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { FlameIcon } from '@/frontend/components/ui/Icons'
 import { useT } from '@/frontend/hooks/useT'
-import { getSession, displayName, addReward, DEFAULT_COINS, DEFAULT_XP, SESSION_EVENT, normalizeStudentStats, type Role } from '@/frontend/session/session'
+import { getSession, displayName, DEFAULT_COINS, DEFAULT_XP, SESSION_EVENT, normalizeStudentStats, type Role } from '@/frontend/session/session'
+import { syncStudentStats, earnReward } from '@/frontend/session/gamificationSync'
 import { getClasses, loadClasses, subscribeClasses, joinByCode, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import { CGROUPS_EVENT } from '@/backend/services/classGroups'
+import { getClassLeaderboard, type BoardRow } from '@/backend/services/gamification'
 import { levelFromXp, rankFromXp } from '@/shared/gamification'
 
 export default function DashboardPage() {
@@ -64,11 +66,13 @@ const QUESTS = [
 
 function StudentView({ t }: { t: T }) {
   const [meName, setMeName] = useState('')
+  const [meId, setMeId] = useState('')
   const [avatar, setAvatar] = useState<string | undefined>(undefined)
   const [coins, setCoins] = useState(DEFAULT_COINS)
   const [xp, setXp] = useState(DEFAULT_XP)
   const [streak, setStreak] = useState(0)
   const [classes, setClasses] = useState<Klass[]>([])
+  const [board, setBoard] = useState<BoardRow[]>([])
   const [code, setCode] = useState('')
   const [msg, setMsg] = useState('')
   const [claimed, setClaimed] = useState<string[]>([])
@@ -76,8 +80,10 @@ function StudentView({ t }: { t: T }) {
 
   useEffect(() => {
     normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
+    void syncStudentStats() // carga las stats reales de la tabla (si existe)
     const sync = () => {
       const s = getSession()
+      setMeId(s?.id ?? '')
       setMeName(displayName(s))
       setAvatar(s?.avatar)
       setCoins(s?.coins ?? DEFAULT_COINS)
@@ -96,6 +102,12 @@ function StudentView({ t }: { t: T }) {
     }
   }, [])
 
+  // Leaderboard REAL del aula (primera clase del estudiante), ordenado por monedas.
+  useEffect(() => {
+    const cid = classes[0]?.id
+    if (cid) getClassLeaderboard(cid).then(setBoard)
+  }, [classes])
+
   async function join() {
     if (!code.trim()) return
     const k = await joinByCode(code)
@@ -104,16 +116,9 @@ function StudentView({ t }: { t: T }) {
   }
   function claim(q: (typeof QUESTS)[number]) {
     if (claimed.includes(q.id)) return
-    addReward(q.coins, q.xp)
+    void earnReward(q.coins, q.xp) // persiste en la tabla (o local si no hay)
     setClaimed((p) => [...p, q.id])
   }
-
-  // Ranking del aula (puntaje estable derivado del nombre)
-  const roster = Array.from(new Set([meName, ...classes.flatMap((c) => c.students)])).filter(Boolean)
-  const board = roster
-    .map((n) => ({ name: n, pts: n === meName ? coins : nameScore(n) }))
-    .sort((a, b) => b.pts - a.pts)
-    .slice(0, 5)
 
   const rk = rankFromXp(xp)
   const lv = levelFromXp(xp)
@@ -242,18 +247,18 @@ function StudentView({ t }: { t: T }) {
         <div>
           <Section title="Top del aula">
             <div className="neo-panel p-4">
-              {board.length <= 1 ? (
+              {classes.length === 0 ? (
                 <p className="py-6 text-center text-sm text-neutral-500">Únete a una clase para ver el ranking.</p>
               ) : (
                 <div className="space-y-1.5">
-                  {board.map((row, i) => (
-                    <div key={row.name} className={`neo-rank-row ${row.name === meName ? 'neo-rank-row--me' : ''}`}>
+                  {board.slice(0, 5).map((row, i) => (
+                    <div key={row.id} className={`neo-rank-row ${row.id === meId ? 'neo-rank-row--me' : ''}`}>
                       <span className={`neo-rank-pos neo-rank-pos--${i + 1}`}>{i + 1}</span>
                       <span className="neo-member !mr-0">{row.name.charAt(0).toUpperCase()}</span>
                       <span className="flex-1 truncate text-sm text-neutral-200">
-                        {row.name === meName ? 'Tú' : row.name}
+                        {row.id === meId ? 'Tú' : row.name}
                       </span>
-                      <span className="text-xs font-semibold text-accent-violet">{row.pts.toLocaleString()}</span>
+                      <span className="text-xs font-semibold text-accent-violet">{row.coins.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -264,12 +269,6 @@ function StudentView({ t }: { t: T }) {
       </div>
     </>
   )
-}
-
-function nameScore(name: string): number {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100000
-  return 300 + (h % 1700)
 }
 
 function JoinByCode({

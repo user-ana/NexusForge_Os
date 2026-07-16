@@ -21,6 +21,7 @@ import {
 import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
 import { getAssistantOverview, type AssistantOverview } from '@/backend/services/studentSearch'
+import { syncStudentStats } from '@/frontend/session/gamificationSync'
 import { RANKS, levelFromXp, rankFromXp } from '@/shared/gamification'
 
 const ACHIEVEMENTS = [
@@ -82,7 +83,10 @@ export default function ProfilePage() {
   useEffect(() => {
     const s = getSession()
     if (s?.role === 'teacher' && s.id) getAssistantOverview(s.id).then(setOv)
-    else if (s?.role !== 'teacher') normalizeStudentStats()
+    else if (s?.role !== 'teacher') {
+      normalizeStudentStats()
+      void syncStudentStats() // stats reales de la tabla (si existe)
+    }
   }, [])
 
   // Coloca el cursor en el nombre del catedrático (cuando ya está renderizado)

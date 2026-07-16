@@ -504,6 +504,29 @@ drop policy if exists cm_delete on public.community_messages;
 create policy cm_delete on public.community_messages for delete to authenticated using (author_id = auth.uid());
 
 -- ----------------------------------------------------------------------
+--  STUDENT_STATS — gamificación real por estudiante (monedas, XP, racha, giro)
+--  Lectura para todos los autenticados (para el leaderboard del aula).
+--  Escritura SOLO del propio estudiante.
+-- ----------------------------------------------------------------------
+create table if not exists public.student_stats (
+  student_id   uuid primary key references auth.users(id) on delete cascade,
+  coins        int not null default 0,
+  xp           int not null default 0,
+  streak       int not null default 0,
+  last_spin_at timestamptz,
+  updated_at   timestamptz not null default now()
+);
+
+alter table public.student_stats enable row level security;
+
+drop policy if exists ss_read on public.student_stats;
+create policy ss_read on public.student_stats for select to authenticated using (true);
+drop policy if exists ss_insert on public.student_stats;
+create policy ss_insert on public.student_stats for insert to authenticated with check (student_id = auth.uid());
+drop policy if exists ss_update on public.student_stats;
+create policy ss_update on public.student_stats for update to authenticated using (student_id = auth.uid()) with check (student_id = auth.uid());
+
+-- ----------------------------------------------------------------------
 --  GRANTS — el rol 'authenticated' necesita permiso en las tablas (RLS filtra)
 -- ----------------------------------------------------------------------
 grant usage on schema public to anon, authenticated;
@@ -523,7 +546,7 @@ alter default privileges in schema public grant execute on functions to anon, au
 do $$
 declare t text;
 begin
-  foreach t in array array['messages','kanban_tasks','class_groups','group_members','enrollments','classes','projects','community_messages','group_projects','group_evaluations']
+  foreach t in array array['messages','kanban_tasks','class_groups','group_members','enrollments','classes','projects','community_messages','group_projects','group_evaluations','student_stats']
   loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Header from '@/frontend/components/layout/Header'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import RewardWheel, { type Reward } from '@/frontend/components/ui/RewardWheel'
-import { addReward, getSession, DEFAULT_COINS, DEFAULT_XP, normalizeStudentStats, canSpinToday, patchSession } from '@/frontend/session/session'
+import { getSession, DEFAULT_XP, normalizeStudentStats, canSpinToday } from '@/frontend/session/session'
+import { syncStudentStats, earnReward, recordSpin } from '@/frontend/session/gamificationSync'
 import { RANKS, levelFromXp, rankFromXp, xpToNextRank } from '@/shared/gamification'
 import { useT } from '@/frontend/hooks/useT'
 
@@ -30,7 +31,6 @@ type Toast = { id: number; msg: string }
 export default function RewardsPage() {
   const { t } = useT()
   const router = useRouter()
-  const [coins, setCoins] = useState(DEFAULT_COINS)
   const [xp, setXp] = useState(DEFAULT_XP)
   const [lastSpin, setLastSpin] = useState<number | undefined>(undefined)
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -46,18 +46,19 @@ export default function RewardsPage() {
       return
     }
     normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
-    const s2 = getSession()
-    if (s2) {
-      setCoins(s2.coins ?? DEFAULT_COINS)
-      setXp(s2.xp ?? DEFAULT_XP)
-      setLastSpin(s2.lastSpin)
-    }
+    ;(async () => {
+      await syncStudentStats() // carga stats reales de la tabla (si existe)
+      const s2 = getSession()
+      if (s2) {
+        setXp(s2.xp ?? DEFAULT_XP)
+        setLastSpin(s2.lastSpin)
+      }
+    })()
   }, [router])
 
   function onSpinStart() {
-    const now = Date.now()
-    patchSession({ lastSpin: now })
-    setLastSpin(now)
+    recordSpin() // registra el giro (tabla + sesión) para el límite diario
+    setLastSpin(Date.now())
   }
 
   const rk = rankFromXp(xp)
@@ -84,9 +85,8 @@ export default function RewardsPage() {
       dCoins = 500
       msg = '¡Gema de rango! +500 monedas'
     }
-    const next = addReward(dCoins, dXp)
-    setCoins(next?.coins ?? coins + dCoins)
-    setXp(next?.xp ?? xp + dXp)
+    setXp((x) => x + dXp) // optimista (el nivel/rango sube al instante)
+    void earnReward(dCoins, dXp) // persiste monedas + XP en la tabla (o local)
     notify(msg)
   }
 
