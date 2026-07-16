@@ -40,84 +40,34 @@ export async function POST(req: Request) {
   const ACTION_RE = /\b(?:crea|cree|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|armar|genera|generar|registra|registrar|elimina|eliminar|borra|borrar|quita|quitar|remueve|remover|haz)(?:me|nos|le|les|lo|la|los|las)?\b|\bnuev[oa]s?\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/i
   const wantsAction = ACTION_RE.test(question)
 
-  const system = [
-    'Eres el asistente del catedrático dentro de NexusForge OS (plataforma académica).',
-    'Consultas responden SOLO con base en los DATOS que te doy abajo sobre sus clases. No inventes.',
-    'Además PUEDES CREAR clases, grupos y proyectos, y ELIMINAR una clase, usando las herramientas cuando el catedrático lo pida.',
-    'Usa eliminar_clase SOLO cuando el catedrático diga explícitamente eliminar/borrar/dar de baja una clase.',
-    'Un saludo, un agradecimiento o una pregunta NO es una orden: respóndelo en TEXTO, nunca con una herramienta.',
-    'REGLA CRÍTICA: NUNCA inventes datos. Solo usa lo que el catedrático escribió textualmente.',
-    'Si NO dio un dato requerido (ej. el nombre de la clase, la cantidad de grupos, la clase destino), NO llames la herramienta: responde con una pregunta corta pidiendo ese dato exacto.',
-    'Antes de crear algo, si en los DATOS ya existe algo con ese nombre, avísalo en vez de duplicar.',
-    'Sé conciso, útil y responde SIEMPRE en español. Al listar, usa viñetas.',
-    '',
-    'DATOS ACTUALES DE SUS CLASES:',
-    context || '(sin datos)',
-  ].join('\n')
+  // En modo ACCIÓN el prompt es corto (sin el contexto RAG) para responder
+  // rápido en CPU; el cliente valida duplicados y pide confirmación. En modo
+  // CONSULTA sí va el contexto completo para responder con datos ciertos.
+  const system = wantsAction
+    ? [
+        'Eres el asistente del catedrático en NexusForge OS.',
+        'Usa una herramienta SOLO para lo que el catedrático pida (crear/eliminar).',
+        'Usa eliminar_clase SOLO si dice explícitamente eliminar/borrar/dar de baja una clase.',
+        'NUNCA inventes datos: usa solo lo que escribió textualmente.',
+        'Si falta un dato requerido (nombre, cantidad o clase destino), NO llames la herramienta: pídelo en una frase corta.',
+        'Responde en español.',
+      ].join('\n')
+    : [
+        'Eres el asistente del catedrático dentro de NexusForge OS (plataforma académica).',
+        'Responde SOLO con base en los DATOS de abajo sobre sus clases. NUNCA inventes; si algo no está, dilo.',
+        'Sé conciso, útil y responde SIEMPRE en español. Al listar, usa viñetas.',
+        '',
+        'DATOS ACTUALES DE SUS CLASES:',
+        context || '(sin datos)',
+      ].join('\n')
 
+  // Esquemas compactos (sin descripciones largas) = menos tokens = respuesta
+  // más rápida en CPU, para caber en el límite de 100s del túnel gratis.
   const tools = [
-    {
-      type: 'function',
-      function: {
-        name: 'crear_clase',
-        description: 'Crea una nueva clase o curso para el catedrático',
-        parameters: {
-          type: 'object',
-          properties: {
-            nombre: { type: 'string', description: 'Nombre de la clase, ej. Bases de Datos' },
-            seccion: { type: 'string', description: 'Sección (opcional)' },
-            periodo: { type: 'string', description: 'Período o ciclo, ej. 2026-II (opcional)' },
-          },
-          required: ['nombre'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'crear_grupos',
-        description: 'Crea varias salas/grupos vacíos dentro de una clase existente',
-        parameters: {
-          type: 'object',
-          properties: {
-            clase: { type: 'string', description: 'Nombre de la clase donde crear los grupos' },
-            cantidad: { type: 'integer', description: 'Cuántos grupos crear' },
-          },
-          required: ['clase', 'cantidad'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'crear_proyecto',
-        description: 'Crea un proyecto o tarea (enunciado) en una clase existente',
-        parameters: {
-          type: 'object',
-          properties: {
-            clase: { type: 'string', description: 'Nombre de la clase' },
-            titulo: { type: 'string', description: 'Título del proyecto o tarea' },
-            descripcion: { type: 'string', description: 'Descripción del enunciado (opcional)' },
-            parcial: { type: 'string', description: 'Parcial: p1, p2, p3 o final (opcional)' },
-          },
-          required: ['clase', 'titulo'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'eliminar_clase',
-        description: 'Elimina (da de baja) una clase existente y todo su contenido. Solo si el catedrático lo pide.',
-        parameters: {
-          type: 'object',
-          properties: {
-            clase: { type: 'string', description: 'Nombre de la clase a eliminar' },
-          },
-          required: ['clase'],
-        },
-      },
-    },
+    { type: 'function', function: { name: 'crear_clase', description: 'Crear una clase', parameters: { type: 'object', properties: { nombre: { type: 'string' }, seccion: { type: 'string' }, periodo: { type: 'string' } }, required: ['nombre'] } } },
+    { type: 'function', function: { name: 'crear_grupos', description: 'Crear grupos en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, cantidad: { type: 'integer' } }, required: ['clase', 'cantidad'] } } },
+    { type: 'function', function: { name: 'crear_proyecto', description: 'Crear un proyecto en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, titulo: { type: 'string' }, descripcion: { type: 'string' }, parcial: { type: 'string' } }, required: ['clase', 'titulo'] } } },
+    { type: 'function', function: { name: 'eliminar_clase', description: 'Eliminar una clase', parameters: { type: 'object', properties: { clase: { type: 'string' } }, required: ['clase'] } } },
   ]
 
   try {
