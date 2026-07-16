@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import PresetAvatar, { presetIndex } from '@/frontend/components/ui/PresetAvatar'
 import { getSession, clearSession, displayName, SESSION_EVENT, DEFAULT_COINS, type Session } from '@/frontend/session/session'
+import { rankFromXp } from '@/shared/gamification'
 import { supabase } from '@/backend/supabase'
 import { useT } from '@/frontend/hooks/useT'
 
@@ -34,6 +35,7 @@ export default function ProfileBar() {
   const coins = session.coins ?? DEFAULT_COINS
   const role = session.role ?? 'student'
   const isStudent = role === 'student'
+  const rank = rankFromXp(session.xp ?? 0)
 
   function toggle() {
     if (!open && chipRef.current) {
@@ -80,8 +82,8 @@ export default function ProfileBar() {
           <p className="text-sm font-semibold text-neutral-100">{name}</p>
           {isStudent ? (
             <p className="flex items-center justify-end gap-1.5 text-[11px] text-neutral-500">
-              <Icon3D src="/icons/rank-gold.png" alt="rank" size={13} fallback="◆" />
-              Gold
+              <Icon3D src={`/icons/rank-${rank.key}.png`} alt="rank" size={13} fallback="◆" />
+              {rank.label}
               <span className="text-neutral-700">·</span>
               <span className={group ? 'text-neutral-400' : 'text-neutral-600'}>
                 {group ?? t('prof.no_group')}

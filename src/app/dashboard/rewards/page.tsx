@@ -5,17 +5,9 @@ import { useRouter } from 'next/navigation'
 import Header from '@/frontend/components/layout/Header'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import RewardWheel, { type Reward } from '@/frontend/components/ui/RewardWheel'
-import { addReward, getSession, DEFAULT_COINS, DEFAULT_XP } from '@/frontend/session/session'
+import { addReward, getSession, DEFAULT_COINS, DEFAULT_XP, normalizeStudentStats, canSpinToday, patchSession } from '@/frontend/session/session'
+import { RANKS, levelFromXp, rankFromXp, xpToNextRank } from '@/shared/gamification'
 import { useT } from '@/frontend/hooks/useT'
-
-const RANKS = [
-  { key: 'bronze', label: 'Bronze' },
-  { key: 'silver', label: 'Silver' },
-  { key: 'gold', label: 'Gold' },
-  { key: 'platinum', label: 'Platinum' },
-  { key: 'diamond', label: 'Diamond' },
-]
-const CURRENT_RANK = 2 // Gold
 
 const ACHIEVEMENTS = [
   { name: 'First Commit', icon: '/icons/ach-commit.png', emoji: '◆', unlocked: true },
@@ -40,6 +32,7 @@ export default function RewardsPage() {
   const router = useRouter()
   const [coins, setCoins] = useState(DEFAULT_COINS)
   const [xp, setXp] = useState(DEFAULT_XP)
+  const [lastSpin, setLastSpin] = useState<number | undefined>(undefined)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [blocked, setBlocked] = useState(false) // catedrático: no accede a la capa de juego
   const tid = useRef(0)
@@ -52,11 +45,24 @@ export default function RewardsPage() {
       router.replace('/dashboard')
       return
     }
-    if (s) {
-      setCoins(s.coins ?? DEFAULT_COINS)
-      setXp(s.xp ?? DEFAULT_XP)
+    normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
+    const s2 = getSession()
+    if (s2) {
+      setCoins(s2.coins ?? DEFAULT_COINS)
+      setXp(s2.xp ?? DEFAULT_XP)
+      setLastSpin(s2.lastSpin)
     }
   }, [router])
+
+  function onSpinStart() {
+    const now = Date.now()
+    patchSession({ lastSpin: now })
+    setLastSpin(now)
+  }
+
+  const rk = rankFromXp(xp)
+  const lv = levelFromXp(xp)
+  const nx = xpToNextRank(xp)
 
   function notify(msg: string) {
     const id = ++tid.current
@@ -112,22 +118,24 @@ export default function RewardsPage() {
           <div className="neo-panel p-6">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <Icon3D src="/icons/rank-gold.png" alt="Gold" size={44} fallback="◆" />
+                <Icon3D src={`/icons/rank-${rk.key}.png`} alt={rk.label} size={44} fallback="◆" />
                 <div>
-                  <p className="text-2xl font-bold text-white">Gold</p>
-                  <p className="text-sm text-neutral-500">{xp.toLocaleString()} XP · {t('rw.to_platinum')}</p>
+                  <p className="text-2xl font-bold text-white">{rk.label}</p>
+                  <p className="text-sm text-neutral-500">
+                    {xp.toLocaleString()} XP{nx.nextLabel ? ` · faltan ${nx.remaining.toLocaleString()} para ${nx.nextLabel}` : ' · rango máximo'}
+                  </p>
                 </div>
               </div>
-              <span className="neo-chip neo-chip--gold">{t('prof.level')} 6</span>
+              <span className="neo-chip neo-chip--gold">{t('prof.level')} {lv.level}</span>
             </div>
 
             <div className="neo-rank-track">
               {RANKS.map((r, i) => (
                 <div key={r.key} className="flex flex-1 flex-col items-center gap-2">
-                  <div className={`neo-gem ${i <= CURRENT_RANK ? 'neo-gem--active' : 'neo-gem--locked'}`}>
+                  <div className={`neo-gem ${i <= rk.index ? 'neo-gem--active' : 'neo-gem--locked'}`}>
                     <Icon3D src={`/icons/rank-${r.key}.png`} alt={r.label} size={38} fallback="◆" />
                   </div>
-                  <span className={`text-[11px] ${i === CURRENT_RANK ? 'text-white font-semibold' : 'text-neutral-500'}`}>
+                  <span className={`text-[11px] ${i === rk.index ? 'text-white font-semibold' : 'text-neutral-500'}`}>
                     {r.label}
                   </span>
                 </div>
@@ -135,7 +143,7 @@ export default function RewardsPage() {
             </div>
 
             <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-black/40 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6]" style={{ width: '58%' }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6] transition-all" style={{ width: `${lv.pct}%` }} />
             </div>
           </div>
         </section>
@@ -146,8 +154,11 @@ export default function RewardsPage() {
             <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-neutral-500 mb-4">
               {t('rw.wheel')}
             </h2>
-            <div className="neo-panel flex justify-center p-8">
-              <RewardWheel onResult={onWin} />
+            <div className="neo-panel flex flex-col items-center gap-3 p-8">
+              <RewardWheel onResult={onWin} canSpin={canSpinToday(lastSpin)} onSpin={onSpinStart} cooldownLabel={t('rw.come_back')} />
+              {!canSpinToday(lastSpin) && (
+                <p className="text-xs text-neutral-500">{t('rw.spin_used')}</p>
+              )}
             </div>
           </div>
 

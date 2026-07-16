@@ -17,6 +17,8 @@ export type Session = {
   provider?: 'password' | 'azure' | 'google' | 'github'
   coins?: number
   xp?: number
+  streak?: number // días seguidos de actividad
+  lastSpin?: number // timestamp del último giro de la ruleta (límite 1/día)
   avatar?: string
   group?: string
 }
@@ -26,8 +28,9 @@ export const SESSION_EVENT = 'nf:session'
 
 const KEY = 'nexusforge_session'
 
-export const DEFAULT_COINS = 256
-export const DEFAULT_XP = 20_021_654
+// Valores iniciales realistas (un estudiante nuevo empieza en cero, no inflado).
+export const DEFAULT_COINS = 0
+export const DEFAULT_XP = 0
 
 export function setSession(session: Session): void {
   if (typeof window === 'undefined') return
@@ -88,4 +91,24 @@ export function addReward(coins: number, xp: number): Session | null {
   }
   setSession(next)
   return next
+}
+
+/**
+ * Resetea los valores de juego INFLADOS que quedaron de la versión anterior
+ * (el XP falso de ~20M y monedas exageradas). Deja al estudiante en cero para
+ * que empiece a acumular de verdad. Se llama al entrar a las vistas gamificadas.
+ */
+export function normalizeStudentStats(): void {
+  const s = getSession()
+  if (s && ((s.xp ?? 0) > 1_000_000 || (s.coins ?? 0) > 100_000)) {
+    patchSession({ coins: 0, xp: 0 })
+  }
+}
+
+/** ¿Se puede girar la ruleta? (límite: 1 vez por día natural) */
+export function canSpinToday(lastSpin?: number): boolean {
+  if (!lastSpin) return true
+  const last = new Date(lastSpin)
+  const now = new Date()
+  return last.toDateString() !== now.toDateString()
 }

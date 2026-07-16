@@ -7,9 +7,10 @@ import Tilt3DCard from '@/frontend/components/ui/Tilt3DCard'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { FlameIcon } from '@/frontend/components/ui/Icons'
 import { useT } from '@/frontend/hooks/useT'
-import { getSession, displayName, addReward, DEFAULT_COINS, SESSION_EVENT, type Role } from '@/frontend/session/session'
+import { getSession, displayName, addReward, DEFAULT_COINS, DEFAULT_XP, SESSION_EVENT, normalizeStudentStats, type Role } from '@/frontend/session/session'
 import { getClasses, loadClasses, subscribeClasses, joinByCode, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import { CGROUPS_EVENT } from '@/backend/services/classGroups'
+import { levelFromXp, rankFromXp } from '@/shared/gamification'
 
 export default function DashboardPage() {
   const { t } = useT()
@@ -65,6 +66,8 @@ function StudentView({ t }: { t: T }) {
   const [meName, setMeName] = useState('')
   const [avatar, setAvatar] = useState<string | undefined>(undefined)
   const [coins, setCoins] = useState(DEFAULT_COINS)
+  const [xp, setXp] = useState(DEFAULT_XP)
+  const [streak, setStreak] = useState(0)
   const [classes, setClasses] = useState<Klass[]>([])
   const [code, setCode] = useState('')
   const [msg, setMsg] = useState('')
@@ -72,11 +75,14 @@ function StudentView({ t }: { t: T }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
     const sync = () => {
       const s = getSession()
       setMeName(displayName(s))
       setAvatar(s?.avatar)
       setCoins(s?.coins ?? DEFAULT_COINS)
+      setXp(s?.xp ?? DEFAULT_XP)
+      setStreak(s?.streak ?? 0)
       setClasses(getClasses()) // loadClasses ya trae solo las clases del alumno
     }
     sync()
@@ -109,6 +115,9 @@ function StudentView({ t }: { t: T }) {
     .sort((a, b) => b.pts - a.pts)
     .slice(0, 5)
 
+  const rk = rankFromXp(xp)
+  const lv = levelFromXp(xp)
+
   return (
     <>
       {/* HERO gamer */}
@@ -122,27 +131,27 @@ function StudentView({ t }: { t: T }) {
               <span>{meName.charAt(0).toUpperCase()}</span>
             )}
             <span className="neo-hero-gem">
-              <Icon3D src="/icons/rank-gold.png" alt="" size={26} fallback="◆" />
+              <Icon3D src={`/icons/rank-${rk.key}.png`} alt="" size={26} fallback="◆" />
             </span>
           </div>
           <div className="flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-2xl font-bold text-white">{meName}</h2>
-              <span className="neo-chip neo-chip--gold">Gold · Nivel 6</span>
+              <span className="neo-chip neo-chip--gold">{rk.label} · Nivel {lv.level}</span>
             </div>
             <p className="mt-0.5 text-sm text-neutral-500">Operador de ingeniería · UTH</p>
             <div className="mt-3 max-w-md">
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/45 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)]">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6]" style={{ width: '58%' }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6] transition-all" style={{ width: `${lv.pct}%` }} />
               </div>
-              <p className="mt-1 text-[11px] text-neutral-500">XP al siguiente nivel · 58%</p>
+              <p className="mt-1 text-[11px] text-neutral-500">XP al siguiente nivel · {lv.pct}%</p>
             </div>
           </div>
           <div className="flex gap-3">
             <div className="neo-hero-stat">
               <span className="text-accent-violet"><FlameIcon size={20} /></span>
               <div>
-                <p className="neo-hero-stat-v">4</p>
+                <p className="neo-hero-stat-v">{streak}</p>
                 <p className="neo-hero-stat-l">Racha</p>
               </div>
             </div>

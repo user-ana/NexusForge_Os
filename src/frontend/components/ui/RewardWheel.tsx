@@ -31,14 +31,25 @@ function iconFor(r: Reward) {
   return { src: '/icons/rank-gold.png', emoji: '◆' }
 }
 
-export default function RewardWheel({ onResult }: { onResult?: (reward: Reward) => void }) {
+export default function RewardWheel({
+  onResult,
+  canSpin = true,
+  onSpin,
+  cooldownLabel,
+}: {
+  onResult?: (reward: Reward) => void
+  canSpin?: boolean
+  onSpin?: () => void
+  cooldownLabel?: string
+}) {
   const { t } = useT()
   const [rotation, setRotation] = useState(0)
   const [spinning, setSpinning] = useState(false)
   const [result, setResult] = useState<Reward | null>(null)
 
   function spin() {
-    if (spinning) return
+    if (spinning || !canSpin) return
+    onSpin?.() // registra el giro (para el límite diario) al empezar
     setSpinning(true)
     setResult(null)
 
@@ -84,8 +95,8 @@ export default function RewardWheel({ onResult }: { onResult?: (reward: Reward) 
         </div>
       </div>
 
-      <button onClick={spin} disabled={spinning} className="neo-btn px-10">
-        {spinning ? t('rw.spinning') : t('rw.spin')}
+      <button onClick={spin} disabled={spinning || !canSpin} className={`neo-btn px-10 ${!canSpin && !spinning ? 'opacity-60' : ''}`}>
+        {spinning ? t('rw.spinning') : !canSpin ? (cooldownLabel ?? t('rw.spin')) : t('rw.spin')}
       </button>
 
       {/* Mensaje de premio */}

@@ -14,21 +14,14 @@ import {
   SESSION_EVENT,
   DEFAULT_COINS,
   DEFAULT_XP,
+  normalizeStudentStats,
   type Session,
   type Role,
 } from '@/frontend/session/session'
 import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
 import { getAssistantOverview, type AssistantOverview } from '@/backend/services/studentSearch'
-
-const RANKS = [
-  { key: 'bronze', label: 'Bronze' },
-  { key: 'silver', label: 'Silver' },
-  { key: 'gold', label: 'Gold' },
-  { key: 'platinum', label: 'Platinum' },
-  { key: 'diamond', label: 'Diamond' },
-]
-const CURRENT_RANK = 2
+import { RANKS, levelFromXp, rankFromXp } from '@/shared/gamification'
 
 const ACHIEVEMENTS = [
   { name: 'First Commit', icon: '/icons/ach-commit.png', emoji: '◆', unlocked: true },
@@ -85,10 +78,11 @@ export default function ProfilePage() {
     return () => window.removeEventListener(SESSION_EVENT, sync)
   }, [])
 
-  // Stats reales del catedrático (clases, estudiantes, grupos, evaluados)
+  // Stats reales del catedrático; y reset de valores inflados del estudiante
   useEffect(() => {
     const s = getSession()
     if (s?.role === 'teacher' && s.id) getAssistantOverview(s.id).then(setOv)
+    else if (s?.role !== 'teacher') normalizeStudentStats()
   }, [])
 
   // Coloca el cursor en el nombre del catedrático (cuando ya está renderizado)
@@ -111,6 +105,8 @@ export default function ProfilePage() {
   const coins = session.coins ?? DEFAULT_COINS
   const xp = session.xp ?? DEFAULT_XP
   const group = session.group
+  const rk = rankFromXp(xp)
+  const lv = levelFromXp(xp)
 
   function startEdit() {
     setDraft(name)
@@ -237,7 +233,7 @@ export default function ProfilePage() {
               {/* Chips: solo estudiante (rango/grupo) */}
               {isStudent && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="neo-chip neo-chip--gold">Gold · {t('prof.level')} 6</span>
+                  <span className="neo-chip neo-chip--gold">{rk.label} · {t('prof.level')} {lv.level}</span>
                   <span className="neo-chip">{group ?? t('prof.no_group')}</span>
                   {!group && (
                     <Link href="/dashboard/classes" className="text-xs text-accent-violet hover:text-accent-violetBright">
@@ -252,8 +248,8 @@ export default function ProfilePage() {
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <Stat label={t('prof.coins')} value={coins.toLocaleString()} icon="/icons/coin.png" emoji="◆" />
                   <Stat label={t('prof.xp')} value={xp.toLocaleString()} />
-                  <Stat label={t('prof.rank')} value="Gold" icon="/icons/rank-gold.png" emoji="◆" />
-                  <Stat label={t('prof.level')} value="6" />
+                  <Stat label={t('prof.rank')} value={rk.label} icon={`/icons/rank-${rk.key}.png`} emoji="◆" />
+                  <Stat label={t('prof.level')} value={String(lv.level)} />
                 </div>
               ) : (
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -275,10 +271,10 @@ export default function ProfilePage() {
             <div className="neo-scroll-x">
               {RANKS.map((r, i) => (
                 <div key={r.key} className="flex min-w-[92px] flex-col items-center gap-2">
-                  <div className={`neo-gem ${i <= CURRENT_RANK ? 'neo-gem--active' : 'neo-gem--locked'}`}>
+                  <div className={`neo-gem ${i <= rk.index ? 'neo-gem--active' : 'neo-gem--locked'}`}>
                     <Icon3D src={`/icons/rank-${r.key}.png`} alt={r.label} size={38} fallback="◆" />
                   </div>
-                  <span className={`text-[11px] ${i === CURRENT_RANK ? 'text-white font-semibold' : 'text-neutral-500'}`}>
+                  <span className={`text-[11px] ${i === rk.index ? 'text-white font-semibold' : 'text-neutral-500'}`}>
                     {r.label}
                   </span>
                 </div>

@@ -121,6 +121,8 @@ const es: Dict = {
   'rw.spinning': 'Girando…',
   'rw.you_won': '¡Ganaste',
   'rw.to_platinum': 'faltan 81M para Platino',
+  'rw.come_back': 'Vuelve mañana',
+  'rw.spin_used': 'Ya giraste hoy. Vuelve mañana por otro giro.',
   // Ajustes
   'head.settings.title': 'Ajustes',
   'head.settings.sub': 'Gestiona tu cuenta y preferencias',
@@ -438,6 +440,8 @@ const en: Dict = {
   'rw.spinning': 'Spinning…',
   'rw.you_won': 'You won',
   'rw.to_platinum': '81M left to Platinum',
+  'rw.come_back': 'Come back tomorrow',
+  'rw.spin_used': 'You already spun today. Come back tomorrow for another spin.',
   'head.settings.title': 'Settings',
   'head.settings.sub': 'Manage your account and preferences',
   'set.profile': 'Profile details',
