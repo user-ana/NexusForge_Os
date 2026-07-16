@@ -6,7 +6,7 @@
 
 import Image from 'next/image'
 
-export default function NexusScene({ children }: { children?: React.ReactNode }) {
+export default function NexusScene({ children, tagline }: { children?: React.ReactNode; tagline?: string }) {
   return (
     <div className="neo-space relative min-h-[420px] md:min-h-0 overflow-hidden">
       <div className="relative z-10 flex h-full min-h-[420px] flex-col p-8 md:min-h-0">
@@ -32,7 +32,7 @@ export default function NexusScene({ children }: { children?: React.ReactNode })
                 NEXUSFORGE<span className="neo-wordmark-os">OS</span>
               </span>
             </span>
-            <div className="neo-tagline">Gamified Development Platform</div>
+            <div className="neo-tagline">{tagline ?? 'Gamified Development Platform'}</div>
           </div>
         </div>
 

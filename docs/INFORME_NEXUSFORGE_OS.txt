@@ -450,7 +450,7 @@ solo "de apariencia".
 13. EL ASISTENTE DE INTELIGENCIA ARTIFICIAL (A FONDO)
 --------------------------------------------------------------------------------
 
-Esta es una de las partes de las que estoy mas orgullosa. El asistente es un modelo
+ El asistente es un modelo
 de lenguaje corriendo en la propia maquina, al que la aplicacion le manda una
 pregunta junto con un resumen de los datos de la clase, y responde en lenguaje
 natural o ejecuta acciones que el catedratico confirma. No se entrena ni se manda

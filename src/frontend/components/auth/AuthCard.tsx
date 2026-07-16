@@ -8,6 +8,7 @@ import { setSession } from '@/frontend/session/session'
 import { supabase, isSupabaseReady } from '@/backend/supabase'
 import { bridgeUser } from '@/frontend/session/authBridge'
 import { generateTeacherCode, isValidTeacherKey, isInstitutionalEmail, isValidAccount } from '@/shared/roles'
+import { useT } from '@/frontend/hooks/useT'
 
 type Mode = 'signin' | 'signup'
 type Role = 'student' | 'teacher'
@@ -18,6 +19,7 @@ const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())
 
 export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mode }) {
   const router = useRouter()
+  const { t } = useT()
   const [mode, setMode] = useState<Mode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [showTeacherKey, setShowTeacherKey] = useState(false) // mostrar/ocultar clave docente
@@ -383,18 +385,16 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
           <div key={mode} className="neo-stagger flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
             <div className="mb-7">
               <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
-                {isSignup ? 'Create account' : 'Sign in'}
+                {isSignup ? t('auth.signup_title') : t('auth.signin_title')}
               </h1>
               <p className="text-neutral-500 text-sm mt-2">
-                {isSignup
-                  ? 'Crea tu identidad en NexusForge.'
-                  : 'Accede a tu centro de mando de ingeniería.'}
+                {isSignup ? t('auth.signup_sub') : t('auth.signin_sub')}
               </p>
             </div>
 
             {/* Username (solo registro) */}
             {isSignup && (
-              <Field label="Username" className="mb-4">
+              <Field label={t('auth.username')} className="mb-4">
                 <input
                   ref={usernameRef}
                   id="username"
@@ -414,12 +414,12 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
             {isSignup ? (
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="email" className="neo-label">Email</label>
+                  <label htmlFor="email" className="neo-label">{t('auth.email')}</label>
                   {role === 'student' && email.length > 0 && (
                     isInstitutionalEmail(email) ? (
-                      <span className="neo-hint neo-hint--ok"><CheckIcon /> Correo UTH</span>
+                      <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.email_ok')}</span>
                     ) : (
-                      <span className="neo-hint neo-hint--medium">Debe ser @uth.hn</span>
+                      <span className="neo-hint neo-hint--medium">{t('auth.email_bad')}</span>
                     )
                   )}
                 </div>
@@ -437,7 +437,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 />
               </div>
             ) : (
-              <Field label="Email o username" className="mb-5">
+              <Field label={t('auth.identifier')} className="mb-5">
                 <input
                   ref={identifierRef}
                   id="identifier"
@@ -456,10 +456,10 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
             {/* Password */}
             <div className="space-y-2 mb-4">
               <div className="flex items-center justify-between">
-                <label htmlFor="password" className="neo-label">Password</label>
+                <label htmlFor="password" className="neo-label">{t('auth.password')}</label>
                 {!isSignup && (
                   <button type="button" onClick={forgotPassword} className="neo-label neo-label--link">
-                    Forget password?
+                    {t('auth.forgot')}
                   </button>
                 )}
                 {isSignup && strength.label && (
@@ -505,12 +505,12 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
             {showConfirm && (
               <div className="neo-reveal space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="confirm" className="neo-label">Confirm password</label>
+                  <label htmlFor="confirm" className="neo-label">{t('auth.confirm')}</label>
                   {confirmState === 'ok' && (
-                    <span className="neo-hint neo-hint--ok"><CheckIcon /> Coincide</span>
+                    <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.match')}</span>
                   )}
                   {confirmState === 'bad' && (
-                    <span className="neo-hint neo-hint--bad">No coincide</span>
+                    <span className="neo-hint neo-hint--bad">{t('auth.nomatch')}</span>
                   )}
                 </div>
                 <input
@@ -531,26 +531,26 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
             {/* Rol (registro) */}
             {isSignup && (
               <div className="space-y-2 mb-6">
-                <span className="neo-label">I am a</span>
+                <span className="neo-label">{t('auth.i_am')}</span>
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => setRole('student')}
                     className={`neo-pill ${role === 'student' ? 'neo-pill--active' : ''}`}
                   >
-                    Estudiante
+                    {t('auth.student')}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setRole('teacher'); setTeacherCode((c) => c || generateTeacherCode()) }}
                     className={`neo-pill ${role === 'teacher' ? 'neo-pill--active' : ''}`}
                   >
-                    Catedrático
+                    {t('auth.teacher')}
                   </button>
                 </div>
                 {role === 'student' && (
                   <div className="neo-reveal space-y-1.5 pt-1">
-                    <label htmlFor="account" className="neo-label">Número de cuenta</label>
+                    <label htmlFor="account" className="neo-label">{t('auth.account')}</label>
                     <input
                       id="account"
                       ref={accountRef}
@@ -563,14 +563,12 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                       spellCheck={false}
                       className="neo-input w-full font-mono tracking-wide"
                     />
-                    <p className="text-[10px] leading-relaxed text-neutral-500">
-                      Regístrate con tu correo institucional <span className="text-neutral-400">@uth.hn</span> y tu número de cuenta.
-                    </p>
+                    <p className="text-[10px] leading-relaxed text-neutral-500">{t('auth.account_hint')}</p>
                   </div>
                 )}
                 {role === 'teacher' && (
                   <div className="neo-reveal space-y-2 pt-1">
-                    <label htmlFor="tkey" className="neo-label">Clave de docente</label>
+                    <label htmlFor="tkey" className="neo-label">{t('auth.tkey')}</label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">
                         <LockMini />
@@ -582,7 +580,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                         type={showTeacherKey ? 'text' : 'password'}
                         value={teacherKey}
                         onChange={(e) => setTeacherKey(e.target.value)}
-                        placeholder="Clave que entrega tu institución"
+                        placeholder={t('auth.tkey_ph')}
                         autoComplete="off"
                         spellCheck={false}
                         style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
@@ -597,9 +595,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                         {showTeacherKey ? <EyeIcon /> : <EyeOffIcon />}
                       </button>
                     </div>
-                    <p className="text-[10px] leading-relaxed text-neutral-500">
-                      Solo el personal docente la tiene. Sin la clave correcta no podrás registrarte como catedrático.
-                    </p>
+                    <p className="text-[10px] leading-relaxed text-neutral-500">{t('auth.tkey_hint')}</p>
 
                     {/* Tarjeta desplegable: no tengo la clave */}
                     <button
@@ -610,15 +606,13 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                       <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent-violet/12 text-accent-violet transition-colors duration-300 group-hover:bg-accent-violet/20">
                         <HelpMini />
                       </span>
-                      <span className="flex-1 text-[12px] font-medium text-neutral-100">¿No tienes la clave de docente?</span>
+                      <span className="flex-1 text-[12px] font-medium text-neutral-100">{t('auth.tkey_help')}</span>
                       <ChevronMini className={`text-neutral-500 transition-transform duration-300 ${teacherHelpOpen ? 'rotate-180' : ''}`} />
                     </button>
                     <div className={`grid transition-[grid-template-rows] duration-[350ms] ease-out ${teacherHelpOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                       <div className="overflow-hidden">
                         <div className="rounded-xl border-l-2 border-accent-violet bg-accent-violet/[0.06] px-3.5 py-2.5 text-[11px] leading-relaxed text-neutral-300">
-                          Solicítala al <span className="font-semibold text-neutral-100">administrador de la plataforma</span> o a la{' '}
-                          <span className="font-semibold text-neutral-100">coordinación académica</span>. Es una clave única del
-                          personal docente. Si eres estudiante, elige <span className="font-semibold text-neutral-100">Estudiante</span>.
+                          {t('auth.tkey_help_body')}
                         </div>
                       </div>
                     </div>
@@ -629,25 +623,25 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
 
             {/* Botón principal */}
             <button type="button" onClick={handleSubmit} className="neo-cta w-full">
-              {isSignup ? 'Create account' : 'Sign in'}
+              {isSignup ? t('auth.create_btn') : t('auth.signin_btn')}
             </button>
 
             {/* Alternar modo (sin recargar) */}
             <div className="text-center text-xs text-neutral-500 mt-5">
-              {isSignup ? '¿Ya tienes una cuenta? ' : '¿No tienes una cuenta? '}
+              {isSignup ? t('auth.have_account') : t('auth.no_account')}
               <button type="button" onClick={toggle} className="neo-toggle">
-                {isSignup ? 'Sign in' : 'Sign up'}
+                {isSignup ? t('auth.to_signin') : t('auth.to_signup')}
               </button>
             </div>
           </div>
         </div>
 
         {/* ---------- Panel derecho: red NexusForge + sociales ---------- */}
-        <NexusScene>
+        <NexusScene tagline={t('auth.tagline')}>
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-neutral-400">
               <span className="h-px flex-1 bg-white/10" />
-              {isSignup ? 'O regístrate con' : 'O continúa con'}
+              {isSignup ? t('auth.or_signup') : t('auth.or_signin')}
               <span className="h-px flex-1 bg-white/10" />
             </div>
             <button type="button" onClick={() => social('azure')} className="neo-social">
