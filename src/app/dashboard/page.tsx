@@ -64,6 +64,28 @@ const QUESTS = [
   { id: 'social', label: 'Saluda en el chat de tu clase', coins: 20, xp: 60, icon: '/icons/ach-team.png', emoji: '◆' },
 ]
 
+// Reclamos de retos: se guardan por día (se reinician cada día natural). Evita que
+// al recargar reaparezca "Reclamar" y se sumen monedas otra vez.
+const CLAIMED_KEY = 'nf_quests_claimed'
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+}
+function loadClaimed(): string[] {
+  try {
+    const o = JSON.parse(localStorage.getItem(CLAIMED_KEY) || '{}')
+    return o.date === todayStr() ? (o.ids ?? []) : []
+  } catch {
+    return []
+  }
+}
+function saveClaimed(ids: string[]): void {
+  try {
+    localStorage.setItem(CLAIMED_KEY, JSON.stringify({ date: todayStr(), ids }))
+  } catch {
+    /* ignore */
+  }
+}
+
 function StudentView({ t }: { t: T }) {
   const [meName, setMeName] = useState('')
   const [meId, setMeId] = useState('')
@@ -82,6 +104,7 @@ function StudentView({ t }: { t: T }) {
     normalizeStudentStats() // borra el XP/monedas inflados de la versión vieja
     void syncStudentStats() // carga las stats reales de la tabla (si existe)
     void syncStudentGroup() // detecta y refleja el escuadrón real del estudiante
+    setClaimed(loadClaimed()) // retos ya reclamados hoy (no se pueden reclamar de nuevo)
     const sync = () => {
       const s = getSession()
       setMeId(s?.id ?? '')
@@ -118,7 +141,11 @@ function StudentView({ t }: { t: T }) {
   function claim(q: (typeof QUESTS)[number]) {
     if (claimed.includes(q.id)) return
     void earnReward(q.coins, q.xp) // persiste en la tabla (o local si no hay)
-    setClaimed((p) => [...p, q.id])
+    setClaimed((p) => {
+      const next = [...p, q.id]
+      saveClaimed(next) // guarda el reclamo del día (no reaparece al recargar)
+      return next
+    })
   }
 
   const rk = rankFromXp(xp)
