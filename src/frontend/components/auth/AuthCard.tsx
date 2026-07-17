@@ -49,11 +49,11 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
   // Requisitos en vivo de la contraseña
   const reqs = useMemo(
     () => [
-      { label: '8+ caracteres', ok: password.length >= 8 },
-      { label: 'Mayúscula', ok: /[A-Z]/.test(password) },
-      { label: 'Minúscula', ok: /[a-z]/.test(password) },
+      { label: '8+ car.', ok: password.length >= 8 },
+      { label: 'Mayús.', ok: /[A-Z]/.test(password) },
+      { label: 'Minús.', ok: /[a-z]/.test(password) },
       { label: 'Número', ok: /\d/.test(password) },
-      { label: 'Signo especial', ok: /[^A-Za-z0-9]/.test(password) },
+      { label: 'Signo', ok: /[^A-Za-z0-9]/.test(password) },
     ],
     [password],
   )

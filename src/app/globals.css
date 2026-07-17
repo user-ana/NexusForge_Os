@@ -410,8 +410,11 @@ body {
 }
 .neo-req--ok {
   color: #6ee7b7;
-  background: rgba(110, 231, 183, 0.08);
-  border-color: rgba(110, 231, 183, 0.25);
+  background: rgba(110, 231, 183, 0.1);
+  border-color: rgba(110, 231, 183, 0.3);
+  /* toque "flotante": leve brillo verde y subida, como el badge de fuerza */
+  box-shadow: 0 3px 10px -4px rgba(110, 231, 183, 0.35);
+  transform: translateY(-1px);
 }
 .neo-req-dot {
   width: 5px;
