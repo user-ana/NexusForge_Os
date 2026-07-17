@@ -9,6 +9,7 @@ import { supabase, isSupabaseReady } from '@/backend/supabase'
 import { bridgeUser } from '@/frontend/session/authBridge'
 import { generateTeacherCode, isValidTeacherKey, isInstitutionalEmail, isValidAccount } from '@/shared/roles'
 import { useT } from '@/frontend/hooks/useT'
+import { GradCapIcon, TeacherIcon } from '@/frontend/components/ui/Icons'
 
 type Mode = 'signin' | 'signup'
 type Role = 'student' | 'teacher'
@@ -388,7 +389,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
 
           {/* key={mode} → reinicia la animación de entrada al alternar */}
           <div key={mode} className="neo-stagger flex-1 flex flex-col justify-center max-w-sm w-full mx-auto">
-            <div className="mb-7">
+            <div className="mb-6">
               <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
                 {isSignup ? t('auth.signup_title') : t('auth.signin_title')}
               </h1>
@@ -396,6 +397,30 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 {isSignup ? t('auth.signup_sub') : t('auth.signin_sub')}
               </p>
             </div>
+
+            {/* Rol (registro) — tarjetas arriba: una para estudiante, otra para catedratico */}
+            {isSignup && (
+              <div className="mb-5 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('student')}
+                  className={`neo-rolecard ${role === 'student' ? 'neo-rolecard--active' : ''}`}
+                >
+                  <span className="neo-rolecard-ic"><GradCapIcon size={20} /></span>
+                  <span className="neo-rolecard-t">{t('auth.student')}</span>
+                  <span className="neo-rolecard-d">{t('auth.student_desc')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRole('teacher'); setTeacherCode((c) => c || generateTeacherCode()) }}
+                  className={`neo-rolecard ${role === 'teacher' ? 'neo-rolecard--active' : ''}`}
+                >
+                  <span className="neo-rolecard-ic"><TeacherIcon size={20} /></span>
+                  <span className="neo-rolecard-t">{t('auth.teacher')}</span>
+                  <span className="neo-rolecard-d">{t('auth.teacher_desc')}</span>
+                </button>
+              </div>
+            )}
 
             {/* Registro: usuario + correo lado a lado. Login: un solo campo. */}
             {isSignup ? (
@@ -460,7 +485,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {/* Contraseña */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex min-h-[22px] items-center justify-between">
                       <label htmlFor="password" className="neo-label">{t('auth.password')}</label>
                       {strength.label && (
                         <span className={`neo-hint neo-hint--${strength.tone}`}>{strength.label}</span>
@@ -490,7 +515,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                   </div>
                   {/* Confirmar contraseña — se activa cuando la contraseña ya es valida */}
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex min-h-[22px] items-center justify-between">
                       <label htmlFor="confirm" className={`neo-label ${!accepted ? 'opacity-50' : ''}`}>{t('auth.confirm')}</label>
                       {accepted && confirmState === 'ok' && (
                         <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.match')}</span>
@@ -557,26 +582,9 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               </div>
             )}
 
-            {/* Rol (registro) */}
+            {/* Campo especifico del rol elegido arriba: cuenta del estudiante o clave del docente */}
             {isSignup && (
-              <div className="space-y-2 mb-6">
-                <span className="neo-label">{t('auth.i_am')}</span>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRole('student')}
-                    className={`neo-pill ${role === 'student' ? 'neo-pill--active' : ''}`}
-                  >
-                    {t('auth.student')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setRole('teacher'); setTeacherCode((c) => c || generateTeacherCode()) }}
-                    className={`neo-pill ${role === 'teacher' ? 'neo-pill--active' : ''}`}
-                  >
-                    {t('auth.teacher')}
-                  </button>
-                </div>
+              <div className="mb-4">
                 {role === 'student' && (
                   <div className="neo-reveal space-y-1.5 pt-1">
                     <label htmlFor="account" className="neo-label">{t('auth.account')}</label>
