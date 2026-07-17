@@ -195,16 +195,28 @@ body {
   background: #25282d;
   border: 1px solid rgba(0, 0, 0, 0.25);
   border-radius: 12px;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 1.05rem;
   font-size: 0.875rem;
   color: #e8e8e8;
+  /* sombra interior mas suave: la primera letra ya no queda oscurecida */
   box-shadow:
-    inset 3px 3px 6px rgba(0, 0, 0, 0.55),
-    inset -3px -3px 6px rgba(255, 255, 255, 0.025);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    inset 2px 2px 4px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.02);
+  transition: box-shadow 0.22s ease, border-color 0.22s ease, transform 0.22s ease, background 0.22s ease;
 }
 .neo-input::placeholder {
   color: #6b6f76;
+}
+/* Animacion suave al enfocar: borde violeta + leve brillo + subida sutil */
+.neo-input:focus {
+  outline: none;
+  border-color: rgba(167, 139, 250, 0.55);
+  background: #282b31;
+  box-shadow:
+    inset 1px 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(167, 139, 250, 0.12),
+    0 7px 18px -9px rgba(139, 92, 246, 0.4);
+  transform: translateY(-1px);
 }
 /* Oculta las flechas de los input numéricos (apariencia limpia) */
 .neo-input[type='number']::-webkit-outer-spin-button,

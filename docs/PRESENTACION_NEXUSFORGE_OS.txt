@@ -1,0 +1,476 @@
+================================================================================
+
+                          NEXUSFORGE OS
+     Plataforma web academica para la gestion de proyectos de
+                  ingenieria de software
+
+              Presentacion de avances — Primer y Segundo Parcial
+
+   Autora:      Ana Leticia Montes Sarmiento
+   Catedra:     Sistemas Abiertos 2
+   Docente:     Ing. Renato Adolfo Cruz Pineda
+   Repositorio: github.com/user-ana/NexusForge_Os
+   Despliegue:  https://nexusforgeos.vercel.app
+
+================================================================================
+
+
+--------------------------------------------------------------------------------
+INDICE
+--------------------------------------------------------------------------------
+
+  1.  Introduccion
+  2.  Objetivos
+  3.  Alcance general del proyecto
+  4.  Metodologia y control de versiones
+
+  PRIMER PARCIAL — Fundamentos de la plataforma
+  5.  Resumen del primer parcial
+  6.  Stack tecnologico
+  7.  Arquitectura del sistema
+  8.  Autenticacion y roles
+  9.  Gestion de clases y proyectos
+  10. Formacion de grupos
+  11. Tableros Kanban y entregables
+  12. Comunicacion en tiempo real
+  13. Evaluacion por rubrica
+  14. Despliegue continuo (GitHub + Vercel)
+
+  SEGUNDO PARCIAL — Inteligencia artificial, datos reales y refinamiento
+  15. Resumen del segundo parcial
+  16. Asistente de inteligencia artificial (Ollama + Llama 3)
+  17. Despliegue de la IA en un servidor Rocky Linux
+  18. Gamificacion real del estudiante (backend)
+  19. Datos reales y leaderboard del aula
+  20. Rediseno de la comunidad (estilo mensajeria moderna)
+  21. Ajustes de cuenta funcionales
+  22. Internacionalizacion (espanol / ingles)
+  23. Manuales integrados en la plataforma
+
+  TRANSVERSAL Y CIERRE
+  24. Seguridad (autenticacion y RLS)
+  25. Modelo de datos
+  26. Conclusiones
+  27. Trabajo futuro
+
+
+================================================================================
+1. INTRODUCCION
+================================================================================
+
+NexusForge OS es una plataforma web academica de tipo fullstack disenada para
+gestionar, de principio a fin, el ciclo de vida de los proyectos de ingenieria de
+software de una clase: desde que el catedratico crea la clase y publica los
+proyectos, hasta que los estudiantes se organizan en grupos, trabajan con tableros
+de tareas, se comunican y entregan, y el catedratico evalua por rubrica.
+
+Ademas de la gestion academica, el proyecto incorpora un asistente con inteligencia
+artificial propio y privado, que consulta los datos y ejecuta acciones por lenguaje
+natural, ejecutado sobre un servidor Linux montado por la autora.
+
+El presente documento describe los avances desarrollados durante el primer y el
+segundo parcial.
+
+
+================================================================================
+2. OBJETIVOS
+================================================================================
+
+OBJETIVO GENERAL
+  Desarrollar una plataforma web academica, segura y ordenada, que centralice todo
+  el ciclo de los proyectos de ingenieria de software, con una capa de inteligencia
+  artificial propia.
+
+OBJETIVOS ESPECIFICOS
+  - Construir una aplicacion fullstack con autenticacion real y control de acceso
+    por roles (catedratico, estudiante, visitante).
+  - Modelar la jerarquia academica: clase, proyecto por parcial, grupo, tablero y
+    entregable.
+  - Garantizar la seguridad de los datos con reglas a nivel de fila en la base.
+  - Incorporar comunicacion en tiempo real y una capa gamificada para el estudiante.
+  - Implementar un asistente de IA local y privado, capaz de consultar y actuar.
+  - Desplegar la aplicacion de forma continua y exponer la IA de forma segura.
+
+
+================================================================================
+3. ALCANCE GENERAL DEL PROYECTO
+================================================================================
+
+El sistema se organiza con una jerarquia clara:
+
+     CLASE
+       -> PROYECTO (por parcial: 1, 2, 3, final)
+            -> GRUPO (escuadron de estudiantes)
+                 -> TABLERO KANBAN (tareas del grupo)
+                      -> ENTREGABLE (repositorio, despliegue, video) + NOTA
+
+El catedratico configura las modalidades por clase (como se forman los grupos y como
+se asignan los proyectos), supervisa el trabajo de cada grupo en solo lectura y
+evalua por rubrica. El estudiante se inscribe con un codigo, se organiza y entrega.
+El visitante explora la plataforma en modo lectura.
+
+
+================================================================================
+4. METODOLOGIA Y CONTROL DE VERSIONES
+================================================================================
+
+  - Desarrollo incremental por funcionalidades, con verificacion (compilacion
+    estricta de TypeScript) en cada avance.
+  - Control de versiones con Git; repositorio unico en GitHub (rama principal main).
+  - Integracion y despliegue continuos: cada cambio subido a main reconstruye y
+    publica automaticamente la aplicacion en Vercel.
+  - Separacion de responsabilidades en el codigo (frontend, backend, compartido y
+    rutas), para mantener el proyecto ordenado y mantenible.
+
+
+================================================================================
+                    PRIMER PARCIAL
+        Fundamentos de la plataforma
+================================================================================
+
+
+================================================================================
+5. RESUMEN DEL PRIMER PARCIAL
+================================================================================
+
+En el primer parcial se construyo la base funcional de la plataforma: la
+arquitectura del proyecto, la autenticacion con roles, la gestion de clases y
+proyectos, la formacion de grupos, los tableros Kanban, el chat en tiempo real, la
+evaluacion por rubrica y el despliegue continuo. Es el nucleo sobre el que se
+apoyan los avances del segundo parcial.
+
+
+================================================================================
+6. STACK TECNOLOGICO
+================================================================================
+
+  - Next.js 14 (App Router) + React 18 + TypeScript 5 (estricto)
+        Framework fullstack: la vista y los endpoints de API conviven en un mismo
+        proyecto. TypeScript estricto reduce errores y mejora el mantenimiento.
+  - Tailwind CSS 3
+        Estilos por utilidades; tema neomorfico oscuro personalizado.
+  - Supabase (PostgreSQL)
+        Base de datos relacional gestionada, con autenticacion, tiempo real,
+        almacenamiento y seguridad a nivel de fila (RLS).
+  - Vercel
+        Hospedaje con despliegue continuo desde GitHub.
+
+  Lenguajes: TypeScript (logica de frontend y backend), JSX/TSX (interfaz),
+  HTML/CSS via Tailwind, y SQL (estructura y seguridad de la base de datos).
+
+
+================================================================================
+7. ARQUITECTURA DEL SISTEMA
+================================================================================
+
+El codigo separa responsabilidades:
+
+  src/
+    app/          Rutas de Next.js: paginas + endpoints de API
+    frontend/     La vista: componentes, hooks, textos (i18n), sesion
+    backend/      Datos y servicios: cliente de Supabase, servicios, tiempo real
+    shared/       Tipos y reglas compartidas (roles, parciales, gamificacion)
+  supabase/
+    schema.sql    Esquema completo de la base de datos + seguridad (RLS)
+
+  Las operaciones de datos corren desde el cliente autenticado (respetando la
+  seguridad de la base) y lo que requiere el servidor (por ejemplo la IA) vive en
+  endpoints de API.
+
+
+================================================================================
+8. AUTENTICACION Y ROLES
+================================================================================
+
+  - Autenticacion real con Supabase: registro e inicio de sesion por correo y
+    tambien con proveedores (Microsoft, Google, GitHub).
+  - Paso de onboarding para definir nombre, avatar y rol.
+  - Control de acceso por rol:
+      CATEDRATICO  gestiona clases, proyectos y evaluacion; usa el asistente de IA.
+      ESTUDIANTE   se inscribe, se organiza, entrega; tiene la capa gamificada.
+      VISITANTE    explora en modo lectura.
+  - Candado del rol catedratico: exige una clave institucional (se guarda solo el
+    hash, nunca el texto plano). El estudiante se valida con correo institucional y
+    numero de cuenta.
+
+
+================================================================================
+9. GESTION DE CLASES Y PROYECTOS
+================================================================================
+
+  - El catedratico crea clases (nombre, seccion, periodo) y obtiene un codigo unico
+    por clase para compartir; el estudiante se inscribe con ese codigo.
+  - Creacion de proyectos: el enunciado se sube como PDF, se pega un enlace
+    (Overleaf, Drive) o se escribe; se definen requisitos, rubrica y el parcial
+    (1, 2, 3 o final). Esto imita el caso real del docente que sube un PDF con la
+    rubrica.
+  - Vista por periodos: los proyectos agrupados por parcial.
+
+
+================================================================================
+10. FORMACION DE GRUPOS
+================================================================================
+
+  Dos modalidades configurables por el catedratico:
+    - Asignacion manual: el catedratico coloca a cada estudiante en un grupo.
+    - Auto-inscripcion: el estudiante elige su grupo desde una vista dedicada
+      ("Elige tu escuadron"), con cupo maximo y bloqueo al unirse (queda fijo).
+
+  La union de un estudiante a un grupo se realiza mediante una funcion segura del
+  servidor que valida las reglas antes de actuar (inscrito en la clase, modalidad
+  activa, no estar ya en un grupo y que haya cupo).
+
+
+================================================================================
+11. TABLEROS KANBAN Y ENTREGABLES
+================================================================================
+
+  - Cada grupo cuenta con un tablero Kanban (columnas: Por hacer, En progreso,
+    Hecho) para organizar sus tareas.
+  - El entregable del grupo reune los enlaces del resultado: repositorio,
+    despliegue y video de demostracion.
+  - El catedratico ve el tablero y la entrega de cada grupo en solo lectura: su rol
+    es supervisar y evaluar, no realizar el trabajo.
+
+
+================================================================================
+12. COMUNICACION EN TIEMPO REAL
+================================================================================
+
+  - Chat en tiempo real (Supabase Realtime): los mensajes aparecen al instante sin
+    recargar.
+  - Espacios de comunicacion: comunidad general, por clase y por grupo.
+
+
+================================================================================
+13. EVALUACION POR RUBRICA
+================================================================================
+
+  - El catedratico califica la entrega de cada grupo segun los criterios de la
+    rubrica; la nota queda registrada por parcial.
+  - Solo el catedratico de la clase puede calificar (el estudiante no se
+    auto-evalua), garantizado por las reglas de seguridad de la base.
+
+
+================================================================================
+14. DESPLIEGUE CONTINUO (GITHUB + VERCEL)
+================================================================================
+
+  - Repositorio unico en GitHub (rama main).
+  - Cada cambio subido a main dispara una reconstruccion y publicacion automatica en
+    Vercel.
+  - Las claves sensibles se manejan como variables de entorno (no van en el codigo).
+
+
+================================================================================
+                    SEGUNDO PARCIAL
+     Inteligencia artificial, datos reales y refinamiento
+================================================================================
+
+
+================================================================================
+15. RESUMEN DEL SEGUNDO PARCIAL
+================================================================================
+
+El segundo parcial agrego la capa avanzada: un asistente con inteligencia artificial
+propio y privado, desplegado sobre un servidor Rocky Linux; la gamificacion real del
+estudiante respaldada por base de datos; datos reales en todo el sistema (adios a
+valores de ejemplo); el rediseno de la comunicacion; los ajustes de cuenta
+funcionales y la internacionalizacion. En conjunto, elevan la plataforma de un MVP
+funcional a un sistema mas completo, seguro y profesional.
+
+
+================================================================================
+16. ASISTENTE DE INTELIGENCIA ARTIFICIAL (OLLAMA + LLAMA 3)
+================================================================================
+
+  El asistente es un modelo de lenguaje (Llama 3) corriendo LOCAL con Ollama, al que
+  la aplicacion le manda una pregunta junto con un resumen real de los datos de la
+  clase; responde en lenguaje natural o ejecuta acciones que el catedratico confirma.
+
+  16.1 RAG (generacion aumentada con recuperacion)
+       Antes de preguntar, la app recupera los datos reales de la clase y se los da
+       al modelo como contexto, para que responda con hechos y no invente.
+
+  16.2 Agentico (tool-calling)
+       Ademas de responder, la IA puede ejecutar acciones definidas como
+       herramientas: crear clase, crear grupos, crear proyecto, asignar proyecto a
+       un grupo y eliminar clase. La IA decide cual usar segun el comando.
+
+  16.3 Seguridad y confirmacion
+       Ninguna accion se ejecuta sola: se muestra una tarjeta de confirmacion y, al
+       aceptar, la accion corre con los permisos del catedratico (respetando la
+       seguridad RLS de la base).
+
+  16.4 Robustez pese a un modelo pequeno
+       Como el modelo es de 3.000 millones de parametros (por velocidad), la
+       confiabilidad se logra con codigo de validacion: las herramientas solo se
+       ofrecen cuando el mensaje pide una accion, un tope de tokens acota la
+       respuesta, se corrige por verbo, se avisa de duplicados y siempre se confirma.
+
+  16.5 Privacidad
+       El modelo corre en la propia maquina: los datos de los estudiantes no salen a
+       la nube; es gratis por consulta.
+
+
+================================================================================
+17. DESPLIEGUE DE LA IA EN UN SERVIDOR ROCKY LINUX
+================================================================================
+
+  El modelo se ejecuta en un servidor Linux (Rocky Linux 10), montado por la autora:
+
+  17.1 Instalacion
+       - Instalacion de Ollama con su script oficial (queda como servicio del
+         sistema, escuchando en el puerto 11434).
+       - Descarga del modelo (llama3.2, aprox. 2 GB) y prueba de funcionamiento.
+
+  17.2 Exposicion segura hacia la web en produccion
+       La aplicacion esta publicada en Vercel (la nube) y el servidor esta en la red
+       local; Vercel no puede alcanzar directamente la maquina. La solucion fue un
+       tunel de Cloudflare (cloudflared), que abre una conexion de salida desde el
+       servidor hacia Cloudflare y entrega una URL publica segura (https). Esa URL
+       se configura en Vercel mediante la variable OLLAMA_BASE_URL.
+
+  17.3 Flujo de la peticion
+       navegador (nexusforgeos.vercel.app)  ->  tunel Cloudflare  ->  Ollama en el
+       servidor Rocky Linux  ->  respuesta.
+
+  17.4 Consideracion tecnica
+       Por la conexion satelital utilizada, el tunel se forzo a HTTP/2, ya que el
+       protocolo por defecto (QUIC/UDP) presentaba caidas.
+
+  Ventaja: la infraestructura de IA (servidor, modelo y exposicion) fue montada de
+  forma propia, demostrando el dominio del despliegue de un modelo open-source.
+
+
+================================================================================
+18. GAMIFICACION REAL DEL ESTUDIANTE (BACKEND)
+================================================================================
+
+  La capa gamificada del estudiante paso de valores de ejemplo a datos reales y
+  persistentes, respaldados por una tabla en la base de datos:
+
+  - Monedas y experiencia (XP) reales, que persisten entre sesiones y dispositivos.
+  - Rango y nivel derivados del XP real (Bronze a Diamond), consistentes en el panel,
+    el perfil y las recompensas.
+  - Ruleta de recompensas con limite de un giro por dia (evita el abuso).
+  - Racha y logros como parte de la capa de motivacion.
+
+
+================================================================================
+19. DATOS REALES Y LEADERBOARD DEL AULA
+================================================================================
+
+  - El perfil del catedratico muestra estadisticas reales (clases, estudiantes,
+    grupos, evaluados), calculadas de sus propios datos.
+  - El "Top del aula" (leaderboard) muestra a los companeros de clase ordenados por
+    sus monedas REALES, obtenidas de la base de datos.
+  - El sistema detecta y muestra el grupo real del estudiante.
+
+
+================================================================================
+20. REDISENO DE LA COMUNIDAD (ESTILO MENSAJERIA MODERNA)
+================================================================================
+
+  - El chat se rediseno con un estilo de mensajeria moderno: mensajes alineados y
+    agrupados por autor, con avatar, nombre y rol, y acciones al pasar el cursor.
+  - Encabezado y barra de escritura mas limpios y actuales.
+
+
+================================================================================
+21. AJUSTES DE CUENTA FUNCIONALES
+================================================================================
+
+  La pagina de ajustes pasO de ser una maqueta a ser completamente funcional:
+  - Edicion de datos de perfil (nombre, biografia) con persistencia.
+  - Cambio de contrasena con verificacion de la contrasena actual.
+  - Preferencias que se guardan.
+  - Eliminacion de cuenta con confirmacion (endpoint seguro del servidor).
+
+
+================================================================================
+22. INTERNACIONALIZACION (ESPANOL / INGLES)
+================================================================================
+
+  - La interfaz respeta el idioma seleccionado (espanol o ingles).
+  - Se internacionalizo el flujo de inicio de sesion y registro, y se agrego un
+    selector de idioma accesible desde la propia pantalla de acceso.
+
+
+================================================================================
+23. MANUALES INTEGRADOS EN LA PLATAFORMA
+================================================================================
+
+  - Manual de Usuario: guia por rol, glosario y preguntas frecuentes.
+  - Manual del Programador: tarjetas de concepto y un inspector de codigo (una
+    terminal que muestra el codigo real explicado por secciones).
+  - Es documentacion viva dentro del propio sistema.
+
+
+================================================================================
+                 TRANSVERSAL Y CIERRE
+================================================================================
+
+
+================================================================================
+24. SEGURIDAD (AUTENTICACION Y RLS)
+================================================================================
+
+  La seguridad opera en dos capas:
+  - Autenticacion (quien eres): gestionada por Supabase.
+  - Seguridad a nivel de fila, RLS (que puedes hacer): las reglas viven dentro de la
+    base de datos. Cada usuario solo puede ver y modificar lo que le corresponde;
+    por ejemplo, un estudiante no puede escribir directamente en tablas restringidas
+    ni auto-calificarse, y solo se une a un grupo mediante una funcion segura que
+    valida las reglas.
+
+
+================================================================================
+25. MODELO DE DATOS
+================================================================================
+
+  Tablas principales en PostgreSQL (todas con RLS):
+    profiles            Usuarios, su rol, nombre y avatar.
+    classes             Clases del catedratico (codigo, periodo, modalidades).
+    enrollments         Inscripcion de estudiantes a clases.
+    class_groups        Grupos (escuadrones) de una clase.
+    group_members       Integrantes de cada grupo y su lider.
+    projects            Proyectos (enunciado, requisitos, rubrica, parcial).
+    group_projects      Proyecto asignado / entregable de cada grupo.
+    kanban_tasks        Tareas del tablero de cada grupo.
+    group_evaluations   Evaluacion por rubrica y nota de cada grupo.
+    messages            Chat en tiempo real por grupo/aula.
+    community_messages  Chat de la comunidad general.
+    student_stats       Gamificacion real por estudiante (monedas, XP, racha, giro).
+
+
+================================================================================
+26. CONCLUSIONES
+================================================================================
+
+  NexusForge OS reune, en un solo lugar y con un diseno profesional, todo el ciclo
+  de un proyecto academico de ingenieria de software, con seguridad real
+  (autenticacion + RLS), comunicacion en tiempo real y datos reales.
+
+  Sobre esa base, en el segundo parcial se incorporo una capa de inteligencia
+  artificial propia y privada, desplegada sobre un servidor Rocky Linux y expuesta
+  de forma segura a la aplicacion en produccion, capaz de consultar y de actuar por
+  lenguaje natural con las protecciones necesarias para ser confiable.
+
+  El resultado es una plataforma fullstack completa, segura, ordenada y con un valor
+  agregado de infraestructura e inteligencia artificial montado de forma propia.
+
+
+================================================================================
+27. TRABAJO FUTURO
+================================================================================
+
+  - Migrar el motor de IA a un servidor con GPU, siempre encendido, para respuestas
+    mas rapidas y disponibilidad 24/7.
+  - Modo visitante como galeria publica de proyectos, con "me gusta" y autoria.
+  - Validacion de los retos diarios contra condiciones reales (commit, tarea, chat).
+  - Tareas de clase (asignaciones para toda la clase por parcial).
+
+================================================================================
+                        FIN DEL DOCUMENTO
+================================================================================
