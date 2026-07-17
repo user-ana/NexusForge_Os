@@ -488,14 +488,14 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                       </button>
                     </div>
                   </div>
-                  {/* Confirmar contraseña */}
+                  {/* Confirmar contraseña — se activa cuando la contraseña ya es valida */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="confirm" className="neo-label">{t('auth.confirm')}</label>
-                      {confirmState === 'ok' && (
+                      <label htmlFor="confirm" className={`neo-label ${!accepted ? 'opacity-50' : ''}`}>{t('auth.confirm')}</label>
+                      {accepted && confirmState === 'ok' && (
                         <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.match')}</span>
                       )}
-                      {confirmState === 'bad' && (
+                      {accepted && confirmState === 'bad' && (
                         <span className="neo-hint neo-hint--bad">{t('auth.nomatch')}</span>
                       )}
                     </div>
@@ -504,11 +504,12 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                       id="confirm"
                       name="nf-confirm"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••••"
+                      placeholder={accepted ? '••••••••••' : t('auth.confirm_wait')}
                       autoComplete="new-password"
+                      disabled={!accepted}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      className="neo-input w-full"
+                      className={`neo-input w-full transition-opacity duration-300 ${!accepted ? 'cursor-not-allowed opacity-45' : ''}`}
                     />
                   </div>
                 </div>
