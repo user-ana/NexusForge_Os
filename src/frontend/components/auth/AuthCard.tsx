@@ -59,7 +59,6 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
   )
   // Se "acepta" solo cuando cumple todos los requisitos
   const accepted = reqs.every((r) => r.ok)
-  const showConfirm = isSignup && accepted
   const confirmState: 'idle' | 'ok' | 'bad' =
     confirm.length === 0 ? 'idle' : confirm === password ? 'ok' : 'bad'
 
@@ -455,76 +454,105 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               </Field>
             )}
 
-            {/* Password */}
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="neo-label">{t('auth.password')}</label>
-                {!isSignup && (
+            {/* Contraseña: registro = contraseña + confirmar lado a lado; login = solo contraseña */}
+            {isSignup ? (
+              <>
+                <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* Contraseña */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="password" className="neo-label">{t('auth.password')}</label>
+                      {strength.label && (
+                        <span className={`neo-hint neo-hint--${strength.tone}`}>{strength.label}</span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        ref={passwordRef}
+                        id="password"
+                        name="nf-password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••••"
+                        autoComplete="new-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="neo-input w-full pr-11"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Mostrar u ocultar contraseña"
+                        onClick={() => setShowPassword((s) => !s)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 transition hover:text-accent-violet"
+                      >
+                        {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                      </button>
+                    </div>
+                  </div>
+                  {/* Confirmar contraseña */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="confirm" className="neo-label">{t('auth.confirm')}</label>
+                      {confirmState === 'ok' && (
+                        <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.match')}</span>
+                      )}
+                      {confirmState === 'bad' && (
+                        <span className="neo-hint neo-hint--bad">{t('auth.nomatch')}</span>
+                      )}
+                    </div>
+                    <input
+                      ref={confirmRef}
+                      id="confirm"
+                      name="nf-confirm"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••"
+                      autoComplete="new-password"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      className="neo-input w-full"
+                    />
+                  </div>
+                </div>
+                {/* Requisitos en vivo (ancho completo) */}
+                {password.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-1.5 pt-1">
+                    {reqs.map((r) => (
+                      <span key={r.label} className={`neo-req ${r.ok ? 'neo-req--ok' : ''}`}>
+                        {r.ok ? <CheckIcon /> : <span className="neo-req-dot" />}
+                        {r.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="neo-label">{t('auth.password')}</label>
                   <button type="button" onClick={forgotPassword} className="neo-label neo-label--link">
                     {t('auth.forgot')}
                   </button>
-                )}
-                {isSignup && strength.label && (
-                  <span className={`neo-hint neo-hint--${strength.tone}`}>{strength.label}</span>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  ref={passwordRef}
-                  id="password"
-                  name="nf-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••••"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="neo-input w-full pr-12"
-                />
-                <button
-                  type="button"
-                  aria-label="Toggle password visibility"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-accent-violet transition"
-                >
-                  {showPassword ? <EyeIcon /> : <EyeOffIcon />}
-                </button>
-              </div>
-              {/* Requisitos en vivo (registro) */}
-              {isSignup && password.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1.5">
-                  {reqs.map((r) => (
-                    <span key={r.label} className={`neo-req ${r.ok ? 'neo-req--ok' : ''}`}>
-                      {r.ok ? <CheckIcon /> : <span className="neo-req-dot" />}
-                      {r.label}
-                    </span>
-                  ))}
                 </div>
-              )}
-            </div>
-
-            {/* Confirmar contraseña — aparece al cumplir los requisitos (sin hueco reservado) */}
-            {showConfirm && (
-              <div className="neo-reveal mb-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="confirm" className="neo-label">{t('auth.confirm')}</label>
-                  {confirmState === 'ok' && (
-                    <span className="neo-hint neo-hint--ok"><CheckIcon /> {t('auth.match')}</span>
-                  )}
-                  {confirmState === 'bad' && (
-                    <span className="neo-hint neo-hint--bad">{t('auth.nomatch')}</span>
-                  )}
+                <div className="relative">
+                  <input
+                    ref={passwordRef}
+                    id="password"
+                    name="nf-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••••"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="neo-input w-full pr-12"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Mostrar u ocultar contraseña"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 transition hover:text-accent-violet"
+                  >
+                    {showPassword ? <EyeIcon /> : <EyeOffIcon />}
+                  </button>
                 </div>
-                <input
-                  ref={confirmRef}
-                  id="confirm"
-                  name="nf-confirm"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••••"
-                  autoComplete="new-password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  className="neo-input w-full"
-                />
               </div>
             )}
 
