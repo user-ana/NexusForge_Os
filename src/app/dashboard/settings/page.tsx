@@ -117,15 +117,18 @@ export default function SettingsPage() {
   }
 
   async function deleteAccount() {
-    const s = getSession()
     setDelBusy(true)
-    if (s?.id) {
+    if (supabase) {
       try {
-        await fetch('/api/delete-account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: s.id }),
-        })
+        // Enviamos el token de sesión: el servidor borra SOLO la cuenta de quien llama.
+        const { data } = await supabase.auth.getSession()
+        const token = data.session?.access_token
+        if (token) {
+          await fetch('/api/delete-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          })
+        }
       } catch {
         /* aunque falle el borrado remoto, cerramos sesión localmente */
       }

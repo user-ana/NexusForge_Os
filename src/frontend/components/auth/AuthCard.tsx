@@ -211,64 +211,39 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
     }
   }
 
-  // ----- Restablecer contraseña (panel flotante, sin correo) -----
+  // ----- Recuperar contraseña (ENLACE SEGURO al correo) -----
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
-  const [resetPw, setResetPw] = useState('')
-  const [resetConfirm, setResetConfirm] = useState('')
   const [resetBusy, setResetBusy] = useState(false)
   const [resetMsg, setResetMsg] = useState<{ type: 'ok' | 'bad'; text: string } | null>(null)
   const [portalReady, setPortalReady] = useState(false)
   useEffect(() => setPortalReady(true), [])
-  const resetOk = resetPw.length >= 8 && /[A-Z]/.test(resetPw) && /[a-z]/.test(resetPw) && /\d/.test(resetPw)
 
   function forgotPassword() {
     setResetEmail(isEmail(identifier) ? identifier.trim() : '')
-    setResetPw('')
-    setResetConfirm('')
     setResetMsg(null)
     setResetOpen(true)
   }
 
+  /**
+   * SEGURIDAD: envía un ENLACE de recuperación al correo. Solo quien controla ese
+   * correo puede cambiar la contraseña. (Antes, cualquiera que supiera el correo
+   * podía cambiarla directamente: eso permitía robar cuentas.)
+   */
   async function doReset() {
     if (!isEmail(resetEmail)) return setResetMsg({ type: 'bad', text: 'Ingresa un correo válido.' })
-    if (!resetOk) return setResetMsg({ type: 'bad', text: 'Mínimo 8 caracteres, con mayúscula, minúscula y número.' })
-    if (resetPw !== resetConfirm) return setResetMsg({ type: 'bad', text: 'Las contraseñas no coinciden.' })
+    if (!isSupabaseReady || !supabase) return setResetMsg({ type: 'bad', text: 'No disponible en este momento.' })
     setResetBusy(true)
-    try {
-      const res = await fetch('/api/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail.trim(), password: resetPw }),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setResetBusy(false)
-        return setResetMsg({ type: 'bad', text: json.error ?? 'No se pudo cambiar la contraseña.' })
-      }
-    } catch {
-      setResetBusy(false)
-      return setResetMsg({ type: 'bad', text: 'Error de conexión.' })
-    }
-    // Cambiada: inicia sesión automáticamente con la nueva contraseña
-    if (isSupabaseReady && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: resetEmail.trim(),
-        password: resetPw,
-      })
-      setResetBusy(false)
-      setResetOpen(false)
-      if (error || !data.user) {
-        return notify('success', 'Contraseña cambiada. Ya puedes iniciar sesión.')
-      }
-      bridgeUser(data.user)
-      notify('success', '¡Contraseña cambiada! Entrando…')
-      setTimeout(() => router.push('/dashboard'), 800)
-      return
-    }
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    })
     setResetBusy(false)
-    setResetOpen(false)
-    notify('success', 'Contraseña cambiada.')
+    if (error) return setResetMsg({ type: 'bad', text: error.message })
+    // Respuesta neutra: no revelamos si el correo existe (evita enumerar usuarios)
+    setResetMsg({
+      type: 'ok',
+      text: 'Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña. Revisa tu bandeja.',
+    })
   }
 
   // OAuth (Microsoft / GitHub) vía Supabase, o demo si no está configurado
@@ -318,7 +293,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 <button onClick={() => setResetOpen(false)} className="text-neutral-500 hover:text-white">✕</button>
               </div>
               <p className="-mt-1 text-xs text-neutral-500">
-                Escribe tu correo y tu nueva contraseña. Entrarás de una.
+                Escribe tu correo y te enviaremos un enlace seguro para crear una contraseña nueva.
               </p>
 
               <div className="space-y-2">
@@ -326,34 +301,9 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                 <input
                   value={resetEmail}
                   onChange={(e) => { setResetEmail(e.target.value); setResetMsg(null) }}
+                  onKeyDown={(e) => e.key === 'Enter' && doReset()}
                   placeholder="tucorreo@ejemplo.com"
                   autoFocus
-                  className="neo-input w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="neo-label">Nueva contraseña</label>
-                <input
-                  type="password"
-                  value={resetPw}
-                  onChange={(e) => { setResetPw(e.target.value); setResetMsg(null) }}
-                  placeholder="••••••••••"
-                  autoComplete="new-password"
-                  className="neo-input w-full"
-                />
-                {resetPw.length > 0 && !resetOk && (
-                  <p className="text-[11px] text-neutral-500">Mínimo 8 caracteres, con mayúscula, minúscula y número.</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="neo-label">Confirmar contraseña</label>
-                <input
-                  type="password"
-                  value={resetConfirm}
-                  onChange={(e) => { setResetConfirm(e.target.value); setResetMsg(null) }}
-                  onKeyDown={(e) => e.key === 'Enter' && doReset()}
-                  placeholder="••••••••••"
-                  autoComplete="new-password"
                   className="neo-input w-full"
                 />
               </div>
@@ -363,7 +313,7 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               )}
 
               <button onClick={doReset} disabled={resetBusy} className="neo-btn w-full justify-center">
-                {resetBusy ? 'Cambiando…' : 'Cambiar contraseña'}
+                {resetBusy ? 'Enviando…' : 'Enviar enlace de recuperación'}
               </button>
             </div>
           </div>,
