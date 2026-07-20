@@ -563,6 +563,15 @@ grant select on all tables in schema public to anon;
 alter default privileges in schema public grant select, insert, update, delete on tables to authenticated;
 alter default privileges in schema public grant select on tables to anon;
 
+-- service_role: es el rol del SERVIDOR (nuestros endpoints con la llave secreta).
+-- Se salta RLS, pero igual necesita permiso sobre las tablas; sin esto los
+-- endpoints reciben "permission denied for table ..." (ej. asignar el rol docente).
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+
 -- EXECUTE en las funciones: Realtime las usa para autorizar la suscripción (policies)
 grant execute on all functions in schema public to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;

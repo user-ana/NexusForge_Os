@@ -20,6 +20,16 @@
 --  Es idempotente (se puede correr varias veces sin problema).
 -- ======================================================================
 
+-- 0) Permisos del rol del SERVIDOR (service_role)
+--    Se salta RLS, pero igual necesita permiso sobre las tablas. Sin esto, el
+--    endpoint que asigna el rol de catedrático falla con
+--    "permission denied for table profiles".
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+
 -- 1) El trigger de alta/actualización de usuario ya no hereda el rol
 create or replace function public.handle_user()
 returns trigger language plpgsql security definer set search_path = public as $$
