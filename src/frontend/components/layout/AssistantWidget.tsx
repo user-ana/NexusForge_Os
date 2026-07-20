@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { useT } from '@/frontend/hooks/useT'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
+import { supabase } from '@/backend/supabase'
 import { getClasses, loadClasses, createClass, deleteClass } from '@/backend/services/classes'
 import { createGroupsBulk, GROUP_ICONS, loadGroups, getGroups, setGroupProject } from '@/backend/services/classGroups'
 import { createProject, loadProjects, getProjects } from '@/backend/services/projects'
@@ -146,9 +147,15 @@ export default function AssistantWidget() {
       // maneja el flujo determinista de "pending", no el modelo.
       const context = ctx ?? (await getAssistantContext(meId))
       if (ctx == null) setCtx(context)
+      // La IA exige sesión iniciada (evita que cualquiera consuma el servidor).
+      const { data: sess } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+      const token = sess.session?.access_token
       const res = await fetch('/api/assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ question: q, context }),
       })
       const data = await res.json()

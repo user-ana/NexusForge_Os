@@ -1,16 +1,50 @@
 import { NextResponse } from 'next/server'
+import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 
 /**
  * Asistente con IA (Fase 3a — solo lectura). Recibe la pregunta del catedrático
  * + un resumen de sus clases (contexto), y se lo pasa a Llama vía Ollama para que
  * responda en lenguaje natural, SIN inventar (RAG). El LLM corre en el servidor
  * Ollama definido por OLLAMA_BASE_URL (local: http://localhost:11434).
+ *
+ * Seguridad: exige sesión iniciada y limita el número de preguntas. Sin esto
+ * cualquiera podía consumir mi servidor de IA gratis (abuso de recursos) o
+ * dejarlo saturado para el resto (denegación de servicio por agotamiento).
  */
 export const runtime = 'nodejs'
 // La IA puede correr en CPU (lenta). Damos margen para que Vercel no corte antes.
 export const maxDuration = 300
 
+// Tope de tamaño: una pregunta enorme obligaría al modelo a trabajar de más.
+const MAX_QUESTION = 2000
+const MAX_CONTEXT = 20000
+
 export async function POST(req: Request) {
+  sweepBuckets()
+
+  // 1) Límite por IP (antes de tocar nada más)
+  const ip = clientIp(req)
+  const byIp = rateLimit(`assistant:ip:${ip}`, 30, 60 * 1000) // 30 por minuto
+  if (!byIp.ok) {
+    return NextResponse.json(
+      { error: `Vas muy rápido. Espera ${byIp.retryAfter} segundos.` },
+      { status: 429 },
+    )
+  }
+
+  // 2) Solo usuarios con sesión: la IA no es un servicio público
+  const user = await requireUser(req)
+  if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
+
+  // 3) Límite por usuario (una persona no puede acaparar el servidor de IA)
+  const byUser = rateLimit(`assistant:user:${user.id}`, 20, 60 * 1000) // 20 por minuto
+  if (!byUser.ok) {
+    return NextResponse.json(
+      { error: `Vas muy rápido. Espera ${byUser.retryAfter} segundos.` },
+      { status: 429 },
+    )
+  }
+
   let body: { question?: string; context?: string; history?: { role: string; content: string }[] }
   try {
     body = await req.json()
@@ -18,8 +52,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Petición inválida.' }, { status: 400 })
   }
 
-  const question = (body.question ?? '').trim()
-  const context = (body.context ?? '').trim()
+  const question = (body.question ?? '').trim().slice(0, MAX_QUESTION)
+  const context = (body.context ?? '').trim().slice(0, MAX_CONTEXT)
   if (!question) return NextResponse.json({ error: 'Falta la pregunta.' }, { status: 400 })
 
   // Historial de la conversación (memoria), últimos mensajes

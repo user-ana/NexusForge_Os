@@ -6,6 +6,7 @@ import Header from '@/frontend/components/layout/Header'
 import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
 import { getSession, patchSession, clearSession, displayName } from '@/frontend/session/session'
+import { loginAllowed, loginFailed, loginSucceeded } from '@/frontend/session/loginGuard'
 
 type Msg = { type: 'ok' | 'bad'; text: string } | null
 
@@ -88,13 +89,23 @@ export default function SettingsPage() {
     if (!strong) return setPwMsg({ type: 'bad', text: t('set.pw_weak') })
     if (newPw !== confPw) return setPwMsg({ type: 'bad', text: t('set.pw_nomatch') })
     if (!supabase) return setPwMsg({ type: 'bad', text: t('set.pw_unavailable') })
+    // ANTI FUERZA BRUTA: aquí se comprueba la contraseña actual, así que también
+    // hay que frenar los intentos (si no, sirve para adivinarla desde una sesión robada).
+    const gate = loginAllowed('password')
+    if (!gate.ok) {
+      return setPwMsg({ type: 'bad', text: `Demasiados intentos. Espera ${gate.retryAfter} s.` })
+    }
     setPwBusy(true)
     // Verifica la contraseña actual re-autenticando (falla si la cuenta es de proveedor OAuth).
     const { error: signErr } = await supabase.auth.signInWithPassword({ email, password: curPw })
     if (signErr) {
+      const f = loginFailed('password')
       setPwBusy(false)
-      return setPwMsg({ type: 'bad', text: t('set.pw_current_bad') })
+      setCurPw('')
+      const base = t('set.pw_current_bad')
+      return setPwMsg({ type: 'bad', text: f.retryAfter > 0 ? `${base} Espera ${f.retryAfter} s.` : base })
     }
+    loginSucceeded('password')
     const { error } = await supabase.auth.updateUser({ password: newPw })
     setPwBusy(false)
     if (error) return setPwMsg({ type: 'bad', text: error.message })

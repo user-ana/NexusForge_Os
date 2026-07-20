@@ -12,41 +12,16 @@ export function generateTeacherCode(): string {
 /* ------------------------------------------------------------------ *
  * Clave institucional de catedrático (candado del rol docente)
  *
- * Para registrarse como Catedrático hay que escribir una clave que la
- * universidad/admin reparte a los profes. Así un estudiante no puede
- * auto-asignarse el rol docente.
+ * SEGURIDAD: la clave y su hash YA NO viven en el cliente. Antes el hash
+ * viajaba en el JavaScript del navegador, lo que permitía romperlo por fuerza
+ * bruta sin límite y además saltarse la comprobación.
  *
- * Guardamos solo el HASH SHA-256 de las claves válidas — el texto plano
- * NUNCA está en el código, así que nadie puede sacarlo del bundle.
+ * Ahora la verificación ocurre SOLO en el servidor:
+ *   POST /api/verify-teacher-key   (con límite de intentos)
+ * y ese endpoint es el único que puede otorgar el rol de catedrático.
  *
- * Clave por defecto: "UTH-DOCENTE-2026"  
- * 
- * NOTA: esto es una barrera del lado del cliente (suficiente para el MVP).
- *
+ * Ver: src/app/api/verify-teacher-key/route.ts
  * ------------------------------------------------------------------ */
-const VALID_TEACHER_HASHES = new Set<string>([
-  // SHA-256 de "UTH-DOCENTE-2026"
-  'b3b51fce08a232bd48de61fd8b746d0dfc7e1424507e1950ef0eaf798450da19',
-])
-
-async function sha256Hex(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-/** ¿La clave que escribió coincide con una clave docente válida? */
-export async function isValidTeacherKey(key: string): Promise<boolean> {
-  const norm = key.trim().toUpperCase()
-  if (!norm) return false
-  try {
-    const hex = await sha256Hex(norm)
-    return VALID_TEACHER_HASHES.has(hex)
-  } catch {
-    return false
-  }
-}
 
 /* ------------------------------------------------------------------ *
  * Verificación de estudiante (correo institucional + número de cuenta)

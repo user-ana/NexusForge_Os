@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/backend/supabase'
 import { bridgeUser } from '@/frontend/session/authBridge'
 import { useT } from '@/frontend/hooks/useT'
-import { generateTeacherCode, isValidTeacherKey, isInstitutionalEmail } from '@/shared/roles'
+import { generateTeacherCode, isInstitutionalEmail } from '@/shared/roles'
+import { verifyTeacherKey } from '@/frontend/session/teacherKey'
 import { GradCapIcon, TeacherIcon } from '@/frontend/components/ui/Icons'
 
 export default function OnboardingPage() {
@@ -65,13 +66,17 @@ export default function OnboardingPage() {
 
   async function confirm() {
     if (!role || busy) return
-    // Candado del rol catedrático: exige la clave institucional válida.
+    // Candado del rol catedrático: la clave se verifica EN EL SERVIDOR (con límite
+    // de intentos) y es el servidor quien otorga el rol. El navegador no valida nada.
     if (role === 'teacher') {
-      const ok = await isValidTeacherKey(teacherKey)
-      if (!ok) {
-        setKeyErr('Clave de docente inválida. Si no eres catedrático, elige Estudiante.')
+      setBusy(true)
+      const res = await verifyTeacherKey(teacherKey)
+      if (!res.ok) {
+        setBusy(false)
+        setKeyErr(res.error ?? 'Clave de docente inválida. Si no eres catedrático, elige Estudiante.')
         return
       }
+      setBusy(false)
     }
     // Estudiante por OAuth: el correo @uth.hn ya lo verifica (no pedimos cuenta).
     if (role === 'student' && !isInstitutionalEmail(email)) {
@@ -89,8 +94,9 @@ export default function OnboardingPage() {
     }
     setBusy(true)
     if (supabase) {
-      const data: Record<string, unknown> = { role }
-      if (role === 'teacher') data.teacher_code = code
+      // El rol 'teacher' ya lo otorgó el servidor tras validar la clave; aquí solo
+      // guardamos datos no sensibles (el rol desde el cliente se ignora en la base).
+      const data: Record<string, unknown> = role === 'teacher' ? { teacher_code: code } : { role }
       await supabase.auth.updateUser({ data })
       const { data: u } = await supabase.auth.getUser()
       if (u.user) bridgeUser(u.user)

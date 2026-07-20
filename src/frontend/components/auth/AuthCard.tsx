@@ -7,7 +7,9 @@ import NexusScene from '@/frontend/components/ui/NexusScene'
 import { setSession } from '@/frontend/session/session'
 import { supabase, isSupabaseReady } from '@/backend/supabase'
 import { bridgeUser } from '@/frontend/session/authBridge'
-import { generateTeacherCode, isValidTeacherKey, isInstitutionalEmail, isValidAccount } from '@/shared/roles'
+import { generateTeacherCode, isInstitutionalEmail, isValidAccount } from '@/shared/roles'
+import { verifyTeacherKey } from '@/frontend/session/teacherKey'
+import { loginAllowed, loginFailed, loginSucceeded } from '@/frontend/session/loginGuard'
 import { useT } from '@/frontend/hooks/useT'
 import { GradCapIcon, TeacherIcon } from '@/frontend/components/ui/Icons'
 
@@ -131,18 +133,17 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
         confirmRef.current?.focus()
         return notify('warning', 'Las contraseñas no coinciden.')
       }
-      // ---- Candado del rol catedrático: clave institucional ----
-      if (role === 'teacher') {
-        const ok = await isValidTeacherKey(teacherKey)
-        if (!ok) {
-          setTeacherKey('')
-          teacherKeyRef.current?.focus()
-          return notify('warning', 'Clave de docente inválida. Si no eres catedrático, regístrate como estudiante.')
-        }
+      // Candado del rol catedrático: solo comprobamos que escribió algo.
+      // La clave se VERIFICA EN EL SERVIDOR después de crear la cuenta.
+      if (role === 'teacher' && !teacherKey.trim()) {
+        teacherKeyRef.current?.focus()
+        return notify('warning', 'Ingresa la clave de docente.')
       }
       // ---- Supabase ----
       if (isSupabaseReady && supabase) {
-        const meta: Record<string, unknown> = { username: username.trim(), role }
+        // SEGURIDAD: nunca pedimos el rol 'teacher' desde el cliente. La cuenta
+        // nace como estudiante y solo el servidor la promueve tras validar la clave.
+        const meta: Record<string, unknown> = { username: username.trim(), role: 'student' }
         if (role === 'teacher') meta.teacher_code = teacherCode
         if (role === 'student') meta.account_number = account.trim()
         const { data, error } = await supabase.auth.signUp({
@@ -152,9 +153,19 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
         })
         if (error) return notify('warning', error.message)
         if (data.session && data.user) {
-          bridgeUser(data.user)
+          // Si pidió ser catedrático, el servidor valida la clave y otorga el rol.
+          if (role === 'teacher') {
+            const vk = await verifyTeacherKey(teacherKey)
+            if (!vk.ok) {
+              setTeacherKey('')
+              teacherKeyRef.current?.focus()
+              notify('warning', `${vk.error ?? 'Clave inválida.'} Tu cuenta quedó como estudiante.`)
+            }
+          }
+          const { data: fresh } = await supabase.auth.getUser()
+          if (fresh.user) bridgeUser(fresh.user)
           notify('success', `¡Cuenta creada! Bienvenido, ${username.trim()}.`)
-          return void setTimeout(() => router.push('/dashboard'), 800)
+          return void setTimeout(() => router.push('/dashboard'), 900)
         }
         // Sin sesión = Supabase pide confirmar el correo. Lo llevamos al
         // inicio de sesión con su correo ya puesto (en vez de dejarlo colgado).
@@ -190,16 +201,26 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
         identifierRef.current?.focus()
         return notify('warning', 'Ingresa tu contraseña.')
       }
+      // ANTI FUERZA BRUTA: si acumuló fallos, hay que esperar antes de reintentar.
+      const gate = loginAllowed()
+      if (!gate.ok) {
+        setPassword('')
+        return notify('warning', `Demasiados intentos fallidos. Espera ${gate.retryAfter} s antes de volver a intentar.`)
+      }
       // ---- Supabase (requiere email) ----
       if (isSupabaseReady && supabase) {
         if (!isEmail(identifier)) return notify('warning', 'Inicia sesión con tu correo.')
         const { data, error } = await supabase.auth.signInWithPassword({ email: identifier.trim(), password })
         if (error) {
+          const f = loginFailed()
           setPassword('')
           passwordRef.current?.focus()
-          return notify('warning', error.message)
+          // Mensaje genérico a propósito: no revelamos si el correo existe o no.
+          const base = 'Correo o contraseña incorrectos.'
+          return notify('warning', f.retryAfter > 0 ? `${base} Espera ${f.retryAfter} s para reintentar.` : base)
         }
         if (data.user) {
+          loginSucceeded()
           bridgeUser(data.user)
           notify('success', `¡Sesión iniciada! Hola, ${identifier.trim()}.`)
           return void setTimeout(() => router.push('/dashboard'), 800)

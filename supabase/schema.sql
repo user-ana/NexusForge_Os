@@ -339,6 +339,11 @@ grant execute on function public.update_group(uuid, text, text, text) to authent
 --  TRIGGER: crear/actualizar perfil cuando nace o cambia un usuario
 -- ----------------------------------------------------------------------
 
+-- SEGURIDAD (escalada de privilegios): raw_user_meta_data lo puede editar el
+-- propio usuario desde el navegador (supabase.auth.updateUser). Por eso NUNCA
+-- tomamos de ahí el rol 'teacher': todo perfil nuevo nace como 'student' y el
+-- rol solo se puede cambiar desde el servidor (/api/verify-teacher-key, que
+-- valida la clave institucional con límite de intentos).
 create or replace function public.handle_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
@@ -346,7 +351,7 @@ begin
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'role', 'student'),
+    'student',                              -- nunca se hereda el rol del metadata
     new.raw_user_meta_data->>'username',
     coalesce(new.raw_user_meta_data->>'nf_full_name', new.raw_user_meta_data->>'full_name'),
     new.raw_user_meta_data->>'career',
@@ -355,7 +360,7 @@ begin
   )
   on conflict (id) do update set
     email          = excluded.email,
-    role           = coalesce(new.raw_user_meta_data->>'role', public.profiles.role),
+    -- el rol NO se toca aquí (ver protect_profile_role más abajo)
     username       = coalesce(excluded.username, public.profiles.username),
     full_name      = coalesce(new.raw_user_meta_data->>'nf_full_name', new.raw_user_meta_data->>'full_name', public.profiles.full_name),
     career         = coalesce(excluded.career, public.profiles.career),
@@ -372,6 +377,28 @@ create trigger on_auth_user_created
 drop trigger if exists on_auth_user_updated on auth.users;
 create trigger on_auth_user_updated
   after update on auth.users for each row execute function public.handle_user();
+
+-- ----------------------------------------------------------------------
+--  SEGURIDAD: el rol NO se puede cambiar desde el cliente
+--
+--  RLS decide QUÉ FILAS puede tocar alguien, pero no qué COLUMNAS. Sin esto,
+--  la política profiles_update (id = auth.uid()) dejaba que un estudiante se
+--  pusiera role='teacher' en su propia fila. Este trigger revierte cualquier
+--  cambio de rol que no venga del servidor (service_role).
+-- ----------------------------------------------------------------------
+create or replace function public.protect_profile_role()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.role is distinct from old.role and coalesce(auth.role(), '') <> 'service_role' then
+    new.role := old.role;   -- se ignora el intento, en silencio
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_profile_role_trg on public.profiles;
+create trigger protect_profile_role_trg
+  before update on public.profiles for each row execute function public.protect_profile_role();
 
 -- Crea perfiles para usuarios que ya existían antes de este script
 insert into public.profiles (id, email, role, username, full_name, account_number, teacher_code)
