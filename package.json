@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "security:test": "node scripts/security-test.mjs",
+    "security:api": "node scripts/security-api.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
