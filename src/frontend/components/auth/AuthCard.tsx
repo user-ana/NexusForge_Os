@@ -72,7 +72,20 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
     setToasts((t) => t.map((x) => (x.id === id ? { ...x, leaving: true } : x)))
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 400)
   }
+  // ----- Aviso de error DENTRO de la tarjeta -----
+  // Los errores del formulario se muestran junto al botón, que es donde la
+  // persona está mirando al momento de fallar. En la esquina de la pantalla
+  // pasaban desapercibidos. Los mensajes de éxito sí siguen como toast, porque
+  // ahí la persona ya logró lo que quería y solo necesita confirmación.
+  const [formError, setFormError] = useState<string | null>(null)
+  const errorSeq = useRef(0) // fuerza la animación aunque se repita el mismo texto
+
   function notify(type: ToastType, message: string) {
+    if (type === 'warning') {
+      errorSeq.current++
+      setFormError(message)
+      return
+    }
     const id = ++toastId.current
     setToasts((t) => {
       // evita duplicar un mensaje que ya está activo
@@ -83,9 +96,16 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
     setTimeout(() => dismiss(id), 3800)
   }
 
+  // Al corregir lo que sea, el error se va: no dejamos un mensaje viejo colgado.
+  useEffect(() => {
+    if (formError) setFormError(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identifier, email, username, password, confirm, account, teacherKey, role])
+
   function toggle() {
     setMode((m) => (m === 'signin' ? 'signup' : 'signin'))
     setShowPassword(false)
+    setFormError(null)
   }
 
   // Auto-foco en el primer campo al cargar y al cambiar de modo
@@ -626,6 +646,20 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Aviso de error: pegado al botón, imposible no verlo */}
+            {formError && (
+              <div key={errorSeq.current} className="neo-formerror" role="alert" aria-live="assertive">
+                <span className="neo-formerror-icon">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M12 8v5" />
+                    <circle cx="12" cy="16.6" r="0.6" fill="currentColor" stroke="none" />
+                    <path d="M10.3 3.9 2.6 17.4a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <span>{formError}</span>
               </div>
             )}
 
