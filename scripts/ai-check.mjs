@@ -1,4 +1,17 @@
-// Medicion temporal de la IA. Se borra al terminar.
+/**
+ * MIDE LA VELOCIDAD DE LA IA
+ *
+ * Se corre con:   npm run ai:check
+ * Contra otro sitio:   npm run ai:check -- http://localhost:3000
+ *
+ * Para que sirve: el modelo corre en un servidor propio (Ollama sobre Rocky
+ * Linux) y el tunel gratuito corta a los 100 segundos. Este script hace cuatro
+ * preguntas reales -incluida una accion, que es la mas pesada- y dice cuanto
+ * tarda cada una. Conviene correrlo antes de una demostracion: si la primera
+ * sale lenta es que el modelo estaba dormido, y ya queda caliente.
+ *
+ * Crea un usuario de prueba (la IA exige sesion iniciada) y lo borra al final.
+ */
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
 
@@ -7,7 +20,7 @@ for (const line of readFileSync('.env.local', 'utf8').split('\n')) {
   const m = line.match(/^\s*([A-Z_]+)\s*=\s*(.*)\s*$/)
   if (m) env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
 }
-const base = 'https://nexusforgeos.vercel.app'
+const base = (process.argv[2] || 'https://nexusforgeos.vercel.app').replace(/\/$/, '')
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
