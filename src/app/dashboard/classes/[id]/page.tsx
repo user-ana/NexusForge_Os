@@ -11,6 +11,7 @@ import ConfirmDialog from '@/frontend/components/ui/ConfirmDialog'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { TrashIcon } from '@/frontend/components/ui/Icons'
 import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
+import ClassTasksSection from '@/frontend/components/tasks/ClassTasksSection'
 import { useT } from '@/frontend/hooks/useT'
 import { parcialLabel } from '@/shared/parciales'
 
@@ -165,6 +166,9 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
             </div>
           )}
         </section>
+
+        {/* Tareas de la clase (publicar + matriz de entregas) */}
+        <ClassTasksSection classId={params.id} isTeacher={isTeacher} roster={klass.roster} />
 
         {/* Inscritos */}
         <div className="neo-panel p-6">

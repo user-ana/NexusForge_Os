@@ -577,12 +577,145 @@ grant execute on all functions in schema public to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 
 -- ----------------------------------------------------------------------
+--  TAREAS DE CLASE + NOTIFICACIONES  (ver supabase/tasks_notifications.sql)
+-- ----------------------------------------------------------------------
+create table if not exists public.class_tasks (
+  id              uuid primary key default gen_random_uuid(),
+  class_id        uuid not null references public.classes(id) on delete cascade,
+  title           text not null,
+  description     text default '',
+  parcial         text default '',
+  link_url        text default '',
+  due_date        timestamptz,
+  created_by      uuid references public.profiles(id) on delete set null,
+  created_by_name text default '',
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists idx_ct_class on public.class_tasks(class_id, created_at desc);
+alter table public.class_tasks replica identity full;
+
+create table if not exists public.task_submissions (
+  task_id      uuid not null references public.class_tasks(id) on delete cascade,
+  student_id   uuid not null references public.profiles(id) on delete cascade,
+  note         text default '',
+  link_url     text default '',
+  submitted_at timestamptz not null default now(),
+  grade        numeric,
+  feedback     text default '',
+  primary key (task_id, student_id)
+);
+alter table public.task_submissions replica identity full;
+
+create table if not exists public.notifications (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  type       text not null default 'info',
+  title      text not null,
+  body       text default '',
+  link       text default '',
+  class_id   uuid references public.classes(id) on delete cascade,
+  read       boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_notif_user on public.notifications(user_id, read, created_at desc);
+alter table public.notifications replica identity full;
+
+create or replace function public.task_class_id(tid uuid)
+returns uuid language sql security definer stable set search_path = public as $$
+  select class_id from public.class_tasks where id = tid;
+$$;
+
+alter table public.class_tasks      enable row level security;
+alter table public.task_submissions enable row level security;
+alter table public.notifications    enable row level security;
+
+drop policy if exists ct_read on public.class_tasks;
+create policy ct_read on public.class_tasks for select to authenticated
+  using (public.is_class_member(class_id));
+drop policy if exists ct_write on public.class_tasks;
+create policy ct_write on public.class_tasks for all to authenticated
+  using (public.is_class_teacher(class_id))
+  with check (public.is_class_teacher(class_id));
+
+drop policy if exists ts_read on public.task_submissions;
+create policy ts_read on public.task_submissions for select to authenticated
+  using (student_id = auth.uid() or public.is_class_teacher(public.task_class_id(task_id)));
+drop policy if exists ts_insert on public.task_submissions;
+create policy ts_insert on public.task_submissions for insert to authenticated
+  with check (student_id = auth.uid() and public.is_class_member(public.task_class_id(task_id)));
+drop policy if exists ts_update on public.task_submissions;
+create policy ts_update on public.task_submissions for update to authenticated
+  using (student_id = auth.uid()) with check (student_id = auth.uid());
+drop policy if exists ts_delete on public.task_submissions;
+create policy ts_delete on public.task_submissions for delete to authenticated
+  using (student_id = auth.uid());
+
+drop policy if exists notif_read on public.notifications;
+create policy notif_read on public.notifications for select to authenticated
+  using (user_id = auth.uid());
+drop policy if exists notif_update on public.notifications;
+create policy notif_update on public.notifications for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists notif_delete on public.notifications;
+create policy notif_delete on public.notifications for delete to authenticated
+  using (user_id = auth.uid());
+
+create or replace function public.create_class_task(
+  cid uuid, ptitle text, pdesc text, pparcial text, plink text, pdue timestamptz
+) returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  new_id uuid;
+  tname  text;
+  cname  text;
+  venc   text;
+begin
+  if not public.is_class_teacher(cid) then
+    raise exception 'Solo el catedrático de la clase puede publicar tareas';
+  end if;
+  if btrim(coalesce(ptitle, '')) = '' then
+    raise exception 'La tarea necesita un título';
+  end if;
+  select coalesce(nullif(btrim(full_name), ''), username, 'Catedrático')
+    into tname from public.profiles where id = auth.uid();
+  select name into cname from public.classes where id = cid;
+  insert into public.class_tasks
+    (class_id, title, description, parcial, link_url, due_date, created_by, created_by_name)
+  values
+    (cid, btrim(ptitle), coalesce(pdesc, ''), coalesce(pparcial, ''),
+     coalesce(plink, ''), pdue, auth.uid(), tname)
+  returning id into new_id;
+  venc := case when pdue is null then 'sin fecha límite'
+               else 'vence el ' || to_char(pdue, 'DD/MM a las HH24:MI') end;
+  insert into public.notifications (user_id, type, title, body, link, class_id)
+  select e.student_id, 'task_new',
+         'Nueva tarea: ' || btrim(ptitle),
+         coalesce(cname, 'Tu clase') || ' — ' || venc,
+         '/dashboard/tasks', cid
+  from public.enrollments e where e.class_id = cid;
+  return new_id;
+end;
+$$;
+grant execute on function public.create_class_task(uuid, text, text, text, text, timestamptz) to authenticated;
+
+create or replace function public.mark_all_notifications_read()
+returns void language sql security definer set search_path = public as $$
+  update public.notifications set read = true
+  where user_id = auth.uid() and read = false;
+$$;
+grant execute on function public.mark_all_notifications_read() to authenticated;
+
+grant select, insert, update, delete
+  on public.class_tasks, public.task_submissions, public.notifications to authenticated;
+grant all on public.class_tasks, public.task_submissions, public.notifications to service_role;
+
+-- ----------------------------------------------------------------------
 --  REALTIME (para chat / kanban / grupos en vivo) — seguro de re-ejecutar
 -- ----------------------------------------------------------------------
 do $$
 declare t text;
 begin
-  foreach t in array array['messages','kanban_tasks','class_groups','group_members','enrollments','classes','projects','community_messages','group_projects','group_evaluations','student_stats']
+  foreach t in array array['messages','kanban_tasks','class_groups','group_members','enrollments','classes','projects','community_messages','group_projects','group_evaluations','student_stats','class_tasks','task_submissions','notifications']
   loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);

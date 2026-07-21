@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Icon3D from '@/frontend/components/ui/Icon3D'
+import NotificationBell from '@/frontend/components/layout/NotificationBell'
 import PresetAvatar, { presetIndex } from '@/frontend/components/ui/PresetAvatar'
 import { getSession, clearSession, displayName, SESSION_EVENT, DEFAULT_COINS, type Session } from '@/frontend/session/session'
 import { rankFromXp } from '@/shared/gamification'
@@ -64,6 +65,9 @@ export default function ProfileBar() {
 
   return (
     <div className="flex items-center gap-3">
+      {/* Campanita de notificaciones (en tiempo real) */}
+      <NotificationBell />
+
       {/* Monedas: solo estudiante */}
       {isStudent && (
         <div className="neo-coins">

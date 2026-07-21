@@ -3600,3 +3600,209 @@ body {
 .neo-rank-pos--1 { color: #1a1c20; background: linear-gradient(145deg, #e6c163, #cdab63); }
 .neo-rank-pos--2 { color: #1a1c20; background: linear-gradient(145deg, #d4d7dd, #b8bcc4); }
 .neo-rank-pos--3 { color: #1a1c20; background: linear-gradient(145deg, #d39a6a, #c08a5a); }
+
+/* ===================================================================
+   NOTIFICACIONES (campanita) + TAREAS
+   =================================================================== */
+
+/* --- Campanita --- */
+.neo-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: #c2c7d0;
+  background: linear-gradient(145deg, #2a2d33, #212429);
+  box-shadow: -2px -2px 7px rgba(255,255,255,0.02), 3px 3px 9px rgba(0,0,0,0.5);
+  transition: transform 0.12s ease, color 0.2s ease;
+  cursor: pointer;
+}
+.neo-bell:hover { color: #fff; transform: translateY(-1px); }
+.neo-bell--open { color: #b89bff; box-shadow: inset 2px 2px 6px rgba(0,0,0,0.5); }
+.neo-bell-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #f43f5e, #e11d48);
+  box-shadow: 0 0 10px -1px rgba(244,63,94,0.7);
+  animation: neo-badge-pop 0.35s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes neo-badge-pop { 0% { transform: scale(0); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.neo-bell-ring { transform-origin: 50% 4px; animation: neo-bell-swing 2.6s ease-in-out infinite; }
+@keyframes neo-bell-swing {
+  0%, 70%, 100% { transform: rotate(0); }
+  75% { transform: rotate(11deg); }
+  80% { transform: rotate(-9deg); }
+  85% { transform: rotate(6deg); }
+  90% { transform: rotate(-4deg); }
+}
+@media (prefers-reduced-motion: reduce) { .neo-bell-ring, .neo-bell-badge { animation: none; } }
+
+/* --- Panel de notificaciones --- */
+.neo-notif-panel {
+  z-index: 70;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  border-radius: 16px;
+  background: linear-gradient(150deg, #2b2e34, #212429);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 6px 10px 30px -8px rgba(0,0,0,0.75);
+  overflow: hidden;
+  animation: neo-notif-in 0.24s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes neo-notif-in { 0% { opacity: 0; transform: translateY(-8px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+.neo-notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #e6e8ec;
+}
+.neo-notif-readall {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #b89bff;
+  cursor: pointer;
+}
+.neo-notif-readall:hover { color: #cbb6ff; }
+.neo-notif-list { max-height: 380px; overflow-y: auto; }
+.neo-notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 16px;
+  color: #6b7280;
+  font-size: 13px;
+}
+.neo-notif-item {
+  display: flex;
+  gap: 11px;
+  width: 100%;
+  padding: 13px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+.neo-notif-item:hover { background: rgba(255,255,255,0.03); }
+.neo-notif-item--unread { background: rgba(139,92,246,0.06); }
+.neo-notif-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #6b7280;
+}
+.neo-notif-item--unread .neo-notif-dot { box-shadow: 0 0 8px -1px currentColor; }
+.neo-notif-dot--task_new { background: #b89bff; color: #b89bff; }
+.neo-notif-dot--task_due { background: #fbbf24; color: #fbbf24; }
+.neo-notif-dot--graded  { background: #34d399; color: #34d399; }
+.neo-notif-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.neo-notif-title { font-size: 13px; font-weight: 600; color: #eceef2; }
+.neo-notif-text { font-size: 12px; color: #9ca3af; line-height: 1.35; }
+.neo-notif-time { font-size: 10.5px; color: #6b7280; margin-top: 1px; }
+
+/* --- Chips extra --- */
+.neo-chip--active {
+  color: #fff;
+  background: linear-gradient(145deg, #b89bff, #8b5cf6);
+  border-color: transparent;
+}
+.neo-chip--over { color: #f87171; border-color: rgba(248,113,113,0.35); }
+
+/* --- Vacío genérico --- */
+.neo-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.15);
+  box-shadow: inset 2px 2px 8px rgba(0,0,0,0.35);
+}
+
+/* --- Tarjetas de estadística de "Mis tareas" --- */
+.neo-taskstat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(150deg, #2a2d33, #212429);
+  box-shadow: -3px -3px 10px rgba(255,255,255,0.02), 4px 4px 12px rgba(0,0,0,0.5);
+  border-left: 3px solid transparent;
+}
+.neo-taskstat-num { font-size: 28px; font-weight: 800; line-height: 1; color: #fff; }
+.neo-taskstat-label { font-size: 12px; color: #9ca3af; }
+.neo-taskstat--pending   { border-left-color: #b89bff; }
+.neo-taskstat--submitted { border-left-color: #34d399; }
+.neo-taskstat--overdue   { border-left-color: #f43f5e; }
+
+/* --- Insignias de estado --- */
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.neo-badge--pending   { color: #cbb6ff; background: rgba(139,92,246,0.14); }
+.neo-badge--submitted { color: #6ee7b7; background: rgba(52,211,153,0.14); }
+.neo-badge--overdue   { color: #fda4af; background: rgba(244,63,94,0.14); }
+
+/* --- Tarjeta de tarea (Mis tareas) --- */
+.neo-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: linear-gradient(150deg, #292c32, #212429);
+  box-shadow: -3px -3px 10px rgba(255,255,255,0.02), 4px 4px 12px rgba(0,0,0,0.5);
+  border-left: 3px solid transparent;
+  transition: transform 0.14s ease;
+  animation: neo-task-in 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+.neo-task:hover { transform: translateX(2px); }
+@keyframes neo-task-in { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
+.neo-task--pending   { border-left-color: #b89bff; }
+.neo-task--submitted { border-left-color: #34d399; opacity: 0.82; }
+.neo-task--overdue   { border-left-color: #f43f5e; }
+.neo-task-main { min-width: 0; }
+.neo-task-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
+.neo-task-class { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #b89bff; }
+.neo-task-parcial { font-size: 11px; color: #cdab63; }
+.neo-task-title { font-size: 15px; font-weight: 600; color: #fff; }
+.neo-task-desc { margin-top: 3px; font-size: 13px; color: #9ca3af; line-height: 1.4; }
+.neo-task-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.neo-task-due { font-size: 12px; color: #9ca3af; }
+.neo-task-due--soon { color: #fbbf24; font-weight: 600; }
+.neo-task-due--over { color: #f87171; font-weight: 600; }
+.neo-task-link { font-size: 12px; color: #b89bff; }
+.neo-task-actions { flex-shrink: 0; }

@@ -45,6 +45,7 @@ const es: Dict = {
   'auth.tagline': 'Plataforma de desarrollo gamificada',
   // Nav
   'nav.dashboard': 'Panel',
+  'nav.tasks': 'Mis tareas',
   'nav.rewards': 'Recompensas',
   'nav.classes': 'Mis Clases',
   'nav.periods': 'Períodos',
@@ -407,6 +408,7 @@ const en: Dict = {
   'auth.or_signin': 'Or continue with',
   'auth.tagline': 'Gamified development platform',
   'nav.dashboard': 'Dashboard',
+  'nav.tasks': 'My Tasks',
   'nav.rewards': 'Rewards',
   'nav.classes': 'My Classes',
   'nav.periods': 'Periods',

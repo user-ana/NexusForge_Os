@@ -12,6 +12,7 @@ const BASE = [
 ]
 const NAV_BY_ROLE: Record<Role, { href: string; key: string }[]> = {
   student: [
+    { href: '/dashboard/tasks', key: 'nav.tasks' },
     { href: '/dashboard/rewards', key: 'nav.rewards' },
     { href: '/dashboard/classes', key: 'nav.classes' },
   ],
