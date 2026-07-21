@@ -134,11 +134,33 @@ export async function uploadTaskPdf(classId: string, file: File): Promise<string
 }
 
 /**
- * Pide al servidor que lea el PDF y devuelva un resumen (lo redacta la IA;
- * si la IA falla, devuelve un extracto del propio PDF). Requiere sesión.
+ * Extrae el texto de un PDF EN EL NAVEGADOR con pdfjs (donde funciona de forma
+ * confiable). Devuelve '' si el PDF no tiene texto (p. ej. es una imagen).
  */
-export async function summarizePdf(pdfUrl: string): Promise<{ summary: string; source: 'ai' | 'extract' } | null> {
-  if (!supabase) return null
+export async function extractPdfText(file: File): Promise<string> {
+  const pdfjs = await import('pdfjs-dist')
+  // El worker se sirve como archivo estático del propio sitio (public/), no de un
+  // CDN: funciona offline, sin CSP externa, y sin que el bundler lo procese.
+  // Debe coincidir con la versión de pdfjs-dist (ver scripts/copy-pdf-worker.mjs).
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise
+  const pages = Math.min(pdf.numPages, 20) // tope de páginas por si el PDF es enorme
+  let out = ''
+  for (let i = 1; i <= pages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    out += content.items.map((it) => (it as { str?: string }).str ?? '').join(' ') + '\n'
+  }
+  return out.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+/**
+ * Pide al servidor que resuma el texto con la IA (si la IA falla, devuelve un
+ * extracto). Requiere sesión.
+ */
+export async function summarizeText(text: string): Promise<{ summary: string; source: 'ai' | 'extract' } | null> {
+  if (!supabase || text.trim().length < 20) return null
   const { data } = await supabase.auth.getSession()
   const token = data.session?.access_token
   if (!token) return null
@@ -146,7 +168,7 @@ export async function summarizePdf(pdfUrl: string): Promise<{ summary: string; s
     const res = await fetch('/api/pdf-summary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ pdfUrl }),
+      body: JSON.stringify({ text }),
     })
     const json = await res.json().catch(() => ({}))
     if (!res.ok) return null

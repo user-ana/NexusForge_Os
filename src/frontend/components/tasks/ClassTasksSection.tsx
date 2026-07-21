@@ -8,7 +8,8 @@ import {
   deleteClassTask,
   loadSubmissions,
   uploadTaskPdf,
-  summarizePdf,
+  extractPdfText,
+  summarizeText,
   subscribeClassTasks,
   CLASSTASKS_EVENT,
   type ClassTask,
@@ -128,19 +129,28 @@ function TaskModal({
     setPdfName(file.name)
     setPdfSource(null)
     setPdfStatus('uploading')
-    const url = await uploadTaskPdf(classId, file)
+
+    // 1) Subimos el PDF (para que el alumno lo pueda abrir) y, en paralelo,
+    //    extraemos su texto en el navegador.
+    const [url, text] = await Promise.all([
+      uploadTaskPdf(classId, file),
+      extractPdfText(file).catch(() => ''),
+    ])
     if (!url) {
       setPdfStatus('error')
       setErr('No se pudo subir el PDF.')
       return
     }
     setPdfUrl(url)
-    // La IA lee el PDF y redacta la descripción (con respaldo si falla)
-    setPdfStatus('reading')
-    const r = await summarizePdf(url)
-    if (r && r.summary) {
-      setDesc((d) => (d.trim() ? d : r.summary))
-      setPdfSource(r.source)
+
+    // 2) Si el PDF tenía texto, la IA lo resume y rellena la descripción.
+    if (text && text.length >= 20) {
+      setPdfStatus('reading')
+      const r = await summarizeText(text)
+      if (r && r.summary) {
+        setDesc((d) => (d.trim() ? d : r.summary))
+        setPdfSource(r.source)
+      }
     }
     setPdfStatus('done')
   }
