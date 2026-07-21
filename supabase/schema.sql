@@ -594,6 +594,7 @@ create table if not exists public.class_tasks (
 );
 create index if not exists idx_ct_class on public.class_tasks(class_id, created_at desc);
 alter table public.class_tasks replica identity full;
+alter table public.class_tasks add column if not exists pdf_url text default '';
 
 create table if not exists public.task_submissions (
   task_id      uuid not null references public.class_tasks(id) on delete cascade,

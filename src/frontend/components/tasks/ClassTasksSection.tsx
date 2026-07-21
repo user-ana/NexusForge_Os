@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   loadClassTasks,
   createClassTask,
   deleteClassTask,
   loadSubmissions,
+  uploadTaskPdf,
+  summarizePdf,
   subscribeClassTasks,
   CLASSTASKS_EVENT,
   type ClassTask,
@@ -97,14 +99,56 @@ function TaskModal({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
+  // --- PDF del enunciado + lectura automática con IA ---
+  type PdfStatus = 'idle' | 'uploading' | 'reading' | 'done' | 'error'
+  const [pdfUrl, setPdfUrl] = useState('')
+  const [pdfName, setPdfName] = useState('')
+  const [pdfStatus, setPdfStatus] = useState<PdfStatus>('idle')
+  const [pdfSource, setPdfSource] = useState<'ai' | 'extract' | null>(null)
+  const [drag, setDrag] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => setMounted(true), [])
 
   // Al abrir, limpiamos el formulario
   useEffect(() => {
     if (open) {
       setTitle(''); setDesc(''); setParcial(''); setDue(''); setLink(''); setErr('')
+      setPdfUrl(''); setPdfName(''); setPdfStatus('idle'); setPdfSource(null); setDrag(false)
     }
   }, [open])
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErr('El archivo debe ser un PDF.')
+      return
+    }
+    setErr('')
+    setPdfName(file.name)
+    setPdfSource(null)
+    setPdfStatus('uploading')
+    const url = await uploadTaskPdf(classId, file)
+    if (!url) {
+      setPdfStatus('error')
+      setErr('No se pudo subir el PDF.')
+      return
+    }
+    setPdfUrl(url)
+    // La IA lee el PDF y redacta la descripción (con respaldo si falla)
+    setPdfStatus('reading')
+    const r = await summarizePdf(url)
+    if (r && r.summary) {
+      setDesc((d) => (d.trim() ? d : r.summary))
+      setPdfSource(r.source)
+    }
+    setPdfStatus('done')
+  }
+
+  function removePdf() {
+    setPdfUrl(''); setPdfName(''); setPdfStatus('idle'); setPdfSource(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
 
   // Cerrar con la tecla Escape
   useEffect(() => {
@@ -126,12 +170,15 @@ function TaskModal({
       description: desc,
       parcial,
       linkUrl: link,
+      pdfUrl,
       dueDate: due ? new Date(due).getTime() : null,
     })
     setBusy(false)
     if (!ok) return setErr('No se pudo publicar. Intenta de nuevo.')
     onDone()
   }
+
+  const busyPdf = pdfStatus === 'uploading' || pdfStatus === 'reading'
 
   return createPortal(
     <div className="neo-modal-backdrop" onClick={onClose}>
@@ -148,6 +195,51 @@ function TaskModal({
           <label className="neo-label">Título</label>
           <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className="neo-input mt-1 w-full" placeholder="Ej. Investigación sobre servidores web" />
         </div>
+        {/* PDF del enunciado: la IA lo lee y rellena la descripción */}
+        <div>
+          <label className="neo-label">Enunciado en PDF (opcional)</label>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+          {pdfStatus === 'idle' ? (
+            <div
+              onClick={() => fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
+              onDragLeave={() => setDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files?.[0]) }}
+              className={`neo-pdfdrop ${drag ? 'neo-pdfdrop--over' : ''}`}
+            >
+              <PdfIcon />
+              <div>
+                <p className="neo-pdfdrop-title">Arrastra un PDF o haz clic para subirlo</p>
+                <p className="neo-pdfdrop-sub">La IA lo leerá y escribirá la descripción por ti</p>
+              </div>
+            </div>
+          ) : (
+            <div className={`neo-pdffile ${busyPdf ? 'neo-pdffile--busy' : ''}`}>
+              <PdfIcon />
+              <div className="neo-pdffile-info">
+                <span className="neo-pdffile-name">{pdfName}</span>
+                <span className="neo-pdffile-state">
+                  {pdfStatus === 'uploading' && 'Subiendo el PDF…'}
+                  {pdfStatus === 'reading' && 'La IA está leyendo el PDF…'}
+                  {pdfStatus === 'done' && pdfSource === 'ai' && 'Resumen generado por la IA'}
+                  {pdfStatus === 'done' && pdfSource === 'extract' && 'Texto extraído del PDF'}
+                  {pdfStatus === 'done' && pdfSource === null && 'PDF adjuntado'}
+                  {pdfStatus === 'error' && 'No se pudo procesar'}
+                </span>
+              </div>
+              {busyPdf ? <span className="neo-pdfspin" /> : (
+                <button onClick={removePdf} className="neo-pdffile-x" aria-label="Quitar PDF">✕</button>
+              )}
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="neo-label">Descripción (opcional)</label>
           <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="neo-input mt-1 w-full resize-none" placeholder="Qué deben hacer, formato de entrega, etc." />
@@ -173,7 +265,9 @@ function TaskModal({
         {err && <p className="text-xs text-amber-400">{err}</p>}
         <div className="flex items-center justify-end gap-3">
           <button onClick={onClose} className="neo-btn-ghost">Cancelar</button>
-          <button onClick={publish} disabled={busy} className="neo-btn">{busy ? 'Publicando…' : 'Publicar y notificar'}</button>
+          <button onClick={publish} disabled={busy || busyPdf} className="neo-btn">
+            {busy ? 'Publicando…' : busyPdf ? 'Procesando PDF…' : 'Publicar y notificar'}
+          </button>
         </div>
       </div>
     </div>,
@@ -207,11 +301,18 @@ function TaskRow({ task, isTeacher, roster }: { task: ClassTask; isTeacher: bool
           </div>
           <h4 className="font-semibold text-white">{task.title}</h4>
           {task.description && <p className="mt-1 text-sm text-neutral-400">{task.description}</p>}
-          {task.linkUrl && (
-            <a href={task.linkUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-accent-violet">
-              Ver enunciado →
-            </a>
-          )}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            {task.pdfUrl && (
+              <a href={task.pdfUrl} target="_blank" rel="noreferrer" className="neo-pdflink">
+                <PdfIcon small /> Enunciado (PDF)
+              </a>
+            )}
+            {task.linkUrl && (
+              <a href={task.linkUrl} target="_blank" rel="noreferrer" className="text-xs text-accent-violet">
+                Ver enlace →
+              </a>
+            )}
+          </div>
         </div>
         {isTeacher && (
           <div className="flex flex-shrink-0 items-center gap-2">
@@ -264,6 +365,18 @@ function TaskRow({ task, isTeacher, roster }: { task: ClassTask; isTeacher: bool
         </p>
       )}
     </article>
+  )
+}
+
+function PdfIcon({ small }: { small?: boolean }) {
+  const s = small ? 13 : 26
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <path d="M9 13h1.5a1.5 1.5 0 0 1 0 3H9v-3zm0 0v5" />
+      <path d="M15.5 13H14v5m0-2.5h1.2" />
+    </svg>
   )
 }
 

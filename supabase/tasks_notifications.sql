@@ -36,6 +36,8 @@ create table if not exists public.class_tasks (
 );
 create index if not exists idx_ct_class on public.class_tasks(class_id, created_at desc);
 alter table public.class_tasks replica identity full;
+-- PDF del enunciado (subido a Storage) + resumen que la IA extrae de él
+alter table public.class_tasks add column if not exists pdf_url text default '';
 
 -- Entrega/estado de cada estudiante por tarea.
 -- La AUSENCIA de fila = tarea pendiente. La presencia de fila = entregada.

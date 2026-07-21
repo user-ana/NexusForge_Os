@@ -16,6 +16,7 @@ export type ClassTask = {
   description: string
   parcial: string
   linkUrl: string
+  pdfUrl: string
   dueDate: number | null // epoch ms, o null si no tiene fecha límite
   createdByName: string
   createdAt: number
@@ -53,6 +54,7 @@ function mapTask(row: any): ClassTask {
     description: row.description ?? '',
     parcial: row.parcial ?? '',
     linkUrl: row.link_url ?? '',
+    pdfUrl: row.pdf_url ?? '',
     dueDate: row.due_date ? new Date(row.due_date).getTime() : null,
     createdByName: row.created_by_name ?? '',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
@@ -91,10 +93,11 @@ export async function createClassTask(input: {
   description?: string
   parcial?: string
   linkUrl?: string
+  pdfUrl?: string
   dueDate?: number | null // epoch ms
 }): Promise<boolean> {
   if (!supabase) return false
-  const { error } = await supabase.rpc('create_class_task', {
+  const { data, error } = await supabase.rpc('create_class_task', {
     cid: input.classId,
     ptitle: input.title.trim(),
     pdesc: input.description ?? '',
@@ -106,8 +109,51 @@ export async function createClassTask(input: {
     console.error('createClassTask', error)
     return false
   }
+  // La función devuelve el id de la tarea nueva; si hay PDF, lo guardamos.
+  if (input.pdfUrl && typeof data === 'string') {
+    await supabase.from('class_tasks').update({ pdf_url: input.pdfUrl }).eq('id', data)
+  }
   dispatch()
   return true
+}
+
+/**
+ * Sube el PDF del enunciado al Storage (reutiliza el bucket de enunciados) y
+ * devuelve su URL pública, o null si falla.
+ */
+export async function uploadTaskPdf(classId: string, file: File): Promise<string | null> {
+  if (!supabase) return null
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `tasks/${classId}/${crypto.randomUUID()}-${safe}`
+  const { error } = await supabase.storage.from('project-briefs').upload(path, file, { upsert: false })
+  if (error) {
+    console.error('uploadTaskPdf', error)
+    return null
+  }
+  return supabase.storage.from('project-briefs').getPublicUrl(path).data.publicUrl
+}
+
+/**
+ * Pide al servidor que lea el PDF y devuelva un resumen (lo redacta la IA;
+ * si la IA falla, devuelve un extracto del propio PDF). Requiere sesión.
+ */
+export async function summarizePdf(pdfUrl: string): Promise<{ summary: string; source: 'ai' | 'extract' } | null> {
+  if (!supabase) return null
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return null
+  try {
+    const res = await fetch('/api/pdf-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ pdfUrl }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return null
+    return { summary: json.summary ?? '', source: json.source === 'ai' ? 'ai' : 'extract' }
+  } catch {
+    return null
+  }
 }
 
 /** Editar una tarea (solo el catedrático, por RLS). */

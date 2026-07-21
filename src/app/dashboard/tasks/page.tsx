@@ -104,9 +104,14 @@ export default function MyTasksPage() {
                     {t.description && <p className="neo-task-desc">{t.description}</p>}
                     <div className="neo-task-meta">
                       <DueLabel due={t.dueDate} state={t.state} />
+                      {t.pdfUrl && (
+                        <a href={t.pdfUrl} target="_blank" rel="noreferrer" className="neo-task-link">
+                          Enunciado (PDF)
+                        </a>
+                      )}
                       {t.linkUrl && (
                         <a href={t.linkUrl} target="_blank" rel="noreferrer" className="neo-task-link">
-                          Ver enunciado
+                          Ver enlace
                         </a>
                       )}
                     </div>

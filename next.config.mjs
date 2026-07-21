@@ -38,6 +38,12 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+  // pdf-parse (y su motor pdfjs) es pesado y carga recursos en tiempo de
+  // ejecución: lo tratamos como paquete externo del servidor para que Next no
+  // intente empaquetarlo (evita fallos de "worker" en Vercel).
+  experimental: {
+    serverComponentsExternalPackages: ['pdf-parse'],
+  },
   // Las cabeceras se aplican a TODAS las rutas del sitio.
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }]
