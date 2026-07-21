@@ -541,13 +541,30 @@ body {
   flex-shrink: 0;
   animation: neo-alert-pulse 2.4s ease-in-out 0.5s infinite;
 }
-/* La línea se traza de adentro hacia afuera al aparecer el error */
+/* La línea se traza al aparecer y luego la recorre un destello cada tanto */
 .neo-alert-line {
+  position: relative;
+  overflow: hidden;
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.55), transparent);
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.5), transparent);
   transform-origin: center;
   animation: neo-alert-trace 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.neo-alert-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -45%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(253, 224, 71, 0.95), transparent);
+  animation: neo-alert-glint 3s ease-in-out 0.9s infinite;
+}
+@keyframes neo-alert-glint {
+  0%        { left: -45%; opacity: 0; }
+  20%       { opacity: 1; }
+  55%, 100% { left: 100%; opacity: 0; }
 }
 @keyframes neo-alert-in {
   0%   { opacity: 0; transform: translateY(-4px); }
@@ -586,26 +603,62 @@ body {
   filter: none;
   transform: none;
 }
+/* La barra se vacía con una animación continua del CSS (no a saltos desde
+   JavaScript): así el movimiento es fluido de principio a fin. */
 .neo-cta-drain {
   position: absolute;
   inset: 0 auto 0 0;
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.16), rgba(251, 191, 36, 0.07));
-  border-right: 1px solid rgba(251, 191, 36, 0.35);
-  transition: width 0.12s linear;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.07));
+  border-right: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 12px -2px rgba(251, 191, 36, 0.35);
   pointer-events: none;
+  animation: neo-drain linear both;
 }
+/* Un brillo recorre la barra mientras corre el tiempo: da sensación de
+   proceso en marcha en vez de una barra quieta que solo encoge. */
+.neo-cta-drain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 25%, rgba(253, 224, 71, 0.22) 50%, transparent 75%);
+  animation: neo-drain-sweep 2.1s ease-in-out infinite;
+}
+@keyframes neo-drain {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+@keyframes neo-drain-sweep {
+  0%   { transform: translateX(-60%); }
+  100% { transform: translateX(160%); }
+}
+
+/* El número no aparece de golpe: sube y se desvanece el anterior */
 .neo-cta-secs {
-  font-variant-numeric: tabular-nums; /* el número no salta al cambiar */
+  display: inline-block;
+  min-width: 1.15em;
+  text-align: center;
+  font-variant-numeric: tabular-nums; /* el ancho no baila al cambiar de cifra */
+}
+.neo-cta-secs b {
+  display: inline-block;
   font-weight: 700;
   color: #fbbf24;
-  min-width: 1.1em;
-  text-align: center;
+  animation: neo-secs-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes neo-secs-in {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .neo-alert-row,
   .neo-alert-line,
-  .neo-alert-icon { animation: none; }
+  .neo-alert-line::after,
+  .neo-alert-icon,
+  .neo-cta-drain::after,
+  .neo-cta-secs b { animation: none; }
 }
 
 .neo-toast-wrap {

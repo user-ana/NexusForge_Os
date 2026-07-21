@@ -94,20 +94,27 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
         setLock(null)
         setFormError(null)
       } else {
-        forceTick((n) => n + 1) // repinta el contador y la barra
+        forceTick((n) => n + 1) // solo repinta el número; la barra la anima el CSS
       }
-    }, 100)
+    }, 200)
     return () => clearInterval(id)
   }, [lock])
 
   const lockLeft = lock ? Math.max(0, lock.until - Date.now()) : 0
   const locked = lockLeft > 0
   const lockSecs = Math.ceil(lockLeft / 1000)
-  const lockPct = lock ? (lockLeft / lock.total) * 100 : 0
 
   function blockFor(seconds: number) {
     setLock({ until: Date.now() + seconds * 1000, total: seconds * 1000 })
   }
+
+  // Si recarga la página durante un bloqueo, el contador sigue donde iba:
+  // los intentos se guardan localmente, así que no se gana nada recargando.
+  useEffect(() => {
+    const g = loginAllowed()
+    if (!g.ok) blockFor(g.retryAfter)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function notify(type: ToastType, message: string) {
     if (type === 'warning') {
@@ -716,12 +723,22 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               disabled={locked}
               className={`neo-cta w-full ${locked ? 'neo-cta--locked' : ''}`}
             >
-              {locked && <span className="neo-cta-drain" style={{ width: `${lockPct}%` }} />}
+              {locked && lock && (
+                <span
+                  key={lock.until}
+                  className="neo-cta-drain"
+                  style={{ animationDuration: `${lock.total}ms` }}
+                />
+              )}
               <span className="neo-cta-label">
                 {locked ? (
                   <>
                     <LockMini />
-                    Espera <b className="neo-cta-secs">{lockSecs}</b> s
+                    Espera
+                    <span className="neo-cta-secs">
+                      <b key={lockSecs}>{lockSecs}</b>
+                    </span>
+                    s
                   </>
                 ) : isSignup ? (
                   t('auth.create_btn')
