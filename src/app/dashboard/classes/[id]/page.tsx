@@ -172,15 +172,23 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
 
         {/* Inscritos */}
         <div className="neo-panel p-6">
-          <p className="neo-label mb-4">{t('cls.enrolled')} · {klass.students.length}</p>
-          {klass.students.length === 0 ? (
+          <div className="mb-5 flex items-center gap-3">
+            <p className="neo-label">{t('cls.enrolled')}</p>
+            <span className="neo-roster-count">{klass.roster.length}</span>
+          </div>
+          {klass.roster.length === 0 ? (
             <p className="text-sm text-neutral-500">{t('cls.no_students')}</p>
           ) : (
-            <div className="flex flex-wrap gap-3">
-              {klass.students.map((st) => (
-                <div key={st} className="flex items-center gap-2 rounded-xl bg-black/20 px-3 py-2">
-                  <span className="neo-member !mr-0">{st.charAt(0).toUpperCase()}</span>
-                  <span className="text-sm text-neutral-200">{st}</span>
+            <div className="neo-roster">
+              {klass.roster.map((st, i) => (
+                <div key={st.id} className="neo-roster-card" style={{ animationDelay: `${i * 45}ms` }}>
+                  <span className={`neo-roster-av neo-roster-av--${avatarTone(st.name)}`}>
+                    {initials(st.name)}
+                  </span>
+                  <span className="neo-roster-info">
+                    <span className="neo-roster-name">{st.name}</span>
+                    <span className="neo-roster-role">Estudiante</span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -225,6 +233,21 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
       />
     </>
   )
+}
+
+/** Iniciales del nombre (primera + última palabra), para el avatar. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+}
+
+/** Tono del avatar (0..5) derivado del nombre — colores mate, sin neón. */
+function avatarTone(name: string): number {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return h % 6
 }
 
 function Info({ label, value }: { label: string; value: string }) {

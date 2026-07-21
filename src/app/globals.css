@@ -3806,3 +3806,80 @@ body {
 .neo-task-due--over { color: #f87171; font-weight: 600; }
 .neo-task-link { font-size: 12px; color: #b89bff; }
 .neo-task-actions { flex-shrink: 0; }
+
+/* --- Inscritos (roster moderno) --- */
+.neo-roster-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #cbb6ff;
+  background: rgba(139, 92, 246, 0.14);
+}
+.neo-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+.neo-roster-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, #292c32, #212429);
+  box-shadow: -2px -2px 8px rgba(255,255,255,0.02), 3px 3px 10px rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+  animation: neo-roster-in 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+.neo-roster-card:hover {
+  transform: translateY(-2px);
+  box-shadow: -2px -2px 8px rgba(255,255,255,0.03), 5px 7px 16px rgba(0,0,0,0.55);
+}
+@keyframes neo-roster-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.neo-roster-av {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #f3f4f6;
+  box-shadow: inset 1px 1px 3px rgba(255,255,255,0.14), inset -2px -2px 5px rgba(0,0,0,0.35);
+}
+/* Paletas mate (sin neón): degradados apagados y elegantes */
+.neo-roster-av--0 { background: linear-gradient(145deg, #6d5ea8, #4b4270); }
+.neo-roster-av--1 { background: linear-gradient(145deg, #4a7a86, #35565e); }
+.neo-roster-av--2 { background: linear-gradient(145deg, #8a6a4f, #5f4a38); }
+.neo-roster-av--3 { background: linear-gradient(145deg, #5f7d5a, #445a40); }
+.neo-roster-av--4 { background: linear-gradient(145deg, #86596b, #5e3f4c); }
+.neo-roster-av--5 { background: linear-gradient(145deg, #566585, #3d475d); }
+.neo-roster-info { display: flex; flex-direction: column; min-width: 0; }
+.neo-roster-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e6e8ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.neo-roster-role {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a8090;
+}
+@media (prefers-reduced-motion: reduce) { .neo-roster-card { animation: none; } }

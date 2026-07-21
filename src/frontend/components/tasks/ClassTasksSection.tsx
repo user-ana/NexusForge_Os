@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   loadClassTasks,
   createClassTask,
@@ -49,9 +50,11 @@ export default function ClassTasksSection({
         )}
       </div>
 
-      {isTeacher && open && (
-        <TaskForm
+      {isTeacher && (
+        <TaskModal
           classId={classId}
+          open={open}
+          onClose={() => setOpen(false)}
           onDone={() => {
             setOpen(false)
             loadClassTasks(classId).then(setTasks)
@@ -74,7 +77,18 @@ export default function ClassTasksSection({
   )
 }
 
-function TaskForm({ classId, onDone }: { classId: string; onDone: () => void }) {
+function TaskModal({
+  classId,
+  open,
+  onClose,
+  onDone,
+}: {
+  classId: string
+  open: boolean
+  onClose: () => void
+  onDone: () => void
+}) {
+  const [mounted, setMounted] = useState(false)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [parcial, setParcial] = useState('')
@@ -82,6 +96,25 @@ function TaskForm({ classId, onDone }: { classId: string; onDone: () => void }) 
   const [link, setLink] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+
+  useEffect(() => setMounted(true), [])
+
+  // Al abrir, limpiamos el formulario
+  useEffect(() => {
+    if (open) {
+      setTitle(''); setDesc(''); setParcial(''); setDue(''); setLink(''); setErr('')
+    }
+  }, [open])
+
+  // Cerrar con la tecla Escape
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  if (!mounted || !open) return null
 
   async function publish() {
     if (!title.trim()) return setErr('Ponle un título a la tarea.')
@@ -100,40 +133,51 @@ function TaskForm({ classId, onDone }: { classId: string; onDone: () => void }) 
     onDone()
   }
 
-  return (
-    <div className="neo-panel mb-4 space-y-4 p-6">
-      <div>
-        <label className="neo-label">Título</label>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className="neo-input mt-1 w-full" placeholder="Ej. Investigación sobre servidores web" />
-      </div>
-      <div>
-        <label className="neo-label">Descripción (opcional)</label>
-        <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="neo-input mt-1 w-full resize-none" placeholder="Qué deben hacer, formato de entrega, etc." />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  return createPortal(
+    <div className="neo-modal-backdrop" onClick={onClose}>
+      <div className="neo-modal neo-modal--form space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-base font-semibold text-white">Publicar tarea</h4>
+            <p className="text-xs text-neutral-500">Se notificará a todos los alumnos inscritos.</p>
+          </div>
+          <button onClick={onClose} className="text-neutral-500 hover:text-white" aria-label="Cerrar">✕</button>
+        </div>
+
         <div>
-          <label className="neo-label">Parcial</label>
-          <select value={parcial} onChange={(e) => setParcial(e.target.value)} className="neo-input mt-1 w-full">
-            {PARCIAL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <label className="neo-label">Título</label>
+          <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} className="neo-input mt-1 w-full" placeholder="Ej. Investigación sobre servidores web" />
         </div>
         <div>
-          <label className="neo-label">Fecha límite (opcional)</label>
-          <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="neo-input mt-1 w-full" />
+          <label className="neo-label">Descripción (opcional)</label>
+          <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={3} className="neo-input mt-1 w-full resize-none" placeholder="Qué deben hacer, formato de entrega, etc." />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="neo-label">Parcial</label>
+            <select value={parcial} onChange={(e) => setParcial(e.target.value)} className="neo-input mt-1 w-full">
+              {PARCIAL_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="neo-label">Fecha límite (opcional)</label>
+            <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="neo-input mt-1 w-full" />
+          </div>
+        </div>
+        <div>
+          <label className="neo-label">Enlace del enunciado (opcional)</label>
+          <input value={link} onChange={(e) => setLink(e.target.value)} className="neo-input mt-1 w-full" placeholder="https://..." />
+        </div>
+        {err && <p className="text-xs text-amber-400">{err}</p>}
+        <div className="flex items-center justify-end gap-3">
+          <button onClick={onClose} className="neo-btn-ghost">Cancelar</button>
+          <button onClick={publish} disabled={busy} className="neo-btn">{busy ? 'Publicando…' : 'Publicar y notificar'}</button>
         </div>
       </div>
-      <div>
-        <label className="neo-label">Enlace del enunciado (opcional)</label>
-        <input value={link} onChange={(e) => setLink(e.target.value)} className="neo-input mt-1 w-full" placeholder="https://..." />
-      </div>
-      {err && <p className="text-xs text-amber-400">{err}</p>}
-      <div className="flex items-center gap-3">
-        <button onClick={publish} disabled={busy} className="neo-btn">{busy ? 'Publicando…' : 'Publicar y notificar'}</button>
-        <span className="text-xs text-neutral-600">Se notificará a todos los alumnos inscritos.</span>
-      </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
