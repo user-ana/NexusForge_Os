@@ -19,6 +19,35 @@ export const maxDuration = 300
 const MAX_QUESTION = 2000
 const MAX_CONTEXT = 20000
 
+type Tool = { type: string; function: { name: string; description: string; parameters: unknown } }
+
+/**
+ * Elige QUÉ herramientas ofrecerle al modelo.
+ *
+ * Por qué: el modelo corre en CPU, y cada esquema de herramienta son tokens que
+ * tiene que leer antes de contestar. Mandándole las cinco, una acción tardaba
+ * más de 100 segundos y el túnel cortaba la conexión (error 524). Como el verbo
+ * y el sustantivo ya dicen sin ambigüedad qué quiere hacer, le pasamos solo esa
+ * herramienta. Si el mensaje no es claro, se le pasan todas y decide él.
+ */
+function pickTools(question: string, tools: Tool[]): Tool[] {
+  const q = question.toLowerCase()
+  const solo = (nombre: string) => tools.filter((t) => t.function.name === nombre)
+
+  const borrar = /\b(?:elimina|eliminar|borra|borrar|quita|quitar|remueve|remover)\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/.test(q)
+  const asignar = /\basign/.test(q)
+  const hayGrupo = /\bgrupos?\b/.test(q)
+  const hayProyecto = /\bproyectos?\b/.test(q)
+  const hayClase = /\bclases?\b/.test(q)
+
+  if (borrar && hayClase) return solo('eliminar_clase')
+  if (asignar && hayProyecto) return solo('asignar_proyecto')
+  if (hayGrupo) return solo('crear_grupos')
+  if (hayProyecto) return solo('crear_proyecto')
+  if (hayClase) return solo('crear_clase')
+  return tools // mensaje ambiguo: que elija el modelo
+}
+
 export async function POST(req: Request) {
   sweepBuckets()
 
@@ -112,15 +141,16 @@ export async function POST(req: Request) {
       keep_alive: '30m', // mantiene el modelo cargado en memoria (evita el arranque en frío)
       // Tope de tokens acotado: en CPU cada token es lento y el túnel gratis
       // corta a los 100s. Acciones necesitan poco; consultas un poco más.
-      options: { temperature: 0.2, num_predict: wantsAction ? 100 : 200 },
+      options: { temperature: 0.2, num_predict: wantsAction ? 80 : 200 },
       messages: [
         { role: 'system', content: system },
         ...history,
         { role: 'user', content: question },
       ],
     }
-    // Solo ofrecemos herramientas si el mensaje pide una acción (crear/eliminar).
-    if (wantsAction) payload.tools = tools
+    // Solo ofrecemos herramientas si el mensaje pide una acción (crear/eliminar),
+    // y de esas, SOLO la que encaja con lo que pidió (ver pickTools).
+    if (wantsAction) payload.tools = pickTools(question, tools)
 
     const r = await fetch(`${base}/api/chat`, {
       method: 'POST',
