@@ -82,6 +82,33 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
   // animación vuelva a correr y se note que hubo un intento nuevo.
   const [errorSeq, setErrorSeq] = useState(0)
 
+  // ----- Bloqueo por intentos fallidos (anti fuerza bruta) -----
+  // Se muestra un contador que baja solo y una barra que se vacía, para que la
+  // persona vea cuánto falta sin tener que reintentar a ciegas.
+  const [lock, setLock] = useState<{ until: number; total: number } | null>(null)
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    if (!lock) return
+    const id = setInterval(() => {
+      if (Date.now() >= lock.until) {
+        setLock(null)
+        setFormError(null)
+      } else {
+        forceTick((n) => n + 1) // repinta el contador y la barra
+      }
+    }, 100)
+    return () => clearInterval(id)
+  }, [lock])
+
+  const lockLeft = lock ? Math.max(0, lock.until - Date.now()) : 0
+  const locked = lockLeft > 0
+  const lockSecs = Math.ceil(lockLeft / 1000)
+  const lockPct = lock ? (lockLeft / lock.total) * 100 : 0
+
+  function blockFor(seconds: number) {
+    setLock({ until: Date.now() + seconds * 1000, total: seconds * 1000 })
+  }
+
   function notify(type: ToastType, message: string) {
     if (type === 'warning') {
       setErrorSeq((n) => n + 1)
@@ -239,7 +266,8 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
       const gate = loginAllowed()
       if (!gate.ok) {
         setPassword('')
-        return notify('warning', `Demasiados intentos fallidos. Espera ${gate.retryAfter} s antes de volver a intentar.`)
+        blockFor(gate.retryAfter)
+        return notify('warning', 'Demasiados intentos fallidos')
       }
       // ---- Supabase (requiere email) ----
       if (isSupabaseReady && supabase) {
@@ -249,9 +277,9 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
           const f = loginFailed()
           setPassword('')
           passwordRef.current?.focus()
+          if (f.retryAfter > 0) blockFor(f.retryAfter)
           // Mensaje genérico a propósito: no revelamos si el correo existe o no.
-          const base = 'Correo o contraseña incorrectos.'
-          return notify('warning', f.retryAfter > 0 ? `${base} Espera ${f.retryAfter} s para reintentar.` : base)
+          return notify('warning', 'Correo o contraseña incorrectos')
         }
         if (data.user) {
           loginSucceeded()
@@ -663,23 +691,44 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
               </div>
             )}
 
-            {/* Aviso de error: pegado al botón, imposible no verlo */}
+            {/* Aviso de error: sin caja, solo el texto, con una línea que se traza */}
             {formError && (
-              <div key={errorSeq} className="neo-formerror" role="alert" aria-live="assertive">
-                <span className="neo-formerror-icon">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                    <path d="M12 8v5" />
-                    <circle cx="12" cy="16.6" r="0.6" fill="currentColor" stroke="none" />
-                    <path d="M10.3 3.9 2.6 17.4a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinejoin="round" />
-                  </svg>
+              <div key={errorSeq} className="neo-alert" role="alert" aria-live="assertive">
+                <span className="neo-alert-row">
+                  <span className="neo-alert-icon">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                      <path d="M12 8v5" />
+                      <circle cx="12" cy="16.6" r="0.6" fill="currentColor" stroke="none" />
+                      <path d="M10.3 3.9 2.6 17.4a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <span className="neo-alert-text">{formError}</span>
                 </span>
-                <span>{formError}</span>
+                <span className="neo-alert-line" />
               </div>
             )}
 
-            {/* Botón principal */}
-            <button type="button" onClick={handleSubmit} className="neo-cta w-full">
-              {isSignup ? t('auth.create_btn') : t('auth.signin_btn')}
+            {/* Botón principal. Durante el bloqueo se vuelve el propio contador:
+                se vacía una barra y el número baja hasta desbloquear. */}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={locked}
+              className={`neo-cta w-full ${locked ? 'neo-cta--locked' : ''}`}
+            >
+              {locked && <span className="neo-cta-drain" style={{ width: `${lockPct}%` }} />}
+              <span className="neo-cta-label">
+                {locked ? (
+                  <>
+                    <LockMini />
+                    Espera <b className="neo-cta-secs">{lockSecs}</b> s
+                  </>
+                ) : isSignup ? (
+                  t('auth.create_btn')
+                ) : (
+                  t('auth.signin_btn')
+                )}
+              </span>
             </button>
 
             {/* Alternar modo (sin recargar) */}
