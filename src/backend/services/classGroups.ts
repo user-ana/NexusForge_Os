@@ -134,15 +134,20 @@ export async function updateGroup(
   classId: string,
   groupId: string,
   patch: { name?: string; icon?: string; color?: string },
-): Promise<void> {
-  if (!supabase) return
-  await supabase.rpc('update_group', {
+): Promise<string | null> {
+  if (!supabase) return 'Sin conexión.'
+  const { error } = await supabase.rpc('update_group', {
     gid: groupId,
     gname: patch.name ?? '',
     gicon: patch.icon ?? '',
     gcolor: patch.color ?? '',
   })
+  if (error) {
+    console.error('updateGroup', error)
+    return error.message
+  }
   await loadGroups(classId)
+  return null
 }
 
 export async function deleteGroup(id: string): Promise<void> {

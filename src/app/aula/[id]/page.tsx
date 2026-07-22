@@ -1117,7 +1117,7 @@ function Aula({ id }: { id: string }) {
 
       {/* ── Modal editar/personalizar sala (integrantes o catedrático) ── */}
       {editGroup && mounted && (
-        <EditGroupModal group={editGroup} classId={id} onClose={() => setEditGroup(null)} />
+        <EditGroupModal group={editGroup} classId={id} me={me} isTeacher={isTeacher} groups={groups} onClose={() => setEditGroup(null)} />
       )}
 
       {/* ── Modal confirmar borrado en lote ── */}
@@ -1200,17 +1200,46 @@ function WelcomeHero({
   )
 }
 
-/** Modal para que un integrante (o el catedrático) personalice su sala. */
-function EditGroupModal({ group, classId, onClose }: { group: ClassGroup; classId: string; onClose: () => void }) {
+/** Modal para que un integrante (o el catedrático) personalice su sala.
+    El NOMBRE solo lo cambia el líder (o el catedrático) y no puede repetirse. */
+function EditGroupModal({
+  group, classId, me, isTeacher, groups, onClose,
+}: {
+  group: ClassGroup
+  classId: string
+  me: string
+  isTeacher: boolean
+  groups: ClassGroup[]
+  onClose: () => void
+}) {
   const [name, setName] = useState(group.name)
   const [icon, setIcon] = useState(group.icon)
   const [color, setColor] = useState(group.color)
   const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const canRename = isTeacher || group.leader === me
+  // Nombres de las OTRAS salas de la clase (para avisar de duplicados)
+  const otherNames = groups
+    .filter((g) => g.id !== group.id)
+    .map((g) => g.name.trim().toLowerCase())
+  const trimmed = name.trim()
+  const nameChanged = trimmed.toLowerCase() !== group.name.trim().toLowerCase()
+  const dup = nameChanged && otherNames.includes(trimmed.toLowerCase())
 
   async function save() {
+    if (!trimmed) { setErr('La sala necesita un nombre.'); return }
+    if (dup) { setErr('Ya existe una sala con ese nombre en la clase.'); return }
     setSaving(true)
-    await updateGroup(classId, group.id, { name, icon, color })
+    setErr('')
+    // Si no puede renombrar, no mandamos el nombre (conserva el actual).
+    const e = await updateGroup(classId, group.id, {
+      name: canRename ? name : undefined,
+      icon,
+      color,
+    })
     setSaving(false)
+    if (e) { setErr(e); return }
     onClose()
   }
 
@@ -1229,13 +1258,20 @@ function EditGroupModal({ group, classId, onClose }: { group: ClassGroup; classI
             <label className="neo-label">Nombre de la sala</label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setErr('') }}
               onKeyDown={(e) => e.key === 'Enter' && save()}
               placeholder="Ej. el nombre de su proyecto"
-              className="neo-input w-full"
-              autoFocus
+              className={`neo-input w-full ${dup ? '!border-amber-500/60' : ''}`}
+              autoFocus={canRename}
+              disabled={!canRename}
               maxLength={40}
             />
+            {!canRename && (
+              <p className="text-xs text-neutral-500">Solo el líder de la sala puede cambiar el nombre. Tú sí puedes cambiar el emblema y el color.</p>
+            )}
+            {canRename && dup && (
+              <p className="text-xs text-amber-400">Ya existe una sala con ese nombre en la clase.</p>
+            )}
           </div>
           <div className="space-y-2">
             <label className="neo-label">Emblema</label>
@@ -1255,7 +1291,8 @@ function EditGroupModal({ group, classId, onClose }: { group: ClassGroup; classI
               ))}
             </div>
           </div>
-          <button onClick={save} disabled={saving} className="neo-btn neo-group-cta w-full justify-center">
+          {err && !dup && <p className="text-xs text-amber-400">{err}</p>}
+          <button onClick={save} disabled={saving || (canRename && dup)} className="neo-btn neo-group-cta w-full justify-center">
             {saving ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </div>
