@@ -5215,3 +5215,40 @@ body {
 
 /* El deslizamiento del hover no debe empujar el texto del activo */
 .neo-navlink--active { transform: none !important; }
+
+/* ===================================================================
+   MENÚ: sin ningún movimiento al cambiar de opción
+   El hover desplazaba la opción 2px; al hacer clic pasaba a activa y
+   perdía ese desplazamiento, volviendo de golpe a su sitio. Ese retroceso
+   era el brinco. Ahora ninguna opción se mueve nunca: la respuesta es
+   solo de color y de relieve.
+   =================================================================== */
+.neo-navlink,
+.neo-navlink:hover,
+.neo-navlink--active,
+.neo-navlink--active:hover,
+:root[data-theme="light"] .neo-navlink,
+:root[data-theme="light"] .neo-navlink:hover,
+:root[data-theme="light"] .neo-navlink:hover:not(.neo-navlink--active),
+:root[data-theme="light"] .neo-navlink--active {
+  transform: none;
+  animation: none;
+}
+
+/* Solo se animan color, fondo y relieve: nada que ocupe espacio */
+.neo-navlink,
+:root[data-theme="light"] .neo-navlink {
+  transition:
+    color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* La píldora de acento aparece con un fundido, sin desplazar nada */
+:root[data-theme="light"] .neo-navlink--active::before {
+  animation: neo-bar-in 0.3s ease both;
+}
+@keyframes neo-bar-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
