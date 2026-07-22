@@ -4628,3 +4628,103 @@ body {
 :root[data-theme="light"] .neo-app .border-white\/10,
 :root[data-theme="light"] .neo-app .border-white\/12,
 :root[data-theme="light"] .neo-app .border-white\/15 { border-color: #dce2eb; }
+
+/* ===================================================================
+   MODO CLARO — PROFUNDIDAD NEUMÓRFICA (relieve 3D) + respiración
+   Las superficies se elevan con dos sombras (luz arriba-izquierda,
+   sombra abajo-derecha) y laten con un zoom mínimo constante.
+   =================================================================== */
+
+/* Tarjetas 3D del panel (Tilt3DCard) */
+:root[data-theme="light"] .neo-tilt {
+  background: #fafbfd;
+  border: 1px solid #e4e9f1;
+  box-shadow:
+    -7px -7px 16px rgba(255, 255, 255, 0.95),
+    9px 11px 24px rgba(33, 42, 59, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light"] .neo-tilt:hover {
+  box-shadow:
+    -8px -8px 20px rgba(255, 255, 255, 1),
+    14px 18px 34px rgba(33, 42, 59, 0.17),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Relieve también en las superficies principales del modo claro */
+:root[data-theme="light"] .neo-panel,
+:root[data-theme="light"] .neo-sec,
+:root[data-theme="light"] .neo-taskstat,
+:root[data-theme="light"] .neo-task,
+:root[data-theme="light"] .neo-roster-card {
+  box-shadow:
+    -6px -6px 14px rgba(255, 255, 255, 0.9),
+    8px 10px 22px rgba(33, 42, 59, 0.11);
+}
+:root[data-theme="light"] .neo-panel--hover:hover,
+:root[data-theme="light"] .neo-roster-card:hover {
+  box-shadow:
+    -7px -7px 16px rgba(255, 255, 255, 0.95),
+    12px 15px 30px rgba(33, 42, 59, 0.15);
+}
+
+/* Navegación lateral: el activo queda ELEVADO (como la referencia) */
+:root[data-theme="light"] .neo-navlink--active {
+  background: #fafbfd;
+  color: #0b6a86;
+  box-shadow:
+    -4px -4px 10px rgba(255, 255, 255, 0.95),
+    5px 6px 14px rgba(33, 42, 59, 0.12);
+}
+/* Barra de acento a la izquierda del activo */
+:root[data-theme="light"] .neo-navlink--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #0fbce6, #1a8fd6);
+}
+:root[data-theme="light"] .neo-navlink { position: relative; }
+
+/* Botones y chips con relieve suave */
+:root[data-theme="light"] .neo-btn {
+  box-shadow:
+    -3px -3px 8px rgba(255, 255, 255, 0.8),
+    4px 5px 12px rgba(20, 110, 130, 0.28),
+    inset 0 1px 1px rgba(255, 255, 255, 0.28);
+}
+:root[data-theme="light"] .neo-btn-ghost {
+  box-shadow:
+    -3px -3px 8px rgba(255, 255, 255, 0.9),
+    4px 5px 11px rgba(33, 42, 59, 0.1);
+}
+:root[data-theme="light"] .neo-bell,
+:root[data-theme="light"] .neo-coins {
+  box-shadow:
+    -3px -3px 8px rgba(255, 255, 255, 0.9),
+    4px 5px 11px rgba(33, 42, 59, 0.1);
+}
+
+/* ---------- Respiración: nada queda plano ----------
+   Un zoom mínimo y constante en las tarjetas del panel. Se desfasa por
+   posición para que no latan todas a la vez. */
+/* OJO: el giro 3D lo escribe JavaScript en el transform del elemento externo,
+   así que la respiración va en el INTERNO (si no, se pisaría el efecto). */
+@keyframes neo-breathe {
+  0%, 100% { transform: translateZ(30px) scale(1); }
+  50%      { transform: translateZ(30px) scale(1.012); }
+}
+.neo-tilt-inner { animation: neo-breathe 4.2s ease-in-out infinite; }
+/* Desfasadas para que no laten todas a la vez */
+.neo-tilt:nth-child(2) .neo-tilt-inner { animation-delay: 0.6s; }
+.neo-tilt:nth-child(3) .neo-tilt-inner { animation-delay: 1.2s; }
+.neo-tilt:nth-child(4) .neo-tilt-inner { animation-delay: 1.8s; }
+/* Al pasar el mouse se detiene: manda el giro 3D */
+.neo-tilt:hover .neo-tilt-inner { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .neo-tilt-inner { animation: none; }
+}
