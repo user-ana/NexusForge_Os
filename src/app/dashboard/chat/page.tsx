@@ -53,7 +53,7 @@ const CHALLENGES = [
 ]
 
 const RANK_COLOR: Record<string, string> = {
-  teacher: '#b89bff',
+  teacher: '#4fc9f0',
   student: '#8fd3df',
   visitor: '#9398a1',
 }
@@ -408,7 +408,7 @@ export default function ChatPage() {
           ) : (
             online.map((u) => (
               <div key={u.id} className="flex items-center gap-2.5">
-                <span className="neo-chat-avatar !h-8 !w-8" style={{ background: RANK_COLOR[u.role ?? 'student'] ?? '#a78bfa' }}>
+                <span className="neo-chat-avatar !h-8 !w-8" style={{ background: RANK_COLOR[u.role ?? 'student'] ?? '#3fc3e8' }}>
                   {u.name.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
@@ -435,7 +435,7 @@ function CommBubble({
   mine: boolean
   onDelete: () => void
 }) {
-  const color = RANK_COLOR[m.role ?? 'student'] ?? '#a78bfa'
+  const color = RANK_COLOR[m.role ?? 'student'] ?? '#3fc3e8'
   const prof = getProfile(m.author)
   const name = prof?.name ?? m.name
   const avatar = prof?.avatar ?? m.avatar

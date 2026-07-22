@@ -20,7 +20,7 @@ export type ClassGroup = {
 
 export const CGROUPS_EVENT = 'nf:cgroups'
 
-export const GROUP_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899']
+export const GROUP_COLORS = ['#1089d3', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#ec4899']
 export const GROUP_ICONS = [
   '/icons/emblem-1.png',
   '/icons/emblem-2.png',

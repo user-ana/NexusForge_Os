@@ -216,7 +216,7 @@ function UserManual() {
           </p>
         </div>
         <div className="grid gap-4 p-6 sm:grid-cols-3">
-          <RoleCard color="#a78bfa" title="Catedrático" desc="Crea clases y proyectos, forma grupos, supervisa y evalúa por rúbrica. Usa el asistente de IA." />
+          <RoleCard color="#3fc3e8" title="Catedrático" desc="Crea clases y proyectos, forma grupos, supervisa y evalúa por rúbrica. Usa el asistente de IA." />
           <RoleCard color="#60a5fa" title="Estudiante" desc="Se une a la clase con un código, elige grupo, organiza tareas en Kanban y publica su entregable." />
           <RoleCard color="#34d399" title="Visitante" desc="Explora la plataforma en modo lectura, sin gestionar clases ni entregar proyectos." />
         </div>
@@ -226,7 +226,7 @@ function UserManual() {
       <section className="grid gap-6 lg:grid-cols-2">
         <StepColumn
           title="Como catedrático"
-          color="#a78bfa"
+          color="#3fc3e8"
           steps={[
             ['Crea tu clase', 'Ve a Mis Clases y crea una clase (nombre, sección, período). Se genera un código único; compártelo con tus estudiantes para que se inscriban.'],
             ['Crea los proyectos', 'Desde la clase o el aula, abre "Nuevo proyecto": sube el enunciado como PDF, pega un link (Overleaf/Drive) o escríbelo. Asigna el parcial (1, 2, 3 o final), la rúbrica y los requisitos.'],

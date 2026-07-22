@@ -30,7 +30,7 @@ const CHALLENGES = [
   { q: 'En SQL, ¿qué comando elimina una tabla completa?', opts: ['DELETE', 'DROP', 'TRUNCATE'], a: 1 },
 ]
 
-const RANK_COLOR: Record<string, string> = { teacher: '#b89bff', student: '#8fd3df', visitor: '#9398a1' }
+const RANK_COLOR: Record<string, string> = { teacher: '#4fc9f0', student: '#8fd3df', visitor: '#9398a1' }
 
 export default function LiveChat() {
   const { t } = useT()
@@ -227,7 +227,7 @@ export default function LiveChat() {
                   const prof = getProfile(m.author)
                   const name = prof?.name ?? m.name
                   const avatar = prof?.avatar ?? m.avatar
-                  const color = RANK_COLOR[m.role ?? 'student'] ?? '#a78bfa'
+                  const color = RANK_COLOR[m.role ?? 'student'] ?? '#3fc3e8'
                   const mine = m.author === session?.id
                   return (
                     <div key={m.id} className={`neo-chat-msg ${mine ? 'neo-chat-msg--mine' : ''}`}>

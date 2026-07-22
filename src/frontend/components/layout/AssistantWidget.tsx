@@ -384,7 +384,7 @@ export default function AssistantWidget() {
     ? [
         { key: 'free', label: 'Sin grupo', color: '#f59e0b', count: ov.freeStudents.length, run: () => pushQuick('Estudiantes sin grupo', '#f59e0b', ov.freeStudents) },
         { key: 'noproj', label: 'Sin proyecto', color: '#3b82f6', count: ov.groupsNoProject.length, run: () => pushQuick('Grupos sin proyecto', '#3b82f6', undefined, ov.groupsNoProject) },
-        { key: 'ungraded', label: 'Sin calificar', color: '#a78bfa', count: ov.ungraded.length, run: () => pushQuick('Grupos con entrega sin calificar', '#a78bfa', undefined, ov.ungraded) },
+        { key: 'ungraded', label: 'Sin calificar', color: '#3fc3e8', count: ov.ungraded.length, run: () => pushQuick('Grupos con entrega sin calificar', '#3fc3e8', undefined, ov.ungraded) },
         { key: 'nosub', label: 'Sin entrega', color: '#f43f5e', count: ov.noSubmission.length, run: () => pushQuick('Grupos sin entrega', '#f43f5e', undefined, ov.noSubmission) },
       ]
     : []
@@ -599,7 +599,7 @@ function EntryView({ e, t }: { e: Entry; t: (k: string) => string }) {
   if (e.kind === 'ai') {
     return (
       <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-accent-violet" style={{ background: 'rgba(167,139,250,0.14)' }}>
+        <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-accent-violet" style={{ background: 'rgba(63, 195, 232,0.14)' }}>
           <Spark />
         </span>
         <div className="min-w-0 flex-1 whitespace-pre-line rounded-2xl rounded-tl-sm border border-white/8 bg-white/[0.03] px-3.5 py-2.5 text-sm leading-relaxed text-neutral-200">
@@ -688,7 +688,7 @@ function StudentCard({ d, t }: { d: StudentDossier; t: (k: string) => string }) 
                 ].filter((l) => l.url.trim())
               : []
             return (
-              <div key={c.classId} className="rounded-lg bg-black/20 p-3" style={{ borderLeft: `3px solid ${c.groupColor || '#8b5cf6'}` }}>
+              <div key={c.classId} className="rounded-lg bg-black/20 p-3" style={{ borderLeft: `3px solid ${c.groupColor || '#1089d3'}` }}>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-xs font-semibold text-white">{c.className}</span>
                   {c.groupName ? (

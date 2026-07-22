@@ -824,7 +824,7 @@ function getStrength(pw: string): { score: number; label: string; tone: string; 
   if (s <= 1) return { score: 1, label: 'Débil', tone: 'weak', color: '#f87171' }
   if (s === 2) return { score: 2, label: 'Media', tone: 'medium', color: '#fbbf24' }
   if (s === 3) return { score: 3, label: 'Buena', tone: 'medium', color: '#fbbf24' }
-  return { score: 4, label: 'Fuerte', tone: 'strong', color: '#a78bfa' }
+  return { score: 4, label: 'Fuerte', tone: 'strong', color: '#3fc3e8' }
 }
 
 /* ---------- Iconos ---------- */

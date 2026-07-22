@@ -286,7 +286,7 @@ export default function ProfilePage() {
               ))}
             </div>
             <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-black/40 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6]" style={{ width: '58%' }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#4fc9f0] to-[#1089d3]" style={{ width: '58%' }} />
             </div>
           </div>
         </section>

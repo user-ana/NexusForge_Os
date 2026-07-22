@@ -177,7 +177,7 @@ function StudentView({ t }: { t: T }) {
             <p className="mt-0.5 text-sm text-neutral-500">Operador de ingeniería · UTH</p>
             <div className="mt-3 max-w-md">
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-black/45 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)]">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#b89bff] to-[#8b5cf6] transition-all" style={{ width: `${lv.pct}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-[#4fc9f0] to-[#1089d3] transition-all" style={{ width: `${lv.pct}%` }} />
               </div>
               <p className="mt-1 text-[11px] text-neutral-500">XP al siguiente nivel · {lv.pct}%</p>
             </div>
