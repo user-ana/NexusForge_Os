@@ -32,17 +32,28 @@ type Entry =
   | { kind: 'action'; id: string; toolCall: ToolCall; status: ActionStatus; message?: string; warning?: string; descLoading?: boolean; descSource?: 'ai' | 'none' }
 
 type Chat = { id: string; title: string; entries: Entry[]; at: number }
-const CHATS_KEY = 'nf_assistant_chats'
-function loadChats(): Chat[] {
+
+/* El historial se guarda POR USUARIO. Antes había una sola llave para todo el
+   navegador, así que si otra persona iniciaba sesión en la misma máquina veía
+   las conversaciones de la anterior. */
+const chatsKey = (uid: string) => `nf_assistant_chats:${uid}`
+const LEGACY_KEY = 'nf_assistant_chats'
+
+function loadChats(uid: string): Chat[] {
+  if (!uid) return []
   try {
-    return JSON.parse(localStorage.getItem(CHATS_KEY) || '[]') as Chat[]
+    // La llave vieja era compartida: no se puede saber de quién era, así que
+    // se descarta en vez de asignársela a quien entre primero.
+    localStorage.removeItem(LEGACY_KEY)
+    return JSON.parse(localStorage.getItem(chatsKey(uid)) || '[]') as Chat[]
   } catch {
     return []
   }
 }
-function saveChats(chats: Chat[]) {
+function saveChats(uid: string, chats: Chat[]) {
+  if (!uid) return
   try {
-    localStorage.setItem(CHATS_KEY, JSON.stringify(chats.slice(0, 20)))
+    localStorage.setItem(chatsKey(uid), JSON.stringify(chats.slice(0, 20)))
   } catch {
     /* almacenamiento no disponible */
   }
@@ -68,34 +79,39 @@ export default function AssistantWidget() {
   const [chats, setChats] = useState<Chat[]>([])
   const [activeId, setActiveId] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => setMounted(true), [])
 
-  // Cargar el historial de conversaciones al montar
+  // El historial se carga cuando ya se sabe QUIÉN es: al cambiar de usuario se
+  // descarta lo anterior de la pantalla.
   useEffect(() => {
-    const c = loadChats()
+    if (!meId) return
+    const c = loadChats(meId)
     setChats(c)
+    setSelected(new Set())
     if (c.length) {
       setActiveId(c[0].id)
       setEntries(c[0].entries)
     } else {
       setActiveId(crypto.randomUUID())
+      setEntries([])
     }
-  }, [])
+  }, [meId])
 
   // Guardar la conversación activa cuando cambia (si tiene contenido)
   useEffect(() => {
-    if (!activeId || entries.length === 0) return
+    if (!activeId || entries.length === 0 || !meId) return
     const first = entries.find((e) => e.kind === 'query') as { text?: string } | undefined
     const title = first?.text?.slice(0, 44) || 'Conversación'
     setChats((prev) => {
       const next = [{ id: activeId, title, entries, at: Date.now() }, ...prev.filter((c) => c.id !== activeId)]
-      saveChats(next)
+      saveChats(meId, next)
       return next
     })
-  }, [entries, activeId])
+  }, [entries, activeId, meId])
 
   useEffect(() => {
     const sync = () => {
@@ -252,6 +268,32 @@ export default function AssistantWidget() {
     setActiveId(crypto.randomUUID())
     setShowHistory(false)
   }
+  /* ---- Historial: seleccionar y eliminar ---- */
+  function toggleSel(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function selectAll() {
+    setSelected((prev) => (prev.size === chats.length ? new Set() : new Set(chats.map((c) => c.id))))
+  }
+  function removeChats(ids: string[]) {
+    const kill = new Set(ids)
+    const next = chats.filter((c) => !kill.has(c.id))
+    setChats(next)
+    saveChats(meId, next)
+    setSelected(new Set())
+    // Si borré la conversación abierta, empiezo una limpia
+    if (kill.has(activeId)) {
+      setEntries([])
+      setPending(null)
+      setActiveId(crypto.randomUUID())
+    }
+  }
+
   function openChat(c: Chat) {
     setActiveId(c.id)
     setEntries(c.entries)
@@ -427,23 +469,56 @@ export default function AssistantWidget() {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <p className="neo-label">Conversaciones</p>
-                  <button onClick={newChat} className="text-xs text-accent-violet hover:text-accent-violetBright">+ Nuevo</button>
+                  <div className="flex items-center gap-3">
+                    {chats.length > 0 && (
+                      <button onClick={selectAll} className="text-xs text-neutral-500 hover:text-neutral-300">
+                        {selected.size === chats.length ? 'Ninguna' : 'Todas'}
+                      </button>
+                    )}
+                    <button onClick={newChat} className="text-xs text-accent-violet hover:text-accent-violetBright">+ Nuevo</button>
+                  </div>
                 </div>
+
+                {/* Barra de acción: aparece al seleccionar */}
+                {selected.size > 0 && (
+                  <div className="neo-hist-bar">
+                    <span>{selected.size} seleccionada{selected.size > 1 ? 's' : ''}</span>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setSelected(new Set())} className="neo-hist-cancel">Cancelar</button>
+                      <button onClick={() => removeChats([...selected])} className="neo-hist-del">Eliminar</button>
+                    </div>
+                  </div>
+                )}
                 {chats.length === 0 ? (
                   <p className="text-sm text-neutral-500">Aún no hay conversaciones guardadas.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {chats.map((c) => (
-                      <button
+                      <div
                         key={c.id}
-                        onClick={() => openChat(c)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
-                          c.id === activeId ? 'border-accent-violet/30 bg-accent-violet/5' : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.05]'
-                        }`}
+                        className={`neo-hist-row ${c.id === activeId ? 'neo-hist-row--active' : ''} ${selected.has(c.id) ? 'neo-hist-row--sel' : ''}`}
                       >
-                        <span className="truncate text-sm text-neutral-200">{c.title}</span>
+                        <button
+                          onClick={() => toggleSel(c.id)}
+                          className={`neo-hist-check ${selected.has(c.id) ? 'neo-hist-check--on' : ''}`}
+                          title={selected.has(c.id) ? 'Quitar de la selección' : 'Seleccionar'}
+                          aria-label="Seleccionar conversación"
+                        >
+                          {selected.has(c.id) ? <TickGlyph /> : null}
+                        </button>
+                        <button onClick={() => openChat(c)} className="min-w-0 flex-1 text-left">
+                          <span className="block truncate text-sm text-neutral-200">{c.title}</span>
+                        </button>
                         <span className="flex-shrink-0 text-[11px] text-neutral-500">{fmtDate(c.at)}</span>
-                      </button>
+                        <button
+                          onClick={() => removeChats([c.id])}
+                          className="neo-hist-x"
+                          title="Eliminar esta conversación"
+                          aria-label="Eliminar conversación"
+                        >
+                          <TrashGlyph />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -928,6 +1003,22 @@ function ClockGlyph() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
+function TickGlyph() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+function TrashGlyph() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
     </svg>
   )
 }
