@@ -46,6 +46,7 @@ const es: Dict = {
   // Nav
   'nav.dashboard': 'Panel',
   'nav.tasks': 'Mis tareas',
+  'nav.publish': 'Publicar actividades',
   'nav.rewards': 'Recompensas',
   'nav.classes': 'Mis Clases',
   'nav.periods': 'Períodos',
@@ -409,6 +410,7 @@ const en: Dict = {
   'auth.tagline': 'Gamified development platform',
   'nav.dashboard': 'Dashboard',
   'nav.tasks': 'My Tasks',
+  'nav.publish': 'Publish activities',
   'nav.rewards': 'Rewards',
   'nav.classes': 'My Classes',
   'nav.periods': 'Periods',

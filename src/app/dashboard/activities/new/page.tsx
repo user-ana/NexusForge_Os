@@ -15,7 +15,8 @@ import {
   type Deliverable,
   type DeliverableKind,
 } from '@/backend/services/classTasks'
-import { PARCIAL_OPTIONS } from '@/shared/parciales'
+import { createProject } from '@/backend/services/projects'
+import { PARCIAL_OPTIONS, type ParcialCode } from '@/shared/parciales'
 
 /* Tipos de evidencia que puede pedir el catedrático (definen el progreso real). */
 const DELIVERABLES: { kind: DeliverableKind; label: string; hint: string }[] = [
@@ -66,6 +67,8 @@ function Studio() {
   const [classes, setClasses] = useState<Klass[]>([])
 
   // ---- Estado de la actividad ----
+  const [kind, setKind] = useState<'tarea' | 'proyecto'>('tarea')
+  const [teamSize, setTeamSize] = useState(4)
   const [classId, setClassId] = useState('')
   const [title, setTitle] = useState('')
   const [instructions, setInstructions] = useState('')
@@ -187,6 +190,33 @@ function Studio() {
     if (!classId) return setErr('Elige la clase destinataria.')
     if (!title.trim()) return setErr('Ponle un título a la actividad.')
     setErr(''); setBusy(true)
+
+    // ---- PROYECTO: se crea en el catálogo de la clase ----
+    if (kind === 'proyecto') {
+      const req = delivs.map((d) => delivLabel(d)).join(' · ')
+      const p = await createProject({
+        classId,
+        title: title.trim(),
+        description: instructions,
+        objectives: '',
+        deliverables: req,
+        rubric: [],
+        dueDate: dueEpoch ? new Date(dueEpoch).toLocaleDateString('es') : '',
+        teamSize,
+        groupMode: 'open',
+        leaderMode: 'first',
+        parcial: (parcial || '') as ParcialCode,
+        briefUrl: pdfUrl,
+        requirements: req,
+      })
+      setBusy(false)
+      if (!p) return setErr('No se pudo crear el proyecto. Intenta de nuevo.')
+      try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+      router.push(`/dashboard/classes/${classId}`)
+      return
+    }
+
+    // ---- TAREA ----
     const ok = await createClassTask({
       classId,
       title,
@@ -222,7 +252,7 @@ function Studio() {
           {savedNote && <span className="text-xs text-emerald-400">{savedNote}</span>}
           <button onClick={saveDraft} className="neo-btn-ghost text-sm">Guardar borrador</button>
           <button onClick={publish} disabled={busy || busyPdf} className="neo-btn text-sm">
-            {busy ? 'Publicando…' : 'Publicar y notificar'}
+            {busy ? 'Publicando…' : kind === 'proyecto' ? 'Publicar proyecto' : 'Publicar y notificar'}
           </button>
         </div>
       </div>
@@ -245,13 +275,13 @@ function Studio() {
             <div className="neo-sec-head"><span className="neo-sec-n">Paso 01</span><h2>¿Qué deseas publicar?</h2></div>
 
             <div className="neo-typegrid">
-              <button className="neo-typebtn neo-typebtn--active">
+              <button onClick={() => setKind('tarea')} className={`neo-typebtn ${kind === 'tarea' ? 'neo-typebtn--active' : ''}`}>
                 <span className="neo-typebtn-ic"><CheckIc /></span>
                 <span><b>Tarea</b><small>Actividad puntual o práctica</small></span>
               </button>
-              <button className="neo-typebtn neo-typebtn--soon" disabled title="Próximamente">
+              <button onClick={() => setKind('proyecto')} className={`neo-typebtn ${kind === 'proyecto' ? 'neo-typebtn--active' : ''}`}>
                 <span className="neo-typebtn-ic"><BranchIc /></span>
-                <span><b>Proyecto</b><small>Trabajo por fases y requisitos · pronto</small></span>
+                <span><b>Proyecto</b><small>Trabajo grupal por requisitos</small></span>
               </button>
             </div>
 
@@ -333,6 +363,15 @@ function Studio() {
                 <label className="neo-label">Hora</label>
                 <NeoSelect value={dueTime} onChange={setDueTime} options={TIME_OPTIONS} />
               </div>
+              {kind === 'proyecto' && (
+                <div>
+                  <label className="neo-label">Integrantes por grupo</label>
+                  <div className="neo-input flex items-center gap-2">
+                    <input type="number" min={1} max={12} value={teamSize} onChange={(e) => setTeamSize(Math.max(1, Math.min(12, Number(e.target.value) || 1)))} className="w-full bg-transparent outline-none" />
+                    <span className="text-xs text-neutral-500">POR GRUPO</span>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="neo-label">Puntaje</label>
                 <div className="neo-input flex items-center gap-2">
@@ -391,7 +430,8 @@ function Studio() {
             teacherName={teacherName}
             dueEpoch={dueEpoch}
             points={points}
-            group={group}
+            group={kind === 'proyecto' ? true : group}
+            kind={kind}
             pdfName={pdfName}
             delivs={delivs}
           />
@@ -404,11 +444,13 @@ function Studio() {
 
 /* ---------- Vista previa ---------- */
 function StudentPreview({
-  title, instructions, className, teacherName, dueEpoch, points, group, pdfName, delivs,
+  title, instructions, className, teacherName, dueEpoch, points, group, kind, pdfName, delivs,
 }: {
   title: string; instructions: string; className: string; teacherName: string
-  dueEpoch: number | null; points: number; group: boolean; pdfName: string; delivs: Deliverable[]
+  dueEpoch: number | null; points: number; group: boolean; kind: 'tarea' | 'proyecto'
+  pdfName: string; delivs: Deliverable[]
 }) {
+  const esProyecto = kind === 'proyecto'
   const dueTxt = dueEpoch
     ? new Date(dueEpoch).toLocaleDateString('es', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Sin fecha límite'
@@ -416,11 +458,11 @@ function StudentPreview({
   return (
     <article className="neo-prev-card">
       <div className="neo-prev-top">
-        <span className="neo-prev-badge">{group ? <UsersIc /> : <CheckIc />} {group ? 'Tarea grupal' : 'Tarea individual'}</span>
+        <span className="neo-prev-badge">{esProyecto || group ? <UsersIc /> : <CheckIc />} {esProyecto ? 'Proyecto grupal' : group ? 'Tarea grupal' : 'Tarea individual'}</span>
         <span className="neo-prev-new">NUEVA</span>
       </div>
       <p className="neo-prev-class">{className}</p>
-      <h3 className="neo-prev-title">{title || 'Título de la actividad'}</h3>
+      <h3 className="neo-prev-title">{title || (esProyecto ? 'Título del proyecto' : 'Título de la actividad')}</h3>
       <p className="neo-prev-instr">{instructions ? stripMd(instructions) : 'Las instrucciones aparecerán aquí conforme las escribas.'}</p>
 
       <div className="neo-prev-author">
@@ -432,7 +474,7 @@ function StudentPreview({
       <div className="neo-prev-facts">
         <div><small>Vence</small><b>{dueTxt}</b></div>
         <div><small>Valor</small><b>{points} puntos</b></div>
-        <div><small>Asignada a</small><b>{group ? 'Grupos' : 'Toda la clase'}</b></div>
+        <div><small>Asignada a</small><b>{esProyecto || group ? 'Grupos' : 'Toda la clase'}</b></div>
       </div>
 
       {pdfName && (
@@ -449,7 +491,9 @@ function StudentPreview({
       )}
 
       <div className="neo-prev-status"><span className="neo-dot-amber" /> Aún no iniciada</div>
-      <button type="button" className="neo-prev-start" title="Así lo verá el estudiante">Comenzar tarea →</button>
+      <button type="button" className="neo-prev-start" title="Así lo verá el estudiante">
+        {esProyecto ? 'Elegir proyecto y comenzar →' : 'Comenzar tarea →'}
+      </button>
     </article>
   )
 }
