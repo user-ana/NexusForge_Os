@@ -5808,3 +5808,45 @@ body {
 .neo-badge--working { color: #9fd3ea; background: rgba(29, 123, 166, 0.2); }
 .neo-taskstat--working { border-left-color: #1d7ba6; }
 .neo-task--working { border-left-color: #1d7ba6; }
+
+/* ===================================================================
+   TARJETAS SELECCIONABLES: respuesta al pasar el mouse y al presionar
+   El hover aclara el relleno; al presionar la tarjeta se hunde un poco.
+   El estado seleccionado tambien responde, asi que no hay salto al
+   hacer clic (el hover no desaparece al quedar activa).
+   =================================================================== */
+.neo-typebtn,
+.neo-deliv {
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+}
+
+/* Sin seleccionar */
+.neo-typebtn:hover:not(:disabled):not(.neo-typebtn--active),
+.neo-deliv:hover:not(.neo-deliv--on) {
+  background: linear-gradient(165deg, #2b3039, #212630);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.neo-typebtn:hover:not(:disabled):not(.neo-typebtn--active) .neo-typebtn-ic,
+.neo-deliv:hover:not(.neo-deliv--on) .neo-deliv-check {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Ya seleccionada: el azul se aclara un punto */
+.neo-typebtn--active:hover:not(:disabled),
+.neo-deliv--on:hover {
+  background: linear-gradient(150deg, #2189b5, #196a92);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Al presionar: se hunde */
+.neo-typebtn:active:not(:disabled),
+.neo-deliv:active { transform: scale(0.985); }
+
+/* Deshabilitada: sin respuesta */
+.neo-typebtn:disabled { cursor: not-allowed; }
+
+/* Mismo tacto en las filas de interruptor */
+.neo-togglerow { cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease; }
+.neo-togglerow:hover { border-color: rgba(255, 255, 255, 0.12); }
+.neo-togglerow:active { transform: scale(0.99); }
