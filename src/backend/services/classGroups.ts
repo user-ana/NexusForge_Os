@@ -98,8 +98,14 @@ export async function createGroup(input: {
 }
 
 /** Crea varias salas de una vez (Sala N+1 … N+count), con emblema y color por defecto. */
-export async function createGroupsBulk(classId: string, count: number, prefix = 'Sala'): Promise<void> {
-  if (!supabase || count < 1) return
+/**
+ * Crea N salas de una vez. Devuelve null si salió bien, o el mensaje de error.
+ * (Antes no devolvía nada y los fallos pasaban en silencio: se hacía clic y no
+ * ocurría nada sin explicación.)
+ */
+export async function createGroupsBulk(classId: string, count: number, prefix = 'Sala'): Promise<string | null> {
+  if (!supabase) return 'Sin conexión con la base de datos.'
+  if (count < 1) return 'Indica cuántas salas crear.'
   const start = getGroups(classId).length
   const rows = Array.from({ length: count }, (_, i) => {
     const idx = start + i
@@ -110,8 +116,13 @@ export async function createGroupsBulk(classId: string, count: number, prefix = 
       color: GROUP_COLORS[idx % GROUP_COLORS.length],
     }
   })
-  await supabase.from('class_groups').insert(rows)
+  const { error } = await supabase.from('class_groups').insert(rows)
+  if (error) {
+    console.error('createGroupsBulk', error)
+    return error.message
+  }
   await loadGroups(classId)
+  return null
 }
 
 /**

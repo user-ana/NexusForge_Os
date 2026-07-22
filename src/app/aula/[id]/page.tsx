@@ -80,7 +80,9 @@ function Aula({ id }: { id: string }) {
   const [gName, setGName] = useState('')
   const [gIcon, setGIcon] = useState(GROUP_ICONS[0])
   const [gColor, setGColor] = useState(GROUP_COLORS[0])
-  const [bulkN, setBulkN] = useState('') // TOTAL de salas deseado (texto para poder borrar)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkErr, setBulkErr] = useState('')
+  const [bulkN, setBulkN] = useState('') // cuántas salas crear (texto para poder borrarlo)
   const [editGroup, setEditGroup] = useState<ClassGroup | null>(null) // editar mi sala
   const [selectedIds, setSelectedIds] = useState<string[]>([]) // grupos seleccionados (lote)
   const [bulkDelete, setBulkDelete] = useState(false) // confirmar borrado en lote
@@ -128,13 +130,9 @@ function Aula({ id }: { id: string }) {
     }
   }, [id])
 
-  // El input de "Crear salas" muestra el TOTAL actual y se sincroniza cuando
-  // cambia el número real de salas. OJO: antes se reseteaba al perder el foco,
-  // pero el blur ocurre ANTES del clic del botón, así que el valor volvía a 0 y
-  // el botón quedaba deshabilitado antes de que el clic llegara.
-  useEffect(() => {
-    setBulkN(String(groups.length))
-  }, [groups.length])
+  // El campo es CUÁNTAS salas crear (no el total deseado): así lo que escribes
+  // es exactamente lo que se crea. Antes se sincronizaba con el total y se
+  // reseteaba solo, que es lo que hacía que el número "volviera a cero".
 
   // canal de chat según vista activa
   const channel = active === 'manage' ? 'general' : active
@@ -451,30 +449,36 @@ function Aula({ id }: { id: string }) {
                   <div className="flex items-center gap-1.5 rounded-xl bg-black/20 px-2 py-1">
                     <input
                       type="number"
-                      min={0}
+                      min={1}
                       max={60}
                       value={bulkN}
                       onChange={(e) => setBulkN(e.target.value)}
+                      placeholder="0"
                       className="neo-input !w-14 !py-1 text-center text-sm"
-                      title="Total de salas que quieres tener"
+                      title="Cuántas salas crear"
                     />
                     <button
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        const target = Math.max(0, Math.min(60, parseInt(bulkN, 10) || 0))
-                        const add = target - groups.length
-                        if (add > 0) createGroupsBulk(id, add)
+                      onClick={async () => {
+                        const n = Math.max(0, Math.min(60, parseInt(bulkN, 10) || 0))
+                        if (n < 1) { setBulkErr('Escribe cuántas salas crear.'); return }
+                        setBulkBusy(true); setBulkErr('')
+                        const err = await createGroupsBulk(id, n)
+                        setBulkBusy(false)
+                        if (err) setBulkErr(err)
+                        else setBulkN('')
                       }}
-                      disabled={(parseInt(bulkN, 10) || 0) <= groups.length}
+                      disabled={bulkBusy}
                       className="neo-btn-ghost whitespace-nowrap text-sm"
-                      title="Crea las salas que falten para llegar al total"
+                      title="Crea esa cantidad de salas"
                     >
-                      Crear salas
+                      {bulkBusy ? 'Creando…' : 'Crear salas'}
                     </button>
                   </div>
                   <button onClick={() => setCreating(true)} className="neo-btn text-sm">+ Nuevo grupo</button>
                 </div>
               </div>
+              {bulkErr && <p className="-mt-3 text-xs text-amber-400">{bulkErr}</p>}
 
               {/* Formación de grupos: quién forma los equipos + cupo */}
               <div className="flex flex-wrap items-center gap-3 rounded-xl bg-black/20 px-4 py-3">
