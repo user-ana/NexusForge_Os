@@ -5678,3 +5678,19 @@ body {
 /* Interruptor encendido, en la misma familia */
 .neo-switch--on { background: rgba(35, 166, 221, 0.35); }
 .neo-switch--on .neo-switch-knob { background: linear-gradient(145deg, #4fd0f0, #1478b8); }
+
+/* Relleno seleccionado: mismo azul de marca, un tono mas profundo.
+   Ademas de verse menos fuerte, mejora el contraste del texto blanco. */
+.neo-step--active,
+.neo-typebtn--active,
+.neo-deliv--on {
+  background: linear-gradient(150deg, #1d7ba6, #15597f);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.neo-step--active .neo-step-n,
+.neo-typebtn--active .neo-typebtn-ic,
+.neo-deliv--on .neo-deliv-check { background: rgba(255, 255, 255, 0.18); color: #ffffff; }
+.neo-typebtn--active span small,
+.neo-deliv--on span small { color: rgba(255, 255, 255, 0.82); }
+.neo-switch--on { background: rgba(29, 123, 166, 0.4); }
+.neo-switch--on .neo-switch-knob { background: linear-gradient(145deg, #4ab8dd, #15597f); }
