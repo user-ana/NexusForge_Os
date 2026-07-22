@@ -888,12 +888,14 @@ body {
 /* Transición al navegar entre páginas */
 /* Cambio de página: entrada suave (misma curva que el resto del sistema).
    Antes era 0.2s con 6px: tan corto que se sentía un corte seco. */
+/* IMPORTANTE: el contenedor solo hace fundido. Si también se desplazara,
+   su movimiento se sumaría al de los hijos y se percibe como un salto. */
 .neo-page {
-  animation: neo-page 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: neo-page 0.28s ease both;
 }
 @keyframes neo-page {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 /* El contenido entra escalonado, no todo de golpe */
 .neo-page main > * {
@@ -906,7 +908,7 @@ body {
 .neo-page main > *:nth-child(5) { animation-delay: 0.19s; }
 .neo-page main > *:nth-child(n + 6) { animation-delay: 0.22s; }
 @keyframes neo-page-item {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 /* La cabecera acompaña con un fundido corto */
@@ -5106,4 +5108,82 @@ body {
   :root[data-theme="light"] .neo-navlink--active::before,
   :root[data-theme="light"] .neo-brand-badge,
   :root[data-theme="light"] .neo-btn { animation: none; }
+}
+
+/* ===================================================================
+   AJUSTES: entrada del menú, sombra blanca más suave, color en el panel
+   y transición suave al cambiar de tema.
+   =================================================================== */
+
+/* ---------- El menú entra escalonado ---------- */
+.neo-navlink {
+  animation: neo-nav-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes neo-nav-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* El hover desliza también en modo oscuro */
+.neo-navlink:hover:not(.neo-navlink--active) { transform: translateX(2px); }
+
+/* ---------- Sombra blanca menos brillante ----------
+   El blanco puro a 12px producía un halo demasiado marcado. Se baja a un
+   blanco apenas teñido y se reduce el alcance: el relieve se mantiene,
+   el brillo desaparece. */
+:root[data-theme="light"] {
+  --shadow-l: #f6f8fc;
+  --neu: 5px 5px 11px var(--shadow-d), -4px -4px 9px var(--shadow-l);
+  --neu-sm: 3px 3px 7px var(--shadow-d), -3px -3px 6px var(--shadow-l);
+  --neu-in: inset 3px 3px 6px var(--shadow-d), inset -3px -3px 6px var(--shadow-l);
+  --neu-in-sm: inset 2px 2px 4px var(--shadow-d), inset -2px -2px 4px var(--shadow-l);
+}
+@keyframes neo-border-pulse {
+  0%, 100% { box-shadow: inset 3px 3px 6px #c5cbd6, inset -3px -3px 6px #f6f8fc; }
+  50%      { box-shadow: inset 3px 3px 6px #c5cbd6, inset -3px -3px 6px #f6f8fc, 0 0 12px rgba(16, 137, 211, 0.12); }
+}
+
+/* ---------- Color de marca en el panel ---------- */
+/* Las cifras grandes y los datos destacados en azul, no en gris */
+:root[data-theme="light"] .neo-tilt .text-3xl,
+:root[data-theme="light"] .neo-tilt .text-2xl,
+:root[data-theme="light"] .neo-hero-stat-v {
+  color: var(--primary);
+}
+/* Títulos de sección con más presencia */
+:root[data-theme="light"] .neo-app h1,
+:root[data-theme="light"] .neo-app h2,
+:root[data-theme="light"] .neo-app h3,
+:root[data-theme="light"] .neo-app h4 { color: var(--text); }
+/* Etiquetas de sección en azul apagado, para que no se vean grises */
+:root[data-theme="light"] .neo-app .uppercase.tracking-wider,
+:root[data-theme="light"] .neo-app .tracking-\[0\.15em\] { color: #47617d; }
+/* Emblemas y avatares con aro de marca */
+:root[data-theme="light"] .neo-member,
+:root[data-theme="light"] .neo-avatar { box-shadow: var(--neu-sm); }
+
+/* ---------- Cambio de tema suave ---------- */
+/* Solo en las superficies grandes: evita que el salto claro/oscuro sea seco */
+.neo-app,
+.neo-sidebar,
+.neo-topbar,
+.neo-panel,
+.neo-sec,
+.neo-tilt,
+.neo-input,
+.neo-row,
+.neo-navlink,
+.neo-btn,
+.neo-btn-ghost,
+.neo-bell,
+.neo-menu,
+.neo-modal {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neo-navlink { animation: none; }
 }

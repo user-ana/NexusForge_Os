@@ -53,8 +53,8 @@ export default function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-        {NAV.map((item) => {
+      <nav className="flex-1 px-4 pt-4 space-y-2 overflow-y-auto">
+        {NAV.map((item, i) => {
           const active =
             item.href === '/dashboard'
               ? pathname === '/dashboard'
@@ -65,6 +65,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={`neo-navlink ${active ? 'neo-navlink--active' : ''}`}
+              style={{ animationDelay: `${i * 55}ms` }}
             >
               {t(item.key)}
             </Link>
