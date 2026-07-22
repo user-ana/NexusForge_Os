@@ -5496,112 +5496,67 @@ body {
 }
 
 /* ===================================================================
-   ESTUDIO DE PUBLICACIÓN — rediseño (modo oscuro)
-   Nada de cajas planas con borde: superficies con degradado, filo de luz
-   superior, sombra flotante y acentos de la marca.
+   ESTUDIO DE PUBLICACIÓN — superficie mate (modo oscuro)
+   Regla: el color va en el RELLENO, nunca en bordes que brillan ni en
+   sombras de color. La profundidad la dan sombras neutras oscuras.
    =================================================================== */
 
-/* Fondo con una insinuación de color de marca arriba */
-.neo-studio {
-  background-image:
-    radial-gradient(900px 380px at 22% -8%, rgba(16, 137, 211, 0.09), transparent 70%),
-    radial-gradient(700px 320px at 88% 0%, rgba(53, 198, 240, 0.06), transparent 72%);
-}
-
-/* ---------- Secciones: tarjetas flotantes ---------- */
+/* ---------- Secciones ---------- */
 .neo-sec {
-  position: relative;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.045);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 42%),
-    linear-gradient(160deg, #23272e, #191c21);
-  box-shadow:
-    0 18px 40px -22px rgba(0, 0, 0, 0.9),
-    0 2px 0 rgba(255, 255, 255, 0.03) inset;
-  transition: box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(165deg, #242830, #1b1e24);
+  box-shadow: 0 16px 34px -24px rgba(0, 0, 0, 0.85);
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
-/* Filo de luz superior, del color de la marca */
-.neo-sec::before {
-  content: '';
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(53, 198, 240, 0.5), transparent);
-}
-.neo-sec:hover {
-  box-shadow:
-    0 24px 52px -24px rgba(0, 0, 0, 0.95),
-    0 0 0 1px rgba(53, 198, 240, 0.1);
-}
-.neo-sec-n {
-  color: #35c6f0;
-  letter-spacing: 0.18em;
-}
-.neo-sec-head h2 { letter-spacing: -0.01em; }
+.neo-sec:hover { border-color: rgba(255, 255, 255, 0.08); }
+.neo-sec-n { color: #7f8b9c; letter-spacing: 0.18em; }
 
-/* ---------- Pasos: píldoras conectadas ---------- */
+/* ---------- Pasos ---------- */
 .neo-stepper { gap: 12px; }
 .neo-step {
-  position: relative;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012));
-  box-shadow: 0 10px 24px -18px rgba(0, 0, 0, 0.9);
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(165deg, #23262d, #1c1f25);
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
-.neo-step-n {
-  background: rgba(255, 255, 255, 0.06);
-  color: #8b93a3;
-  transition: all 0.3s ease;
-}
+.neo-step-n { background: rgba(255, 255, 255, 0.06); color: #8b93a3; }
+/* Activo: se rellena de azul apagado, sin resplandor */
 .neo-step--active {
-  border-color: rgba(53, 198, 240, 0.28);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.14), rgba(16, 137, 211, 0.06));
-  box-shadow: 0 12px 28px -18px rgba(16, 137, 211, 0.9);
+  border-color: rgba(255, 255, 255, 0.09);
+  background: linear-gradient(165deg, #1d3a4d, #16293a);
 }
-.neo-step--active .neo-step-n {
-  background: linear-gradient(140deg, #35c6f0, #1089d3);
-  color: #fff;
-  box-shadow: 0 4px 12px -5px rgba(16, 137, 211, 0.8);
-}
-.neo-step--active .neo-step-l { color: #eaf6fb; }
+.neo-step--active .neo-step-n { background: #1c6f9e; color: #eaf6fb; }
+.neo-step--active .neo-step-l { color: #dbe7ef; }
 
 /* ---------- Tipo de actividad ---------- */
 .neo-typebtn {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(165deg, #23262d, #1c1f25);
+  transition: background 0.22s ease, border-color 0.22s ease;
 }
-.neo-typebtn:hover:not(:disabled) {
-  border-color: rgba(53, 198, 240, 0.3);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.1), rgba(255, 255, 255, 0.015));
-}
+.neo-typebtn:hover:not(:disabled) { background: linear-gradient(165deg, #272c34, #1f232a); border-color: rgba(255, 255, 255, 0.09); }
 .neo-typebtn--active {
-  border-color: rgba(53, 198, 240, 0.45);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.16), rgba(16, 137, 211, 0.05));
-  box-shadow: 0 12px 30px -20px rgba(16, 137, 211, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(165deg, #1d3a4d, #16293a);
 }
-.neo-typebtn-ic { box-shadow: 0 6px 16px -10px rgba(16, 137, 211, 0.9); }
+.neo-typebtn-ic { background: rgba(255, 255, 255, 0.06); color: #9fb6c6; box-shadow: none; }
+.neo-typebtn--active .neo-typebtn-ic { background: #1c6f9e; color: #eaf6fb; }
 
 /* ---------- Campos y editor ---------- */
 .neo-studio .neo-input,
 .neo-editor {
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.1));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #1b1e24;
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.35);
 }
 .neo-studio .neo-input:focus,
 .neo-editor:focus-within {
-  border-color: rgba(53, 198, 240, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 3px rgba(53, 198, 240, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: #1e222a;
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.3);
   transform: none;
 }
 .neo-editor-bar { background: rgba(255, 255, 255, 0.02); }
@@ -5610,54 +5565,49 @@ body {
 .neo-deliv {
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008));
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  background: linear-gradient(165deg, #23262d, #1c1f25);
+  transition: background 0.22s ease, border-color 0.22s ease;
 }
-.neo-deliv:hover { border-color: rgba(53, 198, 240, 0.28); background: linear-gradient(160deg, rgba(53, 198, 240, 0.08), rgba(255, 255, 255, 0.012)); }
+.neo-deliv:hover { background: linear-gradient(165deg, #272c34, #1f232a); border-color: rgba(255, 255, 255, 0.09); }
 .neo-deliv--on {
-  border-color: rgba(53, 198, 240, 0.42);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.14), rgba(16, 137, 211, 0.04));
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(165deg, #1d3a4d, #16293a);
 }
-.neo-deliv--on .neo-deliv-check { box-shadow: 0 5px 14px -8px rgba(16, 137, 211, 0.9); }
+.neo-deliv-check { background: rgba(255, 255, 255, 0.07); }
+.neo-deliv--on .neo-deliv-check { background: #1c6f9e; color: #eaf6fb; box-shadow: none; }
 
 /* ---------- Interruptores ---------- */
 .neo-togglerow {
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.04);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.008));
-  transition: all 0.25s ease;
+  background: linear-gradient(165deg, #23262d, #1c1f25);
 }
-.neo-togglerow:hover { border-color: rgba(53, 198, 240, 0.22); background: linear-gradient(160deg, rgba(53, 198, 240, 0.07), rgba(255, 255, 255, 0.01)); }
-.neo-togglerow-ic { background: rgba(53, 198, 240, 0.12); color: #35c6f0; }
+.neo-togglerow:hover { background: linear-gradient(165deg, #272c34, #1f232a); }
+.neo-togglerow-ic { background: rgba(255, 255, 255, 0.06); color: #9fb6c6; }
 
-/* ---------- Zona de PDF ---------- */
+/* ---------- Zona de PDF: punteado neutro, sin cian encendido ---------- */
 .neo-pdfdrop {
   border-radius: 16px;
-  border: 1.5px dashed rgba(53, 198, 240, 0.3);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.06), rgba(255, 255, 255, 0.008));
+  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  background: #1c2027;
 }
 .neo-pdfdrop:hover, .neo-pdfdrop--over {
-  border-color: rgba(53, 198, 240, 0.6);
-  background: linear-gradient(160deg, rgba(53, 198, 240, 0.12), rgba(255, 255, 255, 0.015));
+  border-color: rgba(255, 255, 255, 0.24);
+  background: #20252d;
 }
-.neo-pdfdrop svg { color: #35c6f0; }
+.neo-pdfdrop svg { color: #8fa3b3; }
 
-/* ---------- Vista previa: flotante ---------- */
+/* ---------- Vista previa: mate, sin halo de color ---------- */
 .neo-prev-card {
   border-radius: 22px;
-  border: 1px solid rgba(53, 198, 240, 0.16);
-  background:
-    radial-gradient(600px 240px at 20% -10%, rgba(16, 137, 211, 0.22), transparent 70%),
-    linear-gradient(165deg, #232a37, #1a1e26 60%, #171a1f);
-  box-shadow:
-    0 30px 60px -30px rgba(0, 0, 0, 0.95),
-    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(165deg, #262b34, #1b1f26 62%, #191c21);
+  box-shadow: 0 24px 48px -30px rgba(0, 0, 0, 0.9);
 }
-.neo-prev-flag { color: #35c6f0; }
-.neo-live-dot { background: #35c6f0; }
-@keyframes neo-live { 0% { box-shadow: 0 0 0 0 rgba(53, 198, 240, 0.45); } 100% { box-shadow: 0 0 0 8px rgba(53, 198, 240, 0); } }
+.neo-prev-flag { color: #8fa3b3; }
+.neo-live-dot { background: #5aa17f; box-shadow: none; animation: none; }
 
-/* ---------- Barra de desplazamiento propia ---------- */
+/* ---------- Barra de desplazamiento: gris, discreta ---------- */
 .neo-studio::-webkit-scrollbar,
 .neo-app main::-webkit-scrollbar,
 .neo-assistant-body::-webkit-scrollbar { width: 10px; }
@@ -5670,21 +5620,20 @@ body {
   border-radius: 99px;
   border: 3px solid transparent;
   background-clip: content-box;
-  background-color: rgba(53, 198, 240, 0.22);
-  transition: background-color 0.25s ease;
+  background-color: rgba(255, 255, 255, 0.14);
 }
 .neo-studio::-webkit-scrollbar-thumb:hover,
 .neo-app main::-webkit-scrollbar-thumb:hover,
-.neo-assistant-body::-webkit-scrollbar-thumb:hover { background-color: rgba(53, 198, 240, 0.45); }
+.neo-assistant-body::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.24); }
 .neo-studio, .neo-app main, .neo-assistant-body {
   scrollbar-width: thin;
-  scrollbar-color: rgba(53, 198, 240, 0.3) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
-/* Botón secundario del estudio, con más presencia */
+/* Botón secundario */
 .neo-studio .neo-btn-ghost {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  background: #23262d;
 }
-.neo-studio .neo-btn-ghost:hover { border-color: rgba(53, 198, 240, 0.3); background: rgba(53, 198, 240, 0.08); }
+.neo-studio .neo-btn-ghost:hover { background: #292d35; border-color: rgba(255, 255, 255, 0.12); }
