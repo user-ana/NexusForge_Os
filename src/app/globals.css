@@ -4889,3 +4889,46 @@ body {
   border-radius: 0 4px 4px 0;
   background: linear-gradient(180deg, #35c6f0, #1287cf);
 }
+
+/* ===================================================================
+   MODO CLARO — MENÚ ACTIVO con relieve neumórfico MATE 3D
+   El blanco ya no queda plano: dos sombras marcan el volumen (luz
+   arriba-izquierda, sombra abajo-derecha), sin brillos ni color de fondo.
+   =================================================================== */
+:root[data-theme="light"] .neo-navlink--active {
+  background: #ffffff;
+  color: #1287cf;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    -6px -6px 14px rgba(255, 255, 255, 0.95),
+    7px 8px 18px rgba(33, 42, 59, 0.17),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+/* Los inactivos también toman volumen al pasar el mouse (hundido suave) */
+:root[data-theme="light"] .neo-navlink:hover:not(.neo-navlink--active) {
+  background: #e2e8f1;
+  color: #171b25;
+  box-shadow:
+    inset 3px 3px 7px rgba(33, 42, 59, 0.11),
+    inset -3px -3px 7px rgba(255, 255, 255, 0.9);
+}
+/* La barra de acento se mantiene centrada y gruesa, por encima del relieve */
+:root[data-theme="light"] .neo-navlink--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 58%;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #35c6f0, #1287cf);
+  z-index: 1;
+}
+
+/* La barra lateral se hunde un poco más para que el relieve resalte */
+:root[data-theme="light"] .neo-sidebar {
+  background: #e6ebf3;
+  box-shadow: inset -7px 0 14px -9px rgba(33, 42, 59, 0.2);
+}
