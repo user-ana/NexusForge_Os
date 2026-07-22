@@ -36,12 +36,14 @@ function pickTools(question: string, tools: Tool[]): Tool[] {
 
   const borrar = /\b(?:elimina|eliminar|borra|borrar|quita|quitar|remueve|remover)\b|\bd(?:a|ar|ale|arle|ame)\s+de\s+baja\b/.test(q)
   const asignar = /\basign/.test(q)
+  const hayTarea = /\btareas?\b/.test(q)
   const hayGrupo = /\bgrupos?\b/.test(q)
   const hayProyecto = /\bproyectos?\b/.test(q)
   const hayClase = /\bclases?\b/.test(q)
 
   if (borrar && hayClase) return solo('eliminar_clase')
   if (asignar && hayProyecto) return solo('asignar_proyecto')
+  if (hayTarea) return solo('crear_tarea')       // "tarea" antes que "clase": "una tarea para la clase X"
   if (hayGrupo) return solo('crear_grupos')
   if (hayProyecto) return solo('crear_proyecto')
   if (hayClase) return solo('crear_clase')
@@ -130,6 +132,7 @@ export async function POST(req: Request) {
     { type: 'function', function: { name: 'crear_clase', description: 'Crear una clase', parameters: { type: 'object', properties: { nombre: { type: 'string' }, seccion: { type: 'string' }, periodo: { type: 'string' } }, required: ['nombre'] } } },
     { type: 'function', function: { name: 'crear_grupos', description: 'Crear grupos en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, cantidad: { type: 'integer' } }, required: ['clase', 'cantidad'] } } },
     { type: 'function', function: { name: 'crear_proyecto', description: 'Crear un proyecto en una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, titulo: { type: 'string' }, descripcion: { type: 'string' }, parcial: { type: 'string' } }, required: ['clase', 'titulo'] } } },
+    { type: 'function', function: { name: 'crear_tarea', description: 'Crear/publicar una tarea para toda una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, titulo: { type: 'string' }, tema: { type: 'string', description: 'de qué trata la tarea' }, parcial: { type: 'string' }, fecha: { type: 'string', description: 'fecha límite en texto' } }, required: ['clase', 'titulo'] } } },
     { type: 'function', function: { name: 'asignar_proyecto', description: 'Asignar un proyecto existente a un grupo de una clase', parameters: { type: 'object', properties: { clase: { type: 'string' }, grupo: { type: 'string' }, proyecto: { type: 'string' } }, required: ['clase', 'grupo', 'proyecto'] } } },
     { type: 'function', function: { name: 'eliminar_clase', description: 'Eliminar una clase', parameters: { type: 'object', properties: { clase: { type: 'string' } }, required: ['clase'] } } },
   ]

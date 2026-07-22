@@ -9,6 +9,7 @@ import { supabase } from '@/backend/supabase'
 import { getClasses, loadClasses, createClass, deleteClass } from '@/backend/services/classes'
 import { createGroupsBulk, GROUP_ICONS, loadGroups, getGroups, setGroupProject } from '@/backend/services/classGroups'
 import { createProject, loadProjects, getProjects } from '@/backend/services/projects'
+import { createClassTask, generateTaskDescription } from '@/backend/services/classTasks'
 import { type ParcialCode } from '@/shared/parciales'
 import {
   searchStudents,
@@ -28,7 +29,7 @@ type Entry =
   | { kind: 'ai'; text: string }
   | { kind: 'result'; query: string; dossiers: StudentDossier[] }
   | { kind: 'quick'; label: string; color: string; students?: QuickStudent[]; groups?: QuickGroup[] }
-  | { kind: 'action'; toolCall: ToolCall; status: ActionStatus; message?: string; warning?: string }
+  | { kind: 'action'; id: string; toolCall: ToolCall; status: ActionStatus; message?: string; warning?: string; descLoading?: boolean; descSource?: 'ai' | 'none' }
 
 type Chat = { id: string; title: string; entries: Entry[]; at: number }
 const CHATS_KEY = 'nf_assistant_chats'
@@ -199,14 +200,46 @@ export default function AssistantWidget() {
     if (tc.name === 'crear_clase') {
       const n = String(tc.args.nombre ?? '').trim()
       if (n && findClass(n)) warning = `Ya existe una clase parecida a «${n}». ¿Seguro que quieres otra?`
-    } else if (tc.name === 'crear_grupos' || tc.name === 'crear_proyecto' || tc.name === 'asignar_proyecto') {
+    } else if (tc.name === 'crear_grupos' || tc.name === 'crear_proyecto' || tc.name === 'asignar_proyecto' || tc.name === 'crear_tarea') {
       const c = String(tc.args.clase ?? '').trim()
       if (c && !findClass(c)) warning = `No encuentro una clase llamada «${c}». Revisa el nombre o créala primero.`
     } else if (tc.name === 'eliminar_clase') {
       const c = String(tc.args.clase ?? '').trim()
       if (c && !findClass(c)) warning = `No encuentro una clase llamada «${c}».`
     }
-    setEntries((e) => [...e, { kind: 'action', toolCall: tc, status: 'pending', warning }])
+    const id = crypto.randomUUID()
+    const isTask = tc.name === 'crear_tarea'
+    setEntries((e) => [...e, { kind: 'action', id, toolCall: tc, status: 'pending', warning, descLoading: isTask }])
+
+    // Para una tarea, la IA redacta la explicación para los estudiantes mientras
+    // se muestra la tarjeta; el catedrático la ve, la edita si quiere, y confirma.
+    if (isTask) {
+      const cls = findClass(String(tc.args.clase ?? ''))
+      generateTaskDescription({
+        titulo: String(tc.args.titulo ?? ''),
+        tema: String(tc.args.tema ?? ''),
+        className: cls?.name,
+      }).then((text) => {
+        updateActionById(id, (prev) => ({
+          descLoading: false,
+          descSource: text ? 'ai' : 'none',
+          toolCall: { ...prev.toolCall, args: { ...prev.toolCall.args, descripcion: text } },
+        }))
+      })
+    }
+  }
+
+  function updateActionById(
+    id: string,
+    patch: Partial<Extract<Entry, { kind: 'action' }>> | ((prev: Extract<Entry, { kind: 'action' }>) => Partial<Extract<Entry, { kind: 'action' }>>),
+  ) {
+    setEntries((es) =>
+      es.map((e) => {
+        if (e.kind !== 'action' || e.id !== id) return e
+        const p = typeof patch === 'function' ? patch(e) : patch
+        return { ...e, ...p }
+      }),
+    )
   }
 
   function pushQuick(label: string, color: string, students?: QuickStudent[], groups?: QuickGroup[]) {
@@ -305,6 +338,22 @@ export default function AssistantWidget() {
             await setGroupProject(cls.id, grp.id, proj.id)
             msg = `Asigné el proyecto «${proj.title}» al grupo «${grp.name}».`
           }
+        }
+      } else if (name === 'crear_tarea') {
+        await loadClasses()
+        const cls = findClass(String(args.clase ?? ''))
+        if (!cls) msg = `No encontré una clase llamada «${args.clase}».`
+        else {
+          const ok = await createClassTask({
+            classId: cls.id,
+            title: String(args.titulo ?? '').trim(),
+            description: String(args.descripcion ?? '').trim(),
+            parcial: normParcial(String(args.parcial ?? '')),
+            dueDate: parseDueText(String(args.fecha ?? '')),
+          })
+          msg = ok
+            ? `Tarea «${String(args.titulo ?? '').trim()}» publicada en «${cls.name}» y notificada a los alumnos.`
+            : 'No se pudo publicar la tarea.'
         }
       } else if (name === 'eliminar_clase') {
         await loadClasses()
@@ -436,7 +485,15 @@ export default function AssistantWidget() {
               <>
                 {entries.map((e, i) =>
                   e.kind === 'action' ? (
-                    <ActionCard key={i} e={e} onConfirm={() => executeAction(i)} onCancel={() => cancelAction(i)} />
+                    <ActionCard
+                      key={e.id}
+                      e={e}
+                      onConfirm={() => executeAction(i)}
+                      onCancel={() => cancelAction(i)}
+                      onEditDesc={(text) =>
+                        updateActionById(e.id, (prev) => ({ toolCall: { ...prev.toolCall, args: { ...prev.toolCall.args, descripcion: text } } }))
+                      }
+                    />
                   ) : (
                     <EntryView key={i} e={e} t={t} />
                   ),
@@ -722,8 +779,40 @@ function nextMissing(tc: ToolCall, userText: string): { field: string; question:
     if (!argInQuestion(String(tc.args.grupo ?? ''), userText)) return { field: 'grupo', question: '¿A qué grupo se lo asigno?' }
     if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿En qué clase está ese grupo?' }
   }
+  if (tc.name === 'crear_tarea') {
+    if (!argInQuestion(String(tc.args.titulo ?? ''), userText)) return { field: 'titulo', question: '¿Cómo se llama la tarea?' }
+    if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿Para qué clase es la tarea?' }
+  }
   if (tc.name === 'eliminar_clase') {
     if (!argInQuestion(String(tc.args.clase ?? ''), userText)) return { field: 'clase', question: '¿Qué clase quieres eliminar?' }
+  }
+  return null
+}
+
+/** Interpreta una fecha límite escrita en lenguaje natural (best-effort). null si no se entiende. */
+function parseDueText(s: string): number | null {
+  const x = s.trim().toLowerCase()
+  if (!x) return null
+  const now = new Date(Date.now())
+  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'setiembre', 'octubre', 'noviembre', 'diciembre']
+  // "24 de julio" (opcionalmente "de 2026")
+  let m = x.match(/(\d{1,2})\s+de\s+([a-záéí]+)(?:\s+de\s+(\d{4}))?/)
+  if (m) {
+    const day = Number(m[1])
+    const mi = meses.findIndex((n) => m![2].startsWith(n.slice(0, 4)))
+    if (mi >= 0) {
+      const monthIdx = mi === 10 ? 9 : mi > 10 ? mi - 1 : mi // "setiembre" duplicado -> septiembre
+      const year = m[3] ? Number(m[3]) : now.getFullYear()
+      const d = new Date(year, monthIdx, day, 23, 59)
+      return d.getTime()
+    }
+  }
+  // "24/07" o "24/07/2026"
+  m = x.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/)
+  if (m) {
+    const day = Number(m[1]); const mon = Number(m[2]) - 1
+    const year = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : now.getFullYear()
+    return new Date(year, mon, day, 23, 59).getTime()
   }
   return null
 }
@@ -752,6 +841,11 @@ function describeAction({ name, args }: ToolCall): string {
   if (name === 'crear_grupos') return `Crear ${args.cantidad} grupo(s) en la clase «${args.clase}».`
   if (name === 'crear_proyecto')
     return `Crear el proyecto «${args.titulo}» en la clase «${args.clase}»${args.parcial ? ` (${args.parcial})` : ''}.`
+  if (name === 'crear_tarea') {
+    const due = parseDueText(String(args.fecha ?? ''))
+    const fecha = due ? ` · vence ${new Date(due).toLocaleDateString('es', { day: '2-digit', month: 'short' })}` : ''
+    return `Publicar la tarea «${args.titulo}» para toda la clase «${args.clase}»${args.parcial ? ` (${args.parcial})` : ''}${fecha}, y notificar a los alumnos.`
+  }
   if (name === 'asignar_proyecto')
     return `Asignar el proyecto «${args.proyecto}» al grupo «${args.grupo}» de la clase «${args.clase}».`
   if (name === 'eliminar_clase')
@@ -759,8 +853,10 @@ function describeAction({ name, args }: ToolCall): string {
   return 'Acción desconocida.'
 }
 
-function ActionCard({ e, onConfirm, onCancel }: { e: Extract<Entry, { kind: 'action' }>; onConfirm: () => void; onCancel: () => void }) {
+function ActionCard({ e, onConfirm, onCancel, onEditDesc }: { e: Extract<Entry, { kind: 'action' }>; onConfirm: () => void; onCancel: () => void; onEditDesc: (text: string) => void }) {
   const danger = e.toolCall.name.startsWith('eliminar')
+  const isTask = e.toolCall.name === 'crear_tarea'
+  const desc = String(e.toolCall.args.descripcion ?? '')
   return (
     <div className={`neo-card-in rounded-xl border p-4 ${danger ? 'border-red-500/30 bg-red-500/5' : 'border-amber-500/25 bg-amber-500/5'}`}>
       <div className="mb-2 flex items-center gap-2">
@@ -771,6 +867,33 @@ function ActionCard({ e, onConfirm, onCancel }: { e: Extract<Entry, { kind: 'act
       </div>
       <p className="text-sm text-neutral-200">{describeAction(e.toolCall)}</p>
 
+      {/* Explicación que la IA redacta para los estudiantes (editable) */}
+      {isTask && (e.status === 'pending' || e.status === 'running') && (
+        <div className="mt-3">
+          <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-300/80">
+            <Spark /> Explicación para los estudiantes
+          </p>
+          {e.descLoading ? (
+            <div className="neo-ai-writing">
+              <span className="neo-ai-writing-bar" />
+              La IA está redactando la explicación…
+            </div>
+          ) : (
+            <textarea
+              value={desc}
+              onChange={(ev) => onEditDesc(ev.target.value)}
+              rows={5}
+              disabled={e.status !== 'pending'}
+              placeholder="La IA no redactó nada; puedes escribir la explicación aquí."
+              className="neo-input w-full resize-none text-sm"
+            />
+          )}
+          {!e.descLoading && e.descSource === 'ai' && (
+            <p className="mt-1 text-[11px] text-neutral-500">Redactado por la IA · puedes editarlo antes de publicar.</p>
+          )}
+        </div>
+      )}
+
       {e.warning && e.status === 'pending' && (
         <p className={`mt-2 rounded-lg px-3 py-2 text-xs ${danger ? 'bg-red-500/10 text-red-300' : 'bg-amber-500/10 text-amber-300'}`}>{e.warning}</p>
       )}
@@ -779,9 +902,10 @@ function ActionCard({ e, onConfirm, onCancel }: { e: Extract<Entry, { kind: 'act
         <div className="mt-3 flex gap-2">
           <button
             onClick={onConfirm}
+            disabled={isTask && e.descLoading}
             className={danger ? 'rounded-lg bg-red-500/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500' : 'neo-btn text-sm'}
           >
-            {danger ? 'Sí, eliminar' : 'Confirmar'}
+            {danger ? 'Sí, eliminar' : isTask ? 'Publicar tarea' : 'Confirmar'}
           </button>
           <button onClick={onCancel} className="neo-btn-ghost text-sm">Cancelar</button>
         </div>

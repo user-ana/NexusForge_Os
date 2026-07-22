@@ -3969,3 +3969,26 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .neo-pdffile--busy::after, .neo-pdfspin { animation: none; }
 }
+
+/* --- "La IA está redactando…" (tarjeta de acción de la IA) --- */
+.neo-ai-writing {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(139, 92, 246, 0.14);
+  font-size: 12.5px;
+  color: #cbb6ff;
+}
+.neo-ai-writing-bar {
+  position: absolute;
+  top: 0; bottom: 0; left: -30%;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(184,155,255,0.18), transparent);
+  animation: neo-pdfscan 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .neo-ai-writing-bar { animation: none; } }

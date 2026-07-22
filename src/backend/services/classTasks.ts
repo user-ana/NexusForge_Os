@@ -86,6 +86,42 @@ export async function loadClassTasks(classId: string): Promise<ClassTask[]> {
   return (data ?? []).map(mapTask)
 }
 
+/**
+ * La IA REDACTA la explicación de una tarea para los estudiantes, a partir del
+ * título y el tema que dio el catedrático. Devuelve '' si la IA no responde
+ * (el flujo sigue: el catedrático puede escribir la descripción a mano).
+ */
+export async function generateTaskDescription(input: {
+  titulo: string
+  tema?: string
+  className?: string
+}): Promise<string> {
+  if (!supabase) return ''
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return ''
+  const partes = [
+    `Redacta la explicación de una tarea para estudiantes universitarios.`,
+    `Título de la tarea: "${input.titulo}".`,
+    input.tema ? `Trata sobre: ${input.tema}.` : '',
+    input.className ? `Es para la clase de ${input.className}.` : '',
+    `Incluye: una breve introducción, qué deben hacer, qué deben entregar y algún criterio de evaluación.`,
+    `Máximo 2 párrafos cortos. No inventes fechas.`,
+  ].filter(Boolean)
+  try {
+    const res = await fetch('/api/ai-write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ prompt: partes.join(' ') }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return ''
+    return (json.text ?? '').trim()
+  } catch {
+    return ''
+  }
+}
+
 /** El catedrático publica una tarea (crea la tarea + notifica a los alumnos). */
 export async function createClassTask(input: {
   classId: string
