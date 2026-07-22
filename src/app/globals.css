@@ -4863,3 +4863,29 @@ body {
 :root[data-theme="light"] .neo-label,
 :root[data-theme="light"] .neo-studio-kicker,
 :root[data-theme="light"] .neo-sec-n { color: #6b7486; }
+
+/* ===================================================================
+   MODO CLARO — MENÚ LATERAL: activo en BLANCO
+   El color lo llevan solo el texto y la barrita; el fondo es blanco.
+   =================================================================== */
+:root[data-theme="light"] .neo-navlink--active {
+  background: #ffffff;
+  color: #1287cf;
+  font-weight: 600;
+  box-shadow:
+    inset 2px 2px 6px rgba(33, 42, 59, 0.07),
+    inset -2px -2px 6px rgba(255, 255, 255, 1),
+    2px 3px 8px rgba(33, 42, 59, 0.06);
+}
+/* Barra de acento: centrada y un poco más gruesa */
+:root[data-theme="light"] .neo-navlink--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 58%;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, #35c6f0, #1287cf);
+}
