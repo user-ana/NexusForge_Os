@@ -5252,3 +5252,152 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ===================================================================
+   MODO CLARO — CHAT, AULA Y TEXTOS RESTANTES
+   El aula vive fuera del contenedor .neo-app, por eso su texto seguía
+   oscuro: las reglas anteriores estaban acotadas a .neo-app.
+   =================================================================== */
+
+/* ---------- Aula: armazón ---------- */
+:root[data-theme="light"] .neo-aula {
+  background: var(--bg);
+  background-image: none;
+  color: var(--text);
+}
+:root[data-theme="light"] .neo-aula-rail,
+:root[data-theme="light"] .neo-aula-channels,
+:root[data-theme="light"] .neo-aula-members,
+:root[data-theme="light"] .neo-aula-top,
+:root[data-theme="light"] .neo-aula-composer,
+:root[data-theme="light"] .neo-aula-main,
+:root[data-theme="light"] .neo-aula-body,
+:root[data-theme="light"] .neo-aula-board,
+:root[data-theme="light"] .neo-aula-scroll {
+  background: var(--bg);
+  border-color: var(--shadow-d);
+  color: var(--text);
+}
+:root[data-theme="light"] .neo-aula-me,
+:root[data-theme="light"] .neo-aula-section,
+:root[data-theme="light"] .neo-aula-welcome,
+:root[data-theme="light"] .neo-aula-gcard,
+:root[data-theme="light"] .neo-aula-stat,
+:root[data-theme="light"] .neo-aula-mini {
+  background: var(--bg);
+  border-color: var(--shadow-d);
+  box-shadow: var(--neu-sm);
+  color: var(--text);
+}
+
+/* ---------- Textos del aula y del chat ---------- */
+:root[data-theme="light"] .neo-aula-text,
+:root[data-theme="light"] .neo-aula-msg,
+:root[data-theme="light"] .neo-bubble,
+:root[data-theme="light"] .neo-chat-msg { color: var(--text); }
+:root[data-theme="light"] .neo-aula-you,
+:root[data-theme="light"] .neo-aula-member,
+:root[data-theme="light"] .neo-aula-hash,
+:root[data-theme="light"] .neo-bubble-meta,
+:root[data-theme="light"] .neo-bubble-edited,
+:root[data-theme="light"] .neo-aula-mdot { color: var(--text-muted); }
+/* Nombre de quien escribe, en azul de marca */
+:root[data-theme="light"] .neo-aula-msg strong,
+:root[data-theme="light"] .neo-bubble-meta strong,
+:root[data-theme="light"] .neo-chat-rank { color: var(--primary); }
+
+/* ---------- Canales y pestañas ---------- */
+:root[data-theme="light"] .neo-aula-ch,
+:root[data-theme="light"] .neo-chan,
+:root[data-theme="light"] .neo-aula-tab,
+:root[data-theme="light"] .neo-chat-tab {
+  color: var(--text-muted);
+  background: transparent;
+}
+:root[data-theme="light"] .neo-aula-ch:hover,
+:root[data-theme="light"] .neo-chan:hover,
+:root[data-theme="light"] .neo-aula-tab:hover,
+:root[data-theme="light"] .neo-chat-tab:hover { color: var(--text); background: rgba(16, 137, 211, 0.06); }
+:root[data-theme="light"] .neo-aula-ch--active,
+:root[data-theme="light"] .neo-chan--active,
+:root[data-theme="light"] .neo-aula-tab--active,
+:root[data-theme="light"] .neo-chat-tab--active {
+  color: var(--primary);
+  background: var(--bg);
+  box-shadow: var(--neu-in-sm);
+}
+
+/* ---------- Burbujas de mensaje ---------- */
+:root[data-theme="light"] .neo-bubble {
+  background: var(--bg);
+  box-shadow: var(--neu-sm);
+  border: none;
+}
+:root[data-theme="light"] .neo-bubble--mine {
+  background: linear-gradient(135deg, #1089d3, #0ea5e9);
+  color: #ffffff;
+}
+:root[data-theme="light"] .neo-bubble--mine .neo-bubble-meta { color: rgba(255, 255, 255, 0.85); }
+:root[data-theme="light"] .neo-bubble-actions button { color: var(--text-muted); }
+:root[data-theme="light"] .neo-bubble-actions button:hover { color: var(--primary); background: rgba(16, 137, 211, 0.1); }
+
+/* ---------- Campos y botones del chat ---------- */
+:root[data-theme="light"] .neo-aula-input,
+:root[data-theme="light"] .neo-aula-field,
+:root[data-theme="light"] .neo-chat-input {
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  box-shadow: var(--neu-in);
+}
+:root[data-theme="light"] .neo-aula-send,
+:root[data-theme="light"] .neo-chat-send {
+  background: linear-gradient(135deg, #1089d3, #0ea5e9);
+  color: #ffffff;
+  box-shadow: var(--neu-sm);
+}
+:root[data-theme="light"] .neo-chat-tool,
+:root[data-theme="light"] .neo-aula-emojitoggle,
+:root[data-theme="light"] .neo-aula-add { color: var(--text-muted); }
+:root[data-theme="light"] .neo-chat-tool:hover,
+:root[data-theme="light"] .neo-aula-emojitoggle:hover { color: var(--primary); }
+
+/* ---------- Textos sueltos fuera de .neo-app (aula, pantallas propias) ---------- */
+:root[data-theme="light"] .neo-aula .text-white,
+:root[data-theme="light"] .neo-aula .text-neutral-100,
+:root[data-theme="light"] .neo-aula .text-neutral-200,
+:root[data-theme="light"] .neo-aula .text-neutral-300 { color: var(--text); }
+:root[data-theme="light"] .neo-aula .text-neutral-400,
+:root[data-theme="light"] .neo-aula .text-neutral-500,
+:root[data-theme="light"] .neo-aula .text-neutral-600 { color: var(--text-muted); }
+:root[data-theme="light"] .neo-aula .text-accent-violet,
+:root[data-theme="light"] .neo-aula .text-accent-violetBright { color: var(--primary); }
+
+/* ---------- Avatares y miembros ---------- */
+:root[data-theme="light"] .neo-member,
+:root[data-theme="light"] .neo-aula-member-av,
+:root[data-theme="light"] .neo-chat-avatar,
+:root[data-theme="light"] .neo-aula-msg-av {
+  box-shadow: var(--neu-sm);
+  color: #ffffff;
+}
+
+/* ===================================================================
+   MENÚ: hover sutil que NO mueve nada
+   =================================================================== */
+:root[data-theme="light"] .neo-navlink:hover:not(.neo-navlink--active) {
+  color: var(--text);
+  background: rgba(16, 137, 211, 0.07);
+  box-shadow: var(--neu-in-sm);
+}
+.neo-navlink:hover:not(.neo-navlink--active) {
+  background: rgba(255, 255, 255, 0.05);
+}
+/* La píldora de acento crece desde el centro al activarse */
+:root[data-theme="light"] .neo-navlink--active::before {
+  animation: neo-bar-grow 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes neo-bar-grow {
+  from { opacity: 0; height: 0; }
+  to   { opacity: 1; height: 22px; }
+}
