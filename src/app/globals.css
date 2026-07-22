@@ -155,9 +155,10 @@ body {
     inset -1px -1px 2px rgba(255, 255, 255, 0.04);
   animation: neo-dot-pulse 1.8s ease-in-out infinite;
 }
+/* Se encienden en cadena: primero uno, luego el otro, luego el tercero */
 .neo-dot:nth-child(1) { animation-delay: 0s; }
-.neo-dot:nth-child(2) { animation-delay: 0.25s; }
-.neo-dot:nth-child(3) { animation-delay: 0.5s; }
+.neo-dot:nth-child(2) { animation-delay: 0.4s; }
+.neo-dot:nth-child(3) { animation-delay: 0.8s; }
 
 @keyframes neo-dot-pulse {
   0%, 100% {
@@ -790,6 +791,21 @@ body {
 /* ---------- Wordmark "NEXUSFORGE OS" (typewriter real) ---------- */
 .neo-typewrap {
   display: inline-grid;
+  position: relative;
+}
+/* Barra corta fija bajo el nombre (antes era un cursor que parpadeaba) */
+.neo-typewrap::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 30px;
+  height: 2px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: #35beda;
+  opacity: 0;
+  animation: neo-fade 0.5s ease 1.6s forwards;
 }
 .neo-typewrap > span {
   grid-area: 1 / 1; /* ambos ocupan la misma celda → se superponen */
@@ -812,10 +828,7 @@ body {
 .neo-typeline {
   overflow: hidden;
   width: 0;
-  border-right: 2px solid #3dd6ef;
-  animation:
-    neo-typing 1.3s steps(13, end) 0.3s forwards,
-    neo-caret-blink 0.8s steps(1) infinite;
+  animation: neo-typing 1.3s steps(13, end) 0.3s forwards;
 }
 .neo-wordmark-os {
   font-size: 0.78rem;
@@ -4174,8 +4187,8 @@ body {
    Neumorfismo claro y mate: sombras suaves, sin neón ni brillos.
    =================================================================== */
 
-/* Fondo exterior — blanco frío */
-:root[data-theme="light"] .neo-scene { background: #f3f5f9; background-image: none; }
+/* Fondo exterior — blanco frío, apenas más gris para que resalte la tarjeta */
+:root[data-theme="light"] .neo-scene { background: #eaeef4; background-image: none; }
 
 /* Tarjeta contenedora */
 :root[data-theme="light"] .neo-scene .neo-frame {
@@ -4198,9 +4211,20 @@ body {
 :root[data-theme="light"] .neo-auth-left .text-neutral-600 { color: #6f7888; }
 :root[data-theme="light"] .neo-auth-left .neo-label { color: #596273; }
 :root[data-theme="light"] .neo-auth-left .bg-white\/10 { background: #dce2eb; }
+/* Subtítulo bajo el título: un punto más de contraste */
+:root[data-theme="light"] .neo-auth-left h1 + p { color: #5a6373; }
+/* "¿Olvidaste tu contraseña?" y "Regístrate": azul violeta oscuro, legibles */
+:root[data-theme="light"] .neo-auth-left .neo-label--link { color: #5542b7; }
+:root[data-theme="light"] .neo-auth-left .neo-label--link:hover { color: #45359a; }
+:root[data-theme="light"] .neo-auth-left .neo-toggle { color: #5542b7; }
+:root[data-theme="light"] .neo-auth-left .neo-toggle:hover { color: #45359a; }
 
-/* Puntos de ventana: misma animación, paleta clara */
+/* Puntos de ventana: misma animación en cadena, paleta clara.
+   (El atajo `animation` reinicia el delay, por eso se vuelve a declarar.) */
 :root[data-theme="light"] .neo-auth-left .neo-dot { animation: neo-dot-pulse-light 1.8s ease-in-out infinite; }
+:root[data-theme="light"] .neo-auth-left .neo-dot:nth-child(1) { animation-delay: 0s; }
+:root[data-theme="light"] .neo-auth-left .neo-dot:nth-child(2) { animation-delay: 0.4s; }
+:root[data-theme="light"] .neo-auth-left .neo-dot:nth-child(3) { animation-delay: 0.8s; }
 @keyframes neo-dot-pulse-light {
   0%, 100% {
     background: #dce2eb;
@@ -4220,10 +4244,14 @@ body {
   box-shadow: inset 2px 2px 5px rgba(33,42,59,0.07), inset -2px -2px 5px rgba(255,255,255,0.75);
 }
 :root[data-theme="light"] .neo-auth-left .neo-input::placeholder { color: #929caa; }
+/* Campo activo: borde azul violeta discreto pero identificable */
 :root[data-theme="light"] .neo-auth-left .neo-input:focus {
-  background: #f0f3f8;
+  background: #f7f9fc;
   border-color: #6978d9;
-  box-shadow: inset 2px 2px 5px rgba(33,42,59,0.06), 0 0 0 3px rgba(105,120,217,0.14);
+  box-shadow:
+    inset 0 0 0 1px #6978d9,
+    inset 2px 2px 5px rgba(33,42,59,0.05),
+    0 0 0 3px rgba(105,120,217,0.14);
   transform: none;
 }
 :root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill,
@@ -4233,13 +4261,30 @@ body {
   -webkit-box-shadow: 0 0 0 1000px #f0f3f8 inset;
 }
 
-/* Botón principal — degradado azul violeta, sin brillo neón */
+/* Botón principal — degradado azul violeta, sombra suave, sin brillo neón */
 :root[data-theme="light"] .neo-auth-left .neo-cta {
   background: linear-gradient(145deg, #7180e8, #7257d5);
+  background-size: 160% 160%;
+  background-position: 0% 50%;
   color: #ffffff;
-  box-shadow: 0 8px 20px -8px rgba(76, 66, 150, 0.28), inset 0 1px 1px rgba(255,255,255,0.22);
+  box-shadow: 0 5px 12px -6px rgba(76, 66, 150, 0.22), inset 0 1px 1px rgba(255,255,255,0.18);
+  transition:
+    background-position 0.45s ease,
+    box-shadow 0.28s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-:root[data-theme="light"] .neo-auth-left .neo-cta:hover { background: linear-gradient(145deg, #6250c7, #6250c7); filter: none; }
+/* El degradado se desplaza suave y el botón se eleva apenas */
+:root[data-theme="light"] .neo-auth-left .neo-cta:hover {
+  background-position: 100% 50%;
+  transform: translateY(-1.5px);
+  filter: none;
+  box-shadow: 0 9px 20px -8px rgba(76, 66, 150, 0.3), inset 0 1px 1px rgba(255,255,255,0.22);
+}
+:root[data-theme="light"] .neo-auth-left .neo-cta:active {
+  transform: translateY(0);
+  background: #6250c7;
+  box-shadow: 0 3px 8px -5px rgba(76, 66, 150, 0.28), inset 0 1px 2px rgba(0,0,0,0.12);
+}
 
 /* Aviso de advertencia — chip ámbar legible */
 :root[data-theme="light"] .neo-auth-left .neo-alert-row {

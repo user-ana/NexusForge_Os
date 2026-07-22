@@ -151,6 +151,14 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
     if (formError && fields !== snapshot.current) setFormError(null)
   }, [fields, errorSeq, formError])
 
+  // El aviso no se queda para siempre: si la persona no toca nada, se va solo.
+  // (Así "Inicia sesión con tu correo" no parece un error permanente.)
+  useEffect(() => {
+    if (!formError) return
+    const id = setTimeout(() => setFormError(null), 6000)
+    return () => clearTimeout(id)
+  }, [formError, errorSeq])
+
   function toggle() {
     setMode((m) => (m === 'signin' ? 'signup' : 'signin'))
     setShowPassword(false)
@@ -414,9 +422,10 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
 
       <div className="neo-frame w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 overflow-hidden">
         {/* ---------- Panel izquierdo: formulario ---------- */}
-        <div className="neo-auth-left relative px-8 py-10 md:px-12 md:py-10 flex flex-col min-h-[520px]">
-          {/* Controles de ventana + tema + selector de idioma */}
-          <div className="mb-8 flex items-center justify-between">
+        <div className="neo-auth-left relative px-8 py-7 md:px-12 md:py-8 flex flex-col min-h-[520px]">
+          {/* Controles de ventana + tema + selector de idioma
+              (pegados al formulario: sin tanto aire arriba) */}
+          <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="neo-dot" />
               <span className="neo-dot" />
