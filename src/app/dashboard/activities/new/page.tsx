@@ -4,6 +4,8 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSession, displayName } from '@/frontend/session/session'
+import NeoSelect from '@/frontend/components/ui/NeoSelect'
+import NeoDate from '@/frontend/components/ui/NeoDate'
 import { getClasses, loadClasses, type Klass } from '@/backend/services/classes'
 import {
   createClassTask,
@@ -27,6 +29,29 @@ const DELIVERABLES: { kind: DeliverableKind; label: string; hint: string }[] = [
 
 const DRAFT_KEY = 'nf_activity_draft'
 
+/* Horas seleccionables (cada 30 min) + 11:59 p. m., para el selector bonito. */
+const TIME_OPTIONS: { value: string; label: string }[] = (() => {
+  const out: { value: string; label: string }[] = []
+  const fmt = (h: number, m: number) => {
+    const ap = h < 12 ? 'a. m.' : 'p. m.'
+    const h12 = h % 12 === 0 ? 12 : h % 12
+    return `${h12}:${String(m).padStart(2, '0')} ${ap}`
+  }
+  for (let h = 0; h < 24; h++) for (const m of [0, 30]) out.push({ value: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`, label: fmt(h, m) })
+  out.push({ value: '23:59', label: '11:59 p. m.' })
+  return out
+})()
+
+/** Deriva un título a partir del texto del PDF (instantáneo, sin IA). */
+function deriveTitle(text: string): string {
+  const clean = text.replace(/\s+/g, ' ').trim()
+  const m = clean.match(/(?:t[ií]tulo|tema|objetivo)\s*:\s*([^.\n]{4,70})/i)
+  let t = (m ? m[1] : clean.split(/[.\n:]/)[0]).replace(/^tarea\s+/i, '').trim()
+  const words = t.split(' ')
+  if (words.length > 9) t = words.slice(0, 9).join(' ')
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : ''
+}
+
 export default function ActivityStudioPage() {
   return (
     <Suspense fallback={<div className="p-8 text-neutral-500">Cargando estudio…</div>}>
@@ -45,7 +70,8 @@ function Studio() {
   const [title, setTitle] = useState('')
   const [instructions, setInstructions] = useState('')
   const [parcial, setParcial] = useState('')
-  const [due, setDue] = useState('')
+  const [dueDate, setDueDate] = useState('') // 'YYYY-MM-DD'
+  const [dueTime, setDueTime] = useState('23:59') // 'HH:MM'
   const [points, setPoints] = useState(20)
   const [reminders, setReminders] = useState(true)
   const [showOnPublish, setShowOnPublish] = useState(true)
@@ -86,7 +112,8 @@ function Studio() {
       if (d.title) setTitle(d.title)
       if (d.instructions) setInstructions(d.instructions)
       if (d.parcial) setParcial(d.parcial)
-      if (d.due) setDue(d.due)
+      if (d.dueDate) setDueDate(d.dueDate)
+      if (d.dueTime) setDueTime(d.dueTime)
       if (typeof d.points === 'number') setPoints(d.points)
       if (typeof d.group === 'boolean') setGroup(d.group)
       if (Array.isArray(d.delivs)) setDelivs(d.delivs)
@@ -97,6 +124,7 @@ function Studio() {
 
   const currentClass = useMemo(() => classes.find((c) => c.id === classId), [classes, classId])
   const teacherName = displayName(getSession())
+  const dueEpoch = dueDate ? new Date(`${dueDate}T${dueTime || '23:59'}`).getTime() : null
 
   function toggleDeliv(kind: DeliverableKind) {
     setDelivs((prev) =>
@@ -133,6 +161,9 @@ function Studio() {
     if (!url) { setPdfStatus('error'); setErr('No se pudo subir el PDF.'); return }
     setPdfUrl(url)
     if (text && text.length >= 20) {
+      // El título se rellena al instante desde el PDF (si estaba vacío)…
+      setTitle((prev) => (prev.trim() ? prev : deriveTitle(text)))
+      // …y la IA redacta las instrucciones.
       setPdfStatus('reading')
       const r = await summarizeText(text)
       if (r && r.summary) setInstructions((prev) => (prev.trim() ? prev : r.summary))
@@ -146,7 +177,7 @@ function Studio() {
 
   function saveDraft() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, instructions, parcial, due, points, group, delivs }))
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, instructions, parcial, dueDate, dueTime, points, group, delivs }))
       setSavedNote('Borrador guardado')
       setTimeout(() => setSavedNote(''), 1800)
     } catch { /* ignore */ }
@@ -162,7 +193,7 @@ function Studio() {
       description: instructions,
       parcial,
       pdfUrl,
-      dueDate: due ? new Date(due).getTime() : null,
+      dueDate: dueEpoch,
       points,
       deliverables: delivs,
       reminders,
@@ -230,12 +261,11 @@ function Studio() {
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="neo-label">Clase</label>
-                <select value={classId} onChange={(e) => setClassId(e.target.value)} className="neo-input w-full">
-                  {classes.length === 0 && <option value="">No tienes clases</option>}
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.section ? `${c.name} · ${c.section}` : c.name}</option>
-                  ))}
-                </select>
+                <NeoSelect
+                  value={classId}
+                  onChange={setClassId}
+                  options={classes.length ? classes.map((c) => ({ value: c.id, label: c.section ? `${c.name} · ${c.section}` : c.name })) : [{ value: '', label: 'No tienes clases' }]}
+                />
               </div>
               <div>
                 <label className="neo-label">Destinatarios</label>
@@ -294,10 +324,14 @@ function Studio() {
           {/* PASO 2 · Configuración */}
           <section className="neo-sec">
             <div className="neo-sec-head"><span className="neo-sec-n">Paso 02</span><h2>Configuración de entrega</h2></div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label className="neo-label">Fecha de vencimiento</label>
-                <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="neo-input w-full" />
+                <NeoDate value={dueDate} onChange={setDueDate} />
+              </div>
+              <div>
+                <label className="neo-label">Hora</label>
+                <NeoSelect value={dueTime} onChange={setDueTime} options={TIME_OPTIONS} />
               </div>
               <div>
                 <label className="neo-label">Puntaje</label>
@@ -309,9 +343,9 @@ function Studio() {
             </div>
             <div className="mt-3">
               <label className="neo-label">Parcial (opcional)</label>
-              <select value={parcial} onChange={(e) => setParcial(e.target.value)} className="neo-input w-full sm:w-1/2">
-                {PARCIAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <div className="sm:w-1/2">
+                <NeoSelect value={parcial} onChange={setParcial} options={PARCIAL_OPTIONS} />
+              </div>
             </div>
 
             <ToggleRow icon={<BellIc />} title="Recordatorios automáticos" sub="Notificar 72 h, 24 h y 6 h antes del vencimiento" on={reminders} onToggle={() => setReminders((v) => !v)} />
@@ -355,7 +389,7 @@ function Studio() {
             instructions={instructions}
             className={currentClass ? (currentClass.section ? `${currentClass.name} · ${currentClass.section}` : currentClass.name) : 'Tu clase'}
             teacherName={teacherName}
-            due={due}
+            dueEpoch={dueEpoch}
             points={points}
             group={group}
             pdfName={pdfName}
@@ -370,13 +404,13 @@ function Studio() {
 
 /* ---------- Vista previa ---------- */
 function StudentPreview({
-  title, instructions, className, teacherName, due, points, group, pdfName, delivs,
+  title, instructions, className, teacherName, dueEpoch, points, group, pdfName, delivs,
 }: {
   title: string; instructions: string; className: string; teacherName: string
-  due: string; points: number; group: boolean; pdfName: string; delivs: Deliverable[]
+  dueEpoch: number | null; points: number; group: boolean; pdfName: string; delivs: Deliverable[]
 }) {
-  const dueTxt = due
-    ? new Date(due).toLocaleDateString('es', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
+  const dueTxt = dueEpoch
+    ? new Date(dueEpoch).toLocaleDateString('es', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Sin fecha límite'
   const initials = teacherName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '·'
   return (
@@ -415,7 +449,7 @@ function StudentPreview({
       )}
 
       <div className="neo-prev-status"><span className="neo-dot-amber" /> Aún no iniciada</div>
-      <button className="neo-prev-start" disabled>Comenzar tarea →</button>
+      <button type="button" className="neo-prev-start" title="Así lo verá el estudiante">Comenzar tarea →</button>
     </article>
   )
 }
