@@ -592,19 +592,15 @@ function EntryView({ e, t }: { e: Entry; t: (k: string) => string }) {
   if (e.kind === 'query') {
     return (
       <div className="flex justify-end">
-        <span className="rounded-2xl rounded-tr-sm bg-accent-violet px-3.5 py-2 text-sm text-white">{e.text}</span>
+        <span className="neo-ai-msg neo-ai-msg--user">{e.text}</span>
       </div>
     )
   }
   if (e.kind === 'ai') {
     return (
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-accent-violet" style={{ background: 'rgba(63, 195, 232,0.14)' }}>
-          <Spark />
-        </span>
-        <div className="min-w-0 flex-1 whitespace-pre-line rounded-2xl rounded-tl-sm border border-white/8 bg-white/[0.03] px-3.5 py-2.5 text-sm leading-relaxed text-neutral-200">
-          {e.text}
-        </div>
+      <div className="neo-ai-turn">
+        <span className="neo-ai-msg-av"><Spark /></span>
+        <div className="neo-ai-msg neo-ai-msg--bot">{e.text}</div>
       </div>
     )
   }
