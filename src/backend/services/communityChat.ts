@@ -1,14 +1,22 @@
 /**
- * Chat de la COMUNIDAD (global) — respaldado por Supabase, con realtime.
- * Canales: community / soft / civil / mech / group / class …
+ * Chat de COMUNIDAD — respaldado por Supabase, con realtime.
+ *
+ * ALCANCE: la comunidad NO es global de la universidad. Cada catedrático
+ * tiene la suya, y se identifica por `teacherId`:
+ *   - el catedrático ve/escribe en la propia,
+ *   - el estudiante ve la de los catedráticos de sus clases,
+ *   - quien entra por primera vez la encuentra vacía.
+ * La base lo garantiza con RLS (ver supabase/community_por_catedratico.sql);
+ * aquí solo se filtra y se etiqueta cada mensaje con su ecosistema.
  */
 import { supabase } from '@/backend/supabase'
 import { onBusChange, notifyBusChange } from '@/backend/realtime/realtimeBus'
 
-const roomKey = (channel: string) => `comm-${channel}`
+const roomKey = (teacherId: string, channel: string) => `comm-${teacherId}-${channel}`
 
 export type CommMsg = {
   id: string
+  teacherId: string
   channel: string
   author: string // uuid
   name: string
@@ -31,6 +39,7 @@ function dispatch() {
 function mapRow(row: any): CommMsg {
   return {
     id: row.id,
+    teacherId: row.teacher_id ?? '',
     channel: row.channel,
     author: row.author_id,
     name: row.author_name ?? 'Usuario',
@@ -44,23 +53,28 @@ function mapRow(row: any): CommMsg {
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-export function getMessages(channel: string): CommMsg[] {
-  return cache.filter((m) => m.channel === channel).sort((a, b) => a.ts - b.ts)
+const same = (m: CommMsg, teacherId: string, channel: string) =>
+  m.teacherId === teacherId && m.channel === channel
+
+export function getMessages(teacherId: string, channel: string): CommMsg[] {
+  return cache.filter((m) => same(m, teacherId, channel)).sort((a, b) => a.ts - b.ts)
 }
 
-export async function loadMessages(channel: string): Promise<void> {
-  if (!supabase) return
+export async function loadMessages(teacherId: string, channel: string): Promise<void> {
+  if (!supabase || !teacherId) return
   const { data } = await supabase
     .from('community_messages')
     .select('*')
+    .eq('teacher_id', teacherId)
     .eq('channel', channel)
     .order('created_at', { ascending: true })
     .limit(200)
-  cache = [...cache.filter((m) => m.channel !== channel), ...(data ?? []).map(mapRow)]
+  cache = [...cache.filter((m) => !same(m, teacherId, channel)), ...(data ?? []).map(mapRow)]
   dispatch()
 }
 
 export async function sendMessage(input: {
+  teacherId: string
   channel: string
   author: string
   name: string
@@ -69,10 +83,11 @@ export async function sendMessage(input: {
   avatar?: string
   text: string
 }): Promise<void> {
-  if (!supabase) return
+  if (!supabase || !input.teacherId) return
   const body = input.text.trim()
   if (!body) return
   await supabase.from('community_messages').insert({
+    teacher_id: input.teacherId,
     channel: input.channel,
     author_id: input.author,
     author_name: input.name,
@@ -81,8 +96,8 @@ export async function sendMessage(input: {
     avatar: input.avatar,
     body,
   })
-  await loadMessages(input.channel)
-  notifyBusChange(roomKey(input.channel))
+  await loadMessages(input.teacherId, input.channel)
+  notifyBusChange(roomKey(input.teacherId, input.channel))
 }
 
 /** Edita un mensaje propio de comunidad. */
@@ -97,7 +112,7 @@ export async function editMessage(id: string, text: string): Promise<void> {
     m.text = body
     m.edited = true
     dispatch()
-    notifyBusChange(roomKey(m.channel))
+    notifyBusChange(roomKey(m.teacherId, m.channel))
   }
 }
 
@@ -108,29 +123,29 @@ export async function deleteMessage(id: string): Promise<void> {
   await supabase.from('community_messages').delete().eq('id', id)
   cache = cache.filter((x) => x.id !== id)
   dispatch()
-  if (m) notifyBusChange(roomKey(m.channel))
+  if (m) notifyBusChange(roomKey(m.teacherId, m.channel))
 }
 
-/** Realtime de un canal de comunidad (INSERT/UPDATE/DELETE). */
-export function subscribeMessages(channel: string): () => void {
-  if (!supabase) return () => {}
+/** Realtime de una comunidad (INSERT/UPDATE/DELETE). */
+export function subscribeMessages(teacherId: string, channel: string): () => void {
+  if (!supabase || !teacherId) return () => {}
   const sb = supabase
   // Sin 'filter': los filtros de postgres_changes descartan UPDATE/DELETE.
-  // Filtramos del lado del cliente recargando solo este canal (RLS aplica igual).
+  // Filtramos del lado del cliente recargando solo esta comunidad (RLS aplica igual).
   const ch = sb
-    .channel(`comm-${channel}-${Math.random().toString(36).slice(2)}`)
+    .channel(`comm-${teacherId}-${channel}-${Math.random().toString(36).slice(2)}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'community_messages' },
       (payload) => {
-        const row = (payload.new ?? payload.old) as { channel?: string } | null
+        const row = (payload.new ?? payload.old) as { channel?: string; teacher_id?: string } | null
         if (row?.channel && row.channel !== channel) return
-        loadMessages(channel)
+        if (row?.teacher_id && row.teacher_id !== teacherId) return
+        loadMessages(teacherId, channel)
       },
     )
     .subscribe()
-  // Broadcast: garantiza editar/borrar (postgres_changes solo trae INSERT aquí)
-  const offBus = onBusChange(roomKey(channel), () => loadMessages(channel))
+  const offBus = onBusChange(roomKey(teacherId, channel), () => loadMessages(teacherId, channel))
   return () => {
     sb.removeChannel(ch)
     offBus()

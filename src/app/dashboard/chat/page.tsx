@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import Header from '@/frontend/components/layout/Header'
 import { getSession, displayName, addReward, SESSION_EVENT, type Role, type Session } from '@/frontend/session/session'
@@ -32,13 +32,6 @@ import { useT } from '@/frontend/hooks/useT'
 
 type Chan = { key: string; icon: ReactNode; labelKey?: string; label?: string }
 const CATS: { key: string; labelKey: string; channels: Chan[] }[] = [
-  {
-    key: 'main',
-    labelKey: 'chat.cat_main',
-    channels: [
-      { key: 'community', labelKey: 'chat.ch_community', icon: <GlobeIcon size={16} /> },
-    ],
-  },
   {
     key: 'game',
     labelKey: 'chat.cat_game',
@@ -88,7 +81,7 @@ const norm = (m: any): ChatMsg => ({ id: m.id, author: m.author, name: m.name, r
 
 /** Interpreta el "channel" del estado: comunidad / clase / grupo / retos. */
 function parseChannel(ch: string):
-  | { type: 'comm'; key: string }
+  | { type: 'comm'; teacherId: string; key: string }
   | { type: 'class'; classId: string }
   | { type: 'group'; classId: string; groupId: string }
   | { type: 'retos' } {
@@ -98,12 +91,14 @@ function parseChannel(ch: string):
     const [, classId, groupId] = ch.split(':')
     return { type: 'group', classId, groupId }
   }
-  return { type: 'comm', key: ch }
+  // 'comm:<teacherId>' -> la comunidad de ese catedrático
+  if (ch.startsWith('comm:')) return { type: 'comm', teacherId: ch.slice(5), key: 'community' }
+  return { type: 'comm', teacherId: '', key: ch }
 }
 
 export default function ChatPage() {
   const { t } = useT()
-  const [channel, setChannel] = useState('community')
+  const [channel, setChannel] = useState('')
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
   const [text, setText] = useState('')
   const [session, setSession] = useState<Session | null>(null)
@@ -129,12 +124,13 @@ export default function ChatPage() {
     const sel = parseChannel(channel)
     if (sel.type === 'retos') return
     if (sel.type === 'comm') {
-      const sync = () => setMsgs(commGet(sel.key).map(norm))
+      if (!sel.teacherId) return
+      const sync = () => setMsgs(commGet(sel.teacherId, sel.key).map(norm))
       sync()
-      commLoad(sel.key)
-      const unsub = commSub(sel.key)
+      commLoad(sel.teacherId, sel.key)
+      const unsub = commSub(sel.teacherId, sel.key)
       // Respaldo: refresca cada 3s (asegura ver borrados aunque el realtime falle)
-      const poll = setInterval(() => commLoad(sel.key), 3000)
+      const poll = setInterval(() => commLoad(sel.teacherId, sel.key), 3000)
       window.addEventListener(COMMCHAT_EVENT, sync)
       return () => {
         window.removeEventListener(COMMCHAT_EVENT, sync)
@@ -187,6 +183,29 @@ export default function ChatPage() {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
   }, [msgs, channel])
 
+  /* Comunidades a las que pertenezco: la comunidad NO es de toda la
+     universidad, es el ecosistema de un catedrático. Si soy catedrático, la
+     mía; si soy estudiante, la de cada catedrático que me da clase. */
+  const communities = useMemo(() => {
+    const me = session?.id
+    const out: { teacherId: string; label: string }[] = []
+    if (session?.role === 'teacher' && me) {
+      out.push({ teacherId: me, label: 'Comunidad' })
+    }
+    const seen = new Set(out.map((c) => c.teacherId))
+    for (const c of myClasses) {
+      if (!c.teacher || seen.has(c.teacher)) continue
+      seen.add(c.teacher)
+      out.push({ teacherId: c.teacher, label: c.teacherName ? `Comunidad · ${c.teacherName}` : 'Comunidad' })
+    }
+    return out
+  }, [session?.id, session?.role, myClasses])
+
+  // Al entrar (o al cargar las clases) se abre la primera comunidad disponible
+  useEffect(() => {
+    if (!channel && communities.length) setChannel(`comm:${communities[0].teacherId}`)
+  }, [communities, channel])
+
   // perfiles en vivo (foto/nombre)
   useEffect(() => {
     const sync = () => setProfTick((t) => t + 1)
@@ -232,7 +251,7 @@ export default function ChatPage() {
     if (!v || !session?.id) return
     const sel = parseChannel(channel)
     const common = { author: session.id, name: me, role: (session.role ?? 'student') as Role, avatar: session.avatar, text: v }
-    if (sel.type === 'comm') commSend({ channel: sel.key, ...common })
+    if (sel.type === 'comm') commSend({ teacherId: sel.teacherId, channel: sel.key, ...common })
     else if (sel.type === 'class') aulaSend({ classId: sel.classId, channel: 'general', ...common })
     else if (sel.type === 'group') aulaSend({ classId: sel.classId, channel: `g:${sel.groupId}`, ...common })
     setText('')
@@ -266,6 +285,23 @@ export default function ChatPage() {
       <main className="flex flex-1 overflow-hidden p-4 gap-4">
         {/* Canales */}
         <aside className="neo-panel neo-noscroll hidden w-56 flex-shrink-0 flex-col gap-4 overflow-y-auto p-4 md:flex">
+          {communities.length > 0 && (
+            <div>
+              <p className="neo-label mb-2 px-1">{t('chat.cat_main')}</p>
+              <div className="space-y-1">
+                {communities.map((c) => (
+                  <button
+                    key={c.teacherId}
+                    onClick={() => setChannel(`comm:${c.teacherId}`)}
+                    className={`neo-chan ${channel === `comm:${c.teacherId}` ? 'neo-chan--active' : ''}`}
+                  >
+                    <span className="text-base"><GlobeIcon size={16} /></span>
+                    <span className="truncate">{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {CATS.map((cat) => (
             <div key={cat.key}>
               <p className="neo-label mb-2 px-1">{t(cat.labelKey)}</p>

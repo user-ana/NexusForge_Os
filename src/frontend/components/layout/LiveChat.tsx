@@ -57,18 +57,26 @@ export default function LiveChat() {
     return () => window.removeEventListener(SESSION_EVENT, sync)
   }, [])
 
-  // Chat de comunidad real (canal 'community') + realtime
+  /* La comunidad pertenece a un catedrático (no es global): si soy
+     catedrático es la mía, y si soy estudiante la de la clase donde estoy. */
+  const commTeacher =
+    session?.role === 'teacher' ? session.id ?? '' : classes.find((c) => c.teacher)?.teacher ?? ''
+
+  // Chat de comunidad real + realtime
   useEffect(() => {
-    const sync = () => setMsgs(getMessages('community'))
+    if (!commTeacher) return
+    const sync = () => setMsgs(getMessages(commTeacher, 'community'))
     sync()
-    loadMessages('community')
-    const unsub = subscribeMessages('community')
+    loadMessages(commTeacher, 'community')
+    const unsub = subscribeMessages(commTeacher, 'community')
     window.addEventListener(COMMCHAT_EVENT, sync)
     return () => {
       window.removeEventListener(COMMCHAT_EVENT, sync)
       unsub()
     }
-  }, [])
+    // Depende del catedrático: al cargar las clases se resuelve y recién ahí
+    // hay comunidad a la que suscribirse.
+  }, [commTeacher])
 
   // Presencia (en línea) — activa siempre que el widget esté montado
   useEffect(() => {
@@ -120,7 +128,8 @@ export default function LiveChat() {
   function send() {
     const v = text.trim()
     if (!v || !session?.id) return
-    sendMessage({ channel: 'community', author: session.id, name: me, role: session.role, avatar: session.avatar, text: v })
+    if (!commTeacher) return
+    sendMessage({ teacherId: commTeacher, channel: 'community', author: session.id, name: me, role: session.role, avatar: session.avatar, text: v })
     setText('')
   }
 
