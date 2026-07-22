@@ -503,7 +503,7 @@ body {
 }
 .neo-social:hover {
   background: #1d2128;
-  border-color: rgba(53, 190, 218, 0.3);
+  border-color: rgba(63, 210, 232, 0.3);
   transform: translateY(-1px) scale(1.012);
 }
 .neo-social:active { transform: scale(0.995); }
@@ -805,7 +805,7 @@ body {
   height: 2px;
   transform: translateX(-50%);
   border-radius: 2px;
-  background: #35beda;
+  background: #35d6ec;
   opacity: 0;
   animation: neo-fade 0.5s ease 1.6s forwards;
 }
@@ -4177,7 +4177,7 @@ body {
   transition: transform .24s cubic-bezier(0.22,1,0.36,1), background .2s;
 }
 /* Luna (modo oscuro activo) */
-.neo-theme .neo-theme-knob { background: linear-gradient(145deg, #4fd0e6, #2196ad); }
+.neo-theme .neo-theme-knob { background: linear-gradient(145deg, #5ce0f2, #2196ad); }
 /* Sol (modo claro activo) */
 .neo-theme--light { background: #e9edf4; border-color: #dce2eb; box-shadow: inset 1px 1px 3px rgba(33,42,59,0.10); }
 .neo-theme--light .neo-theme-knob { transform: translateX(21px); background: linear-gradient(145deg, #e8a33e, #d68b20); }
@@ -4191,10 +4191,10 @@ body {
 /* Botón principal: degradado cian que se desplaza + leve zoom al pasar el mouse */
 .neo-scene .neo-cta {
   /* Pastel aqua con texto teal profundo: suave a la vista y bien legible */
-  background: linear-gradient(145deg, #a9e6e2, #7fcede);
+  background: linear-gradient(145deg, #7bede3, #4fd3ec);
   background-size: 160% 160%;
   background-position: 0% 50%;
-  color: #0f5560;
+  color: #0b4f5c;
   /* Sombra apenas insinuada: el relieve lo da el degradado, no una sombra dura */
   box-shadow: 0 3px 9px -7px rgba(9, 40, 48, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.45);
   transition:
@@ -4210,7 +4210,7 @@ body {
 }
 .neo-scene .neo-cta:active {
   transform: scale(0.995);
-  background: #93dcdb;
+  background: #5fe0da;
   box-shadow: 0 2px 5px -5px rgba(9, 40, 48, 0.45), inset 0 1px 2px rgba(15, 85, 96, 0.16);
 }
 
@@ -4225,34 +4225,34 @@ body {
     box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.04);
   }
   50% {
-    background: #35beda;
-    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3), 0 0 7px rgba(53, 190, 218, 0.5);
+    background: #35d6ec;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3), 0 0 7px rgba(63, 210, 232, 0.5);
   }
 }
 
 /* Campo activo */
 .neo-auth-left .neo-input:focus {
-  border-color: rgba(53, 190, 218, 0.55);
+  border-color: rgba(63, 210, 232, 0.55);
   background: #282b31;
-  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(53, 190, 218, 0.14);
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(63, 210, 232, 0.14);
   transform: none;
 }
 
 /* Enlaces */
-.neo-scene .neo-toggle { color: #4fd0e6; }
+.neo-scene .neo-toggle { color: #5ce0f2; }
 .neo-scene .neo-toggle:hover { color: #86e2f2; }
-.neo-scene .neo-label--link:hover { color: #4fd0e6; }
+.neo-scene .neo-label--link:hover { color: #5ce0f2; }
 
 /* Tarjeta de rol seleccionada */
 .neo-auth-left .neo-rolecard--active {
-  border-color: rgba(53, 190, 218, 0.5);
-  background: rgba(53, 190, 218, 0.09);
-  box-shadow: 0 10px 24px -14px rgba(53, 190, 218, 0.45);
+  border-color: rgba(63, 210, 232, 0.5);
+  background: rgba(63, 210, 232, 0.09);
+  box-shadow: 0 10px 24px -14px rgba(63, 210, 232, 0.45);
 }
-.neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(53, 190, 218, 0.2); }
+.neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(63, 210, 232, 0.2); }
 
 /* Idioma seleccionado */
-.neo-auth-left .bg-accent-violet.text-white { background: #cdeef1; color: #0f5560; }
+.neo-auth-left .bg-accent-violet.text-white { background: #d5f6fa; color: #0b4f5c; }
 
 /* ===================================================================
    MODO CLARO — pantalla de login
@@ -4288,9 +4288,9 @@ body {
 /* Subtítulo bajo el título: un punto más de contraste */
 :root[data-theme="light"] .neo-auth-left h1 + p { color: #5a6373; }
 /* "¿Olvidaste tu contraseña?" y "Regístrate": azul violeta oscuro, legibles */
-:root[data-theme="light"] .neo-auth-left .neo-label--link { color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .neo-label--link { color: #0e8fa6; }
 :root[data-theme="light"] .neo-auth-left .neo-label--link:hover { color: #0f6172; }
-:root[data-theme="light"] .neo-auth-left .neo-toggle { color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .neo-toggle { color: #0e8fa6; }
 :root[data-theme="light"] .neo-auth-left .neo-toggle:hover { color: #0f6172; }
 
 /* Puntos de ventana: misma animación en cadena, paleta clara.
@@ -4305,8 +4305,8 @@ body {
     box-shadow: inset 1px 1px 2px rgba(33,42,59,0.18), inset -1px -1px 2px rgba(255,255,255,0.8);
   }
   50% {
-    background: #3fc3db;
-    box-shadow: inset 1px 1px 2px rgba(33,42,59,0.12), 0 0 6px rgba(53,190,218,0.4);
+    background: #35d6ec;
+    box-shadow: inset 1px 1px 2px rgba(33,42,59,0.12), 0 0 6px rgba(63,210,232,0.4);
   }
 }
 
@@ -4321,11 +4321,11 @@ body {
 /* Campo activo: borde azul violeta discreto pero identificable */
 :root[data-theme="light"] .neo-auth-left .neo-input:focus {
   background: #f7f9fc;
-  border-color: #7fcede;
+  border-color: #3fd2e8;
   box-shadow:
-    inset 0 0 0 1px #7fcede,
+    inset 0 0 0 1px #3fd2e8,
     inset 2px 2px 5px rgba(33,42,59,0.05),
-    0 0 0 3px rgba(53,190,218,0.14);
+    0 0 0 3px rgba(63,210,232,0.14);
   transform: none;
 }
 :root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill,
@@ -4337,10 +4337,10 @@ body {
 
 /* Botón principal — degradado cian del logo, sombra suave, sin brillo neón */
 :root[data-theme="light"] .neo-auth-left .neo-cta {
-  background: linear-gradient(145deg, #a9e6e2, #7fcede);
+  background: linear-gradient(145deg, #7bede3, #4fd3ec);
   background-size: 160% 160%;
   background-position: 0% 50%;
-  color: #0f5560;
+  color: #0b4f5c;
   box-shadow: 0 3px 8px -6px rgba(20, 110, 130, 0.22), inset 0 1px 1px rgba(255,255,255,0.5);
   transition:
     background-position 0.45s ease,
@@ -4356,7 +4356,7 @@ body {
 }
 :root[data-theme="light"] .neo-auth-left .neo-cta:active {
   transform: scale(0.995);
-  background: #93dcdb;
+  background: #5fe0da;
   box-shadow: 0 2px 5px -5px rgba(20, 110, 130, 0.22), inset 0 1px 2px rgba(15,85,96,0.14);
 }
 
@@ -4380,12 +4380,12 @@ body {
 }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { border-color: #c9d2df; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active {
-  border-color: #7fcede;
-  background: #dff2f5;
+  border-color: #3fd2e8;
+  background: #e3f9fc;
   box-shadow: inset 2px 2px 5px rgba(33,42,59,0.08), inset -2px -2px 5px rgba(255,255,255,0.8);
 }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-ic { background: rgba(33,42,59,0.06); color: #596273; }
-:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(53,190,218,0.18); color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(63,210,232,0.18); color: #0e8fa6; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-t { color: #252b36; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-t { color: #171b25; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-d { color: #6f7888; }
@@ -4397,5 +4397,5 @@ body {
 /* Selector de idioma */
 :root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: #dce2eb; }
 :root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] { background: transparent; }
-:root[data-theme="light"] .neo-auth-left .bg-accent-violet.text-white { background: #dff2f5; color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .bg-accent-violet.text-white { background: #e3f9fc; color: #0e8fa6; }
 
