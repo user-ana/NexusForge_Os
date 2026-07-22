@@ -81,7 +81,6 @@ function Aula({ id }: { id: string }) {
   const [gIcon, setGIcon] = useState(GROUP_ICONS[0])
   const [gColor, setGColor] = useState(GROUP_COLORS[0])
   const [bulkN, setBulkN] = useState('') // TOTAL de salas deseado (texto para poder borrar)
-  const [bulkFocused, setBulkFocused] = useState(false)
   const [editGroup, setEditGroup] = useState<ClassGroup | null>(null) // editar mi sala
   const [selectedIds, setSelectedIds] = useState<string[]>([]) // grupos seleccionados (lote)
   const [bulkDelete, setBulkDelete] = useState(false) // confirmar borrado en lote
@@ -129,10 +128,13 @@ function Aula({ id }: { id: string }) {
     }
   }, [id])
 
-  // el input de "Crear salas" muestra el TOTAL actual (mientras no lo estés editando)
+  // El input de "Crear salas" muestra el TOTAL actual y se sincroniza cuando
+  // cambia el número real de salas. OJO: antes se reseteaba al perder el foco,
+  // pero el blur ocurre ANTES del clic del botón, así que el valor volvía a 0 y
+  // el botón quedaba deshabilitado antes de que el clic llegara.
   useEffect(() => {
-    if (!bulkFocused) setBulkN(String(groups.length))
-  }, [groups.length, bulkFocused])
+    setBulkN(String(groups.length))
+  }, [groups.length])
 
   // canal de chat según vista activa
   const channel = active === 'manage' ? 'general' : active
@@ -452,18 +454,16 @@ function Aula({ id }: { id: string }) {
                       min={0}
                       max={60}
                       value={bulkN}
-                      onFocus={() => setBulkFocused(true)}
-                      onBlur={() => setBulkFocused(false)}
                       onChange={(e) => setBulkN(e.target.value)}
                       className="neo-input !w-14 !py-1 text-center text-sm"
                       title="Total de salas que quieres tener"
                     />
                     <button
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
                         const target = Math.max(0, Math.min(60, parseInt(bulkN, 10) || 0))
                         const add = target - groups.length
                         if (add > 0) createGroupsBulk(id, add)
-                        setBulkFocused(false)
                       }}
                       disabled={(parseInt(bulkN, 10) || 0) <= groups.length}
                       className="neo-btn-ghost whitespace-nowrap text-sm"
