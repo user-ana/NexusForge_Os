@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 // 8 carreras de ingeniería (1-8 = M, 9-16 = F → misma categoría por módulo)
 const CATEGORIES = [
-  { glyph: 'SW', tint: '#6d5bd0' }, // Software / Informática
+  { glyph: 'SW', tint: '#1580c4' }, // Software / Informática
   { glyph: 'CV', tint: '#3d8fb0' }, // Civil
   { glyph: 'MC', tint: '#9a7b3f' }, // Mecánica
   { glyph: 'EL', tint: '#b0903d' }, // Eléctrica / Electrónica

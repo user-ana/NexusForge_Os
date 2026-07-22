@@ -52,10 +52,31 @@ const CHALLENGES = [
   { q: 'Complejidad de la búsqueda binaria:', opts: ['O(n)', 'O(log n)', 'O(n²)'], a: 1 },
 ]
 
+/* Color del NOMBRE: el catedrático destaca en el cian de la marca; el resto
+   va en un tono claro y legible (si todos llevan color, no destaca nadie). */
 const RANK_COLOR: Record<string, string> = {
   teacher: '#4fc9f0',
-  student: '#8fd3df',
+  student: '#d6dae2',
   visitor: '#9398a1',
+}
+
+/* Color del AVATAR: uno distinto por persona, derivado de su nombre, para
+   poder distinguirlas de un vistazo. Tonos apagados, sin neón. */
+const AVATAR_TONES = [
+  'linear-gradient(145deg, #3f7f96, #2b5c6e)',
+  'linear-gradient(145deg, #4a6f9e, #33506f)',
+  'linear-gradient(145deg, #57738a, #3c5162)',
+  'linear-gradient(145deg, #48806f, #325a4e)',
+  'linear-gradient(145deg, #7a6a52, #574c3b)',
+  'linear-gradient(145deg, #6d5f7e, #4c4258)',
+]
+const TEACHER_AVATAR = 'linear-gradient(145deg, #35c6f0, #1089d3)'
+
+function avatarBg(name: string, role?: string): string {
+  if (role === 'teacher') return TEACHER_AVATAR
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_TONES[h % AVATAR_TONES.length]
 }
 
 // Mensaje normalizado (comunidad o aula comparten estos campos)
@@ -408,7 +429,7 @@ export default function ChatPage() {
           ) : (
             online.map((u) => (
               <div key={u.id} className="flex items-center gap-2.5">
-                <span className="neo-chat-avatar !h-8 !w-8" style={{ background: RANK_COLOR[u.role ?? 'student'] ?? '#3fc3e8' }}>
+                <span className="neo-chat-avatar !h-8 !w-8" style={{ background: avatarBg(u.name, u.role) }}>
                   {u.name.charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0">
@@ -446,7 +467,7 @@ function CommBubble({
         {grouped ? (
           <span className="hidden select-none text-[10px] leading-6 text-neutral-600 group-hover:block">{fmtTime(m.ts)}</span>
         ) : (
-          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white" style={{ background: color }}>
+          <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white" style={{ background: avatarBg(name, m.role) }}>
             {avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
