@@ -4172,12 +4172,13 @@ body {
   background-image: radial-gradient(circle at 50% 30%, #eef2f8 0%, #dfe4ee 92%);
 }
 :root[data-theme="light"] .neo-scene .neo-frame {
-  /* Tarjeta del mismo tono, elevada con sombras suaves (relieve mate) */
+  /* Tarjeta del mismo tono, elevada solo con sombras (neumorfismo mate).
+     Sin borde blanco: el relieve lo dan las dos sombras, no una línea. */
   background: #e8ecf3;
-  border: 1px solid rgba(255,255,255,0.7);
+  border: 1px solid rgba(43,54,82,0.05);
   box-shadow:
-    -10px -10px 24px rgba(255,255,255,0.85),
-    12px 14px 30px rgba(43,54,82,0.16);
+    -9px -9px 22px rgba(255,255,255,0.55),
+    12px 14px 30px rgba(43,54,82,0.14);
 }
 :root[data-theme="light"] .neo-auth-left { background: #e8ecf3; color: #2a3142; }
 
@@ -4192,31 +4193,42 @@ body {
 :root[data-theme="light"] .neo-auth-left .text-neutral-600,
 :root[data-theme="light"] .neo-auth-left .neo-label { color: #6a7180; }
 
-/* Puntos de ventana */
-:root[data-theme="light"] .neo-auth-left .neo-dot { animation: none; background: #d3d9e4; box-shadow: inset 1px 1px 2px rgba(30,40,70,0.15); }
-:root[data-theme="light"] .neo-auth-left .neo-dot--bright { background: #7c5cff; }
-
-/* Contenedor del selector de idioma */
-:root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: rgba(20,25,40,0.12); }
-:root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] { background: rgba(20,25,40,0.03); }
+/* Puntos de ventana: misma animación, con paleta clara (relieve hundido) */
+:root[data-theme="light"] .neo-auth-left .neo-dot {
+  animation: neo-dot-pulse-light 1.8s ease-in-out infinite;
+}
+@keyframes neo-dot-pulse-light {
+  0%, 100% {
+    background: #d5dbe6;
+    box-shadow:
+      inset 1px 1px 2px rgba(43,54,82,0.22),
+      inset -1px -1px 2px rgba(255,255,255,0.7);
+  }
+  50% {
+    background: #8b5cf6;
+    box-shadow:
+      inset 1px 1px 2px rgba(43,54,82,0.18),
+      0 0 7px rgba(139,92,246,0.45);
+  }
+}
 
 /* Inputs — hundidos (inset) neumórficos sobre el mismo tono, sin blanco fuerte */
 :root[data-theme="light"] .neo-auth-left .neo-input {
   background: #e4e9f1;
-  border: 1px solid rgba(255,255,255,0.5);
+  border: 1px solid rgba(43,54,82,0.06);
   color: #2a3142;
   box-shadow:
-    inset 3px 3px 6px rgba(43,54,82,0.14),
-    inset -3px -3px 6px rgba(255,255,255,0.9);
+    inset 3px 3px 6px rgba(43,54,82,0.13),
+    inset -3px -3px 6px rgba(255,255,255,0.7);
 }
 :root[data-theme="light"] .neo-auth-left .neo-input::placeholder { color: #9aa2b3; }
 :root[data-theme="light"] .neo-auth-left .neo-input:focus {
   background: #e4e9f1;
-  border-color: rgba(124,92,255,0.4);
+  border-color: rgba(124,92,255,0.35);
   box-shadow:
-    inset 3px 3px 6px rgba(43,54,82,0.14),
-    inset -3px -3px 6px rgba(255,255,255,0.9),
-    0 0 0 3px rgba(124,92,255,0.14);
+    inset 3px 3px 6px rgba(43,54,82,0.13),
+    inset -3px -3px 6px rgba(255,255,255,0.7),
+    0 0 0 3px rgba(124,92,255,0.12);
   transform: none;
 }
 :root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill,
@@ -4228,12 +4240,12 @@ body {
 
 /* Tarjetas de rol — elevadas neumórficas */
 :root[data-theme="light"] .neo-auth-left .neo-rolecard {
-  border: 1px solid rgba(255,255,255,0.6);
+  border: 1px solid rgba(43,54,82,0.05);
   background: #e8ecf3;
-  box-shadow: -4px -4px 10px rgba(255,255,255,0.8), 5px 6px 14px rgba(43,54,82,0.14);
+  box-shadow: -4px -4px 10px rgba(255,255,255,0.5), 5px 6px 14px rgba(43,54,82,0.13);
 }
-:root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { box-shadow: -3px -3px 8px rgba(255,255,255,0.7), 4px 5px 12px rgba(43,54,82,0.18); }
-:root[data-theme="light"] .neo-auth-left .neo-rolecard--active { border-color: rgba(124,92,255,0.45); background: #e9e4fb; box-shadow: inset 2px 2px 5px rgba(43,54,82,0.1), inset -2px -2px 5px rgba(255,255,255,0.9); }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { box-shadow: -3px -3px 8px rgba(255,255,255,0.45), 4px 5px 12px rgba(43,54,82,0.17); }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active { border-color: rgba(124,92,255,0.35); background: #e6e1f8; box-shadow: inset 2px 2px 5px rgba(43,54,82,0.1), inset -2px -2px 5px rgba(255,255,255,0.6); }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-ic { background: rgba(43,54,82,0.06); color: #4b5162; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(124,92,255,0.18); color: #7c5cff; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-t { color: #2b3242; }
@@ -4243,11 +4255,12 @@ body {
 /* Chips de requisitos de contraseña */
 :root[data-theme="light"] .neo-auth-left .neo-req { background: rgba(43,54,82,0.05); border-color: rgba(43,54,82,0.08); color: #6a7180; }
 
-/* Puntos de ventana (relieve) */
-:root[data-theme="light"] .neo-auth-left .neo-dot { background: #d5dbe6; box-shadow: inset 1px 1px 2px rgba(43,54,82,0.18), inset -1px -1px 2px rgba(255,255,255,0.8); }
-/* Contenedor del selector de idioma en relieve suave */
-:root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: rgba(255,255,255,0.6); }
-:root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] { background: rgba(255,255,255,0.5); box-shadow: inset 2px 2px 4px rgba(43,54,82,0.08); }
+/* Contenedor del selector de idioma: hundido mate, sin borde blanco */
+:root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: rgba(43,54,82,0.06); }
+:root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] {
+  background: #e4e9f1;
+  box-shadow: inset 2px 2px 4px rgba(43,54,82,0.1), inset -2px -2px 4px rgba(255,255,255,0.6);
+}
 
 /* Divisor y bordes suaves dentro del formulario */
 :root[data-theme="light"] .neo-auth-left .bg-white\/10 { background: rgba(20,25,40,0.1); }
