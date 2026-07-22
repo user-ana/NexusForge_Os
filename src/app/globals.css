@@ -4194,7 +4194,8 @@ body {
   background-size: 160% 160%;
   background-position: 0% 50%;
   color: #ffffff;
-  box-shadow: 0 6px 16px -8px rgba(20, 110, 130, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+  /* Sombra apenas insinuada: el relieve lo da el degradado, no una sombra dura */
+  box-shadow: 0 3px 9px -7px rgba(9, 40, 48, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.16);
   transition:
     background-position 0.45s ease,
     box-shadow 0.28s ease,
@@ -4204,12 +4205,12 @@ body {
   background-position: 100% 50%;
   transform: translateY(-1.5px) scale(1.015);
   filter: none;
-  box-shadow: 0 10px 24px -10px rgba(53, 190, 218, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 11px -7px rgba(9, 40, 48, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 .neo-scene .neo-cta:active {
   transform: scale(0.995);
   background: #17849a;
-  box-shadow: 0 3px 8px -5px rgba(20, 110, 130, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 5px -5px rgba(9, 40, 48, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.16);
 }
 
 /* Puntos de ventana en cadena, con el cian de la marca */
@@ -4339,7 +4340,7 @@ body {
   background-size: 160% 160%;
   background-position: 0% 50%;
   color: #ffffff;
-  box-shadow: 0 5px 12px -6px rgba(20, 110, 130, 0.22), inset 0 1px 1px rgba(255,255,255,0.18);
+  box-shadow: 0 3px 8px -6px rgba(20, 110, 130, 0.28), inset 0 1px 1px rgba(255,255,255,0.18);
   transition:
     background-position 0.45s ease,
     box-shadow 0.28s ease,
@@ -4350,12 +4351,12 @@ body {
   background-position: 100% 50%;
   transform: translateY(-1.5px) scale(1.015);
   filter: none;
-  box-shadow: 0 9px 20px -8px rgba(20, 110, 130, 0.3), inset 0 1px 1px rgba(255,255,255,0.22);
+  box-shadow: 0 4px 10px -6px rgba(20, 110, 130, 0.26), inset 0 1px 1px rgba(255,255,255,0.22);
 }
 :root[data-theme="light"] .neo-auth-left .neo-cta:active {
   transform: scale(0.995);
   background: #17849a;
-  box-shadow: 0 3px 8px -5px rgba(20, 110, 130, 0.28), inset 0 1px 2px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 5px -5px rgba(20, 110, 130, 0.25), inset 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* Aviso de advertencia — chip ámbar legible */
