@@ -13,6 +13,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Aplica el tema guardado ANTES de pintar, para que no haya un parpadeo
+            de oscuro→claro al cargar. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('nf_theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}`,
+          }}
+        />
+      </head>
       <body>
         {children}
       </body>

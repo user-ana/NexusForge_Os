@@ -10,6 +10,7 @@ import { bridgeUser } from '@/frontend/session/authBridge'
 import { generateTeacherCode, isInstitutionalEmail, isValidAccount } from '@/shared/roles'
 import { verifyTeacherKey } from '@/frontend/session/teacherKey'
 import { loginAllowed, loginFailed, loginSucceeded } from '@/frontend/session/loginGuard'
+import ThemeToggle from '@/frontend/components/ui/ThemeToggle'
 import { useT } from '@/frontend/hooks/useT'
 import { GradCapIcon, TeacherIcon } from '@/frontend/components/ui/Icons'
 
@@ -413,17 +414,20 @@ export default function AuthCard({ initialMode = 'signin' }: { initialMode?: Mod
 
       <div className="neo-frame w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 overflow-hidden">
         {/* ---------- Panel izquierdo: formulario ---------- */}
-        <div className="relative px-8 py-10 md:px-12 md:py-10 flex flex-col min-h-[520px]">
-          {/* Controles de ventana + selector de idioma */}
+        <div className="neo-auth-left relative px-8 py-10 md:px-12 md:py-10 flex flex-col min-h-[520px]">
+          {/* Controles de ventana + tema + selector de idioma */}
           <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="neo-dot" />
               <span className="neo-dot" />
               <span className="neo-dot neo-dot--bright" />
             </div>
-            <div className="flex gap-1 rounded-lg border border-white/8 bg-white/[0.03] p-0.5 text-[11px] font-semibold">
-              <button type="button" onClick={() => setLang('es')} className={`rounded-md px-2.5 py-1 transition ${lang === 'es' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>ES</button>
-              <button type="button" onClick={() => setLang('en')} className={`rounded-md px-2.5 py-1 transition ${lang === 'en' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>EN</button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <div className="flex gap-1 rounded-lg border border-white/8 bg-white/[0.03] p-0.5 text-[11px] font-semibold">
+                <button type="button" onClick={() => setLang('es')} className={`rounded-md px-2.5 py-1 transition ${lang === 'es' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>ES</button>
+                <button type="button" onClick={() => setLang('en')} className={`rounded-md px-2.5 py-1 transition ${lang === 'en' ? 'bg-accent-violet text-white' : 'text-neutral-500 hover:text-neutral-300'}`}>EN</button>
+              </div>
             </div>
           </div>
 

@@ -4128,3 +4128,107 @@ body {
 .neo-prev-note svg { color: #b89bff; }
 
 @media (prefers-reduced-motion: reduce) { .neo-live-dot, .neo-prev-card { animation: none; } }
+
+/* ===================================================================
+   TEMA CLARO / OSCURO
+   Interruptor + (piloto) modo claro acotado a la pantalla de login.
+   =================================================================== */
+
+/* --- Interruptor --- */
+.neo-theme {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 25px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.45);
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.neo-theme-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(145deg, #c4b3ff, #8b5cf6);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  transition: transform .24s cubic-bezier(0.22,1,0.36,1), background .2s;
+}
+.neo-theme--light { background: rgba(124,92,255,0.16); border-color: rgba(124,92,255,0.3); box-shadow: inset 1px 1px 3px rgba(124,92,255,0.18); }
+.neo-theme--light .neo-theme-knob { transform: translateX(21px); background: linear-gradient(145deg, #ffd88a, #f59e0b); }
+
+/* --- MODO CLARO en el login (piloto, acotado a .neo-scene / .neo-auth-left) --- */
+:root[data-theme="light"] .neo-scene {
+  background: #e9edf5;
+  background-image: radial-gradient(circle at 50% 28%, #f4f7fc 0%, #dde3ef 92%);
+}
+:root[data-theme="light"] .neo-scene .neo-frame {
+  background: #ffffff;
+  border-color: rgba(20,25,40,0.06);
+  box-shadow: 0 24px 60px -24px rgba(40,50,80,0.4), 0 2px 10px rgba(40,50,80,0.08);
+}
+:root[data-theme="light"] .neo-auth-left { background: #ffffff; color: #1f2430; }
+
+/* Textos (vencen a las utilidades de Tailwind por especificidad) */
+:root[data-theme="light"] .neo-auth-left h1,
+:root[data-theme="light"] .neo-auth-left .text-white { color: #1b2030; }
+:root[data-theme="light"] .neo-auth-left .text-neutral-100,
+:root[data-theme="light"] .neo-auth-left .text-neutral-200,
+:root[data-theme="light"] .neo-auth-left .text-neutral-300 { color: #2b3242; }
+:root[data-theme="light"] .neo-auth-left .text-neutral-400,
+:root[data-theme="light"] .neo-auth-left .text-neutral-500,
+:root[data-theme="light"] .neo-auth-left .text-neutral-600,
+:root[data-theme="light"] .neo-auth-left .neo-label { color: #6a7180; }
+
+/* Puntos de ventana */
+:root[data-theme="light"] .neo-auth-left .neo-dot { animation: none; background: #d3d9e4; box-shadow: inset 1px 1px 2px rgba(30,40,70,0.15); }
+:root[data-theme="light"] .neo-auth-left .neo-dot--bright { background: #7c5cff; }
+
+/* Contenedor del selector de idioma */
+:root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: rgba(20,25,40,0.12); }
+:root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] { background: rgba(20,25,40,0.03); }
+
+/* Inputs */
+:root[data-theme="light"] .neo-auth-left .neo-input {
+  background: #f3f6fb;
+  border-color: rgba(20,25,40,0.10);
+  color: #1f2430;
+  box-shadow: inset 1px 1px 2px rgba(40,50,80,0.06);
+}
+:root[data-theme="light"] .neo-auth-left .neo-input::placeholder { color: #98a0ae; }
+:root[data-theme="light"] .neo-auth-left .neo-input:focus {
+  background: #ffffff;
+  border-color: rgba(124,92,255,0.55);
+  box-shadow: 0 0 0 3px rgba(124,92,255,0.14), inset 1px 1px 2px rgba(40,50,80,0.05);
+  transform: none;
+}
+:root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill,
+:root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1f2430;
+  caret-color: #1f2430;
+  -webkit-box-shadow: 0 0 0 1000px #f3f6fb inset;
+}
+
+/* Tarjetas de rol */
+:root[data-theme="light"] .neo-auth-left .neo-rolecard { border-color: rgba(20,25,40,0.10); background: #f6f8fc; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { border-color: rgba(20,25,40,0.2); background: #eef1f8; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active { border-color: rgba(124,92,255,0.5); background: rgba(124,92,255,0.08); box-shadow: 0 10px 24px -16px rgba(124,92,255,0.5); }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard-ic { background: rgba(20,25,40,0.05); color: #4b5162; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(124,92,255,0.18); color: #7c5cff; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard-t { color: #2b3242; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-t { color: #1b2030; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard-d { color: #6a7180; }
+
+/* Chips de requisitos de contraseña */
+:root[data-theme="light"] .neo-auth-left .neo-req { background: rgba(20,25,40,0.04); border-color: rgba(20,25,40,0.08); color: #6a7180; }
+
+/* Divisor y bordes suaves dentro del formulario */
+:root[data-theme="light"] .neo-auth-left .bg-white\/10 { background: rgba(20,25,40,0.1); }
