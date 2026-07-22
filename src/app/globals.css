@@ -5193,3 +5193,25 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .neo-navlink { animation: none; }
 }
+
+/* ===================================================================
+   MENÚ: sin reflujo al cambiar de opción
+   El peso de la letra NO puede cambiar entre estados: al pasar de 600 a
+   700 el texto se ensancha y la opción se reacomoda, lo que se percibe
+   como una vibración o brinco en cada navegación.
+   El estado activo se distingue por color, sombra interior y la píldora.
+   =================================================================== */
+.neo-navlink,
+.neo-navlink--active,
+:root[data-theme="light"] .neo-navlink,
+:root[data-theme="light"] .neo-navlink--active {
+  font-weight: 600;
+}
+
+/* La entrada escalonada solo debe correr al cargar la app, no al navegar.
+   Como la barra lateral no se vuelve a montar, se deja sin animación de
+   entrada para descartar cualquier movimiento residual. */
+.neo-navlink { animation: none; }
+
+/* El deslizamiento del hover no debe empujar el texto del activo */
+.neo-navlink--active { transform: none !important; }
