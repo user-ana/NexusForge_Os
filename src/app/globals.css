@@ -5850,3 +5850,51 @@ body {
 .neo-togglerow { cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease; }
 .neo-togglerow:hover { border-color: rgba(255, 255, 255, 0.12); }
 .neo-togglerow:active { transform: scale(0.99); }
+
+/* ===================================================================
+   AULA — lista de salas en MATE
+   Se quitan el hundido tipo cristal y el desvanecido de los bordes; la
+   sala activa se marca con relleno solido y una barra de acento.
+   =================================================================== */
+
+/* Sin desvanecido en los extremos de la lista (era lo que se veia "vidrio") */
+.neo-aula-grouplist {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Sala inactiva: texto mas legible, sin desplazamiento al pasar el mouse */
+.neo-aula-ch {
+  color: #aeb4be;
+  border-radius: 10px;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.neo-aula-ch:hover {
+  color: #f0f2f5;
+  background: #262a31;
+  transform: none;
+}
+
+/* Sala activa: relleno solido de marca + barra de acento a la izquierda */
+.neo-aula-ch--active {
+  position: relative;
+  color: #ffffff;
+  background: linear-gradient(150deg, #1d7ba6, #15597f);
+  box-shadow: none;
+}
+.neo-aula-ch--active:hover { background: linear-gradient(150deg, #2189b5, #196a92); }
+.neo-aula-ch--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 58%;
+  border-radius: 0 3px 3px 0;
+  background: #7fdcf5;
+}
+.neo-aula-ch--active .neo-aula-hash { color: rgba(255, 255, 255, 0.75); }
+
+/* Encabezado de seccion mas legible */
+.neo-aula-section { color: #8b93a3; }
