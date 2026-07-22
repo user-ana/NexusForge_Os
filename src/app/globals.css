@@ -5637,3 +5637,44 @@ body {
   background: #23262d;
 }
 .neo-studio .neo-btn-ghost:hover { background: #292d35; border-color: rgba(255, 255, 255, 0.12); }
+
+/* ===================================================================
+   ESTUDIO — el relleno de lo seleccionado toma el color del botón
+   Mismo criterio mate (sin bordes encendidos ni sombras de color), pero
+   el azul del relleno pasa de apagado a vivo, como "Comenzar tarea".
+   =================================================================== */
+
+/* Paso activo */
+.neo-step--active {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(150deg, #23a6dd, #1478b8);
+}
+.neo-step--active .neo-step-n { background: rgba(255, 255, 255, 0.22); color: #ffffff; }
+.neo-step--active .neo-step-l { color: #ffffff; }
+
+/* Tipo de actividad seleccionado */
+.neo-typebtn--active {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(150deg, #23a6dd, #1478b8);
+}
+.neo-typebtn--active .neo-typebtn-ic { background: rgba(255, 255, 255, 0.22); color: #ffffff; }
+.neo-typebtn--active span b { color: #ffffff; }
+.neo-typebtn--active span small { color: rgba(255, 255, 255, 0.78); }
+
+/* Entregable seleccionado */
+.neo-deliv--on {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(150deg, #23a6dd, #1478b8);
+}
+.neo-deliv--on .neo-deliv-check { background: rgba(255, 255, 255, 0.24); color: #ffffff; }
+.neo-deliv--on span b { color: #ffffff; }
+.neo-deliv--on span small { color: rgba(255, 255, 255, 0.78); }
+.neo-deliv--on .neo-deliv-min {
+  background: rgba(0, 0, 0, 0.22);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Interruptor encendido, en la misma familia */
+.neo-switch--on { background: rgba(35, 166, 221, 0.35); }
+.neo-switch--on .neo-switch-knob { background: linear-gradient(145deg, #4fd0f0, #1478b8); }
