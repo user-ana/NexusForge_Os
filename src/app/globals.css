@@ -4865,70 +4865,219 @@ body {
 :root[data-theme="light"] .neo-sec-n { color: #6b7486; }
 
 /* ===================================================================
-   MODO CLARO — MENÚ LATERAL: activo en BLANCO
-   El color lo llevan solo el texto y la barrita; el fondo es blanco.
+   MODO CLARO — NEUMORPHISM (SOFT UI)
+   Regla del sistema: NO se usan bordes ni fondos de color para marcar
+   elementos. Todo el relieve nace de DOS sombras opuestas sobre un fondo
+   del MISMO color: oscura abajo-derecha, blanca arriba-izquierda.
+   Por eso la pestaña activa comparte el color del sidebar y se ve tallada.
    =================================================================== */
-:root[data-theme="light"] .neo-navlink--active {
-  background: #ffffff;
-  color: #1287cf;
-  font-weight: 600;
-  box-shadow:
-    inset 2px 2px 6px rgba(33, 42, 59, 0.07),
-    inset -2px -2px 6px rgba(255, 255, 255, 1),
-    2px 3px 8px rgba(33, 42, 59, 0.06);
-}
-/* Barra de acento: centrada y un poco más gruesa */
-:root[data-theme="light"] .neo-navlink--active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 58%;
-  width: 4px;
-  border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, #35c6f0, #1287cf);
+:root[data-theme="light"] {
+  --bg: #e8edf4;
+  --shadow-d: #c5cbd6;
+  --shadow-l: #ffffff;
+  --primary: #1089d3;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --neu: 6px 6px 12px var(--shadow-d), -6px -6px 12px var(--shadow-l);
+  --neu-sm: 4px 4px 8px var(--shadow-d), -4px -4px 8px var(--shadow-l);
+  --neu-in: inset 3px 3px 6px var(--shadow-d), inset -3px -3px 6px var(--shadow-l);
+  --neu-in-sm: inset 2px 2px 4px var(--shadow-d), inset -2px -2px 4px var(--shadow-l);
 }
 
-/* ===================================================================
-   MODO CLARO — MENÚ ACTIVO con relieve neumórfico MATE 3D
-   El blanco ya no queda plano: dos sombras marcan el volumen (luz
-   arriba-izquierda, sombra abajo-derecha), sin brillos ni color de fondo.
-   =================================================================== */
-:root[data-theme="light"] .neo-navlink--active {
-  background: #ffffff;
-  color: #1287cf;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow:
-    -6px -6px 14px rgba(255, 255, 255, 0.95),
-    7px 8px 18px rgba(33, 42, 59, 0.17),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+/* ---------- Superficies base: todas el mismo color ---------- */
+:root[data-theme="light"] .neo-app {
+  background: var(--bg);
+  background-image: none;
+  color: var(--text);
 }
-/* Los inactivos también toman volumen al pasar el mouse (hundido suave) */
-:root[data-theme="light"] .neo-navlink:hover:not(.neo-navlink--active) {
-  background: #e2e8f1;
-  color: #171b25;
-  box-shadow:
-    inset 3px 3px 7px rgba(33, 42, 59, 0.11),
-    inset -3px -3px 7px rgba(255, 255, 255, 0.9);
-}
-/* La barra de acento se mantiene centrada y gruesa, por encima del relieve */
-:root[data-theme="light"] .neo-navlink--active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 58%;
-  width: 4px;
-  border-radius: 0 4px 4px 0;
-  background: linear-gradient(180deg, #35c6f0, #1287cf);
-  z-index: 1;
-}
-
-/* La barra lateral se hunde un poco más para que el relieve resalte */
 :root[data-theme="light"] .neo-sidebar {
-  background: #e6ebf3;
-  box-shadow: inset -7px 0 14px -9px rgba(33, 42, 59, 0.2);
+  position: relative;
+  background: var(--bg);
+  border-right: none;
+  box-shadow: none;
+}
+/* Línea divisoria que se desvanece arriba y abajo (no es un borde) */
+:root[data-theme="light"] .neo-sidebar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 10%;
+  height: 80%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--shadow-d), transparent);
+}
+:root[data-theme="light"] .neo-topbar {
+  background: var(--bg);
+  border-bottom: none;
+  box-shadow: 0 1px 0 rgba(197, 203, 214, 0.6);
+}
+
+/* ---------- Opciones del menú: los 3 estados ---------- */
+/* 1) Inactiva: plana, sin decoración */
+:root[data-theme="light"] .neo-navlink {
+  position: relative;
+  background: transparent;
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  box-shadow: none;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* 2) Hover: se oscurece el texto y se desliza 2px, sin cambiar el fondo */
+:root[data-theme="light"] .neo-navlink:hover:not(.neo-navlink--active) {
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  transform: translateX(2px);
+}
+/* 3) Activa: mismo fondo + sombra interior = tallada en la superficie */
+:root[data-theme="light"] .neo-navlink--active {
+  background: var(--bg);
+  color: var(--primary);
+  font-weight: 700;
+  border: none;
+  box-shadow: var(--neu-in);
+  animation: neo-border-pulse 3s ease infinite, neo-color-breath 4s ease infinite;
+}
+/* Píldora de degradado azul pegada al borde izquierdo */
+:root[data-theme="light"] .neo-navlink--active::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(180deg, #1089d3, #0ea5e9, #06b6d4);
+  background-size: 100% 300%;
+  animation: neo-hero-grad 3s ease infinite;
+  box-shadow: 2px 0 8px rgba(16, 137, 211, 0.25);
+}
+
+@keyframes neo-border-pulse {
+  0%, 100% { box-shadow: inset 3px 3px 6px #c5cbd6, inset -3px -3px 6px #ffffff; }
+  50%      { box-shadow: inset 3px 3px 6px #c5cbd6, inset -3px -3px 6px #ffffff, 0 0 12px rgba(16, 137, 211, 0.12); }
+}
+@keyframes neo-color-breath {
+  0%, 100% { color: #1089d3; }
+  33%      { color: #0ea5e9; }
+  66%      { color: #06b6d4; }
+}
+@keyframes neo-hero-grad {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes neo-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ---------- Logo de la marca ---------- */
+:root[data-theme="light"] .neo-brand-badge {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1089d3, #0ea5e9, #06b6d4, #1089d3);
+  background-size: 300% 300%;
+  color: #ffffff;
+  border: none;
+  box-shadow:
+    4px 4px 10px var(--shadow-d),
+    -3px -3px 8px var(--shadow-l),
+    0 4px 14px rgba(16, 137, 211, 0.2);
+  animation: neo-float 4s ease-in-out infinite, neo-hero-grad 6s ease infinite;
+}
+
+/* ---------- Todo lo demás con el mismo sistema ---------- */
+/* Superficies en relieve (sobresalen) */
+:root[data-theme="light"] .neo-panel,
+:root[data-theme="light"] .neo-sec,
+:root[data-theme="light"] .neo-menu,
+:root[data-theme="light"] .neo-modal,
+:root[data-theme="light"] .neo-notif-panel,
+:root[data-theme="light"] .neo-sel-menu,
+:root[data-theme="light"] .neo-cal,
+:root[data-theme="light"] .neo-taskstat,
+:root[data-theme="light"] .neo-task,
+:root[data-theme="light"] .neo-roster-card,
+:root[data-theme="light"] .neo-tilt,
+:root[data-theme="light"] .neo-toast {
+  background: var(--bg);
+  border: none;
+  box-shadow: var(--neu);
+  color: var(--text);
+}
+:root[data-theme="light"] .neo-tilt:hover,
+:root[data-theme="light"] .neo-panel--hover:hover,
+:root[data-theme="light"] .neo-roster-card:hover {
+  background: var(--bg);
+  box-shadow: var(--neu-in);
+}
+
+/* Elementos hundidos (campos, filas, pozos) */
+:root[data-theme="light"] .neo-input,
+:root[data-theme="light"] .neo-select,
+:root[data-theme="light"] .neo-editor,
+:root[data-theme="light"] .neo-row,
+:root[data-theme="light"] .neo-empty {
+  background: var(--bg);
+  border: none;
+  color: var(--text);
+  box-shadow: var(--neu-in);
+}
+:root[data-theme="light"] .neo-input::placeholder { color: #94a3b8; }
+:root[data-theme="light"] .neo-input:focus {
+  background: var(--bg);
+  border: none;
+  box-shadow: var(--neu-in), 0 0 0 2px rgba(16, 137, 211, 0.28);
+  transform: none;
+}
+
+/* Controles en relieve suave */
+:root[data-theme="light"] .neo-btn-ghost,
+:root[data-theme="light"] .neo-bell,
+:root[data-theme="light"] .neo-coins,
+:root[data-theme="light"] .neo-chip {
+  background: var(--bg);
+  border: none;
+  color: var(--text-muted);
+  box-shadow: var(--neu-sm);
+}
+:root[data-theme="light"] .neo-btn-ghost:hover,
+:root[data-theme="light"] .neo-bell:hover { color: var(--text); box-shadow: var(--neu-in-sm); }
+:root[data-theme="light"] .neo-chip--active {
+  color: var(--primary);
+  box-shadow: var(--neu-in-sm);
+  background: var(--bg);
+}
+:root[data-theme="light"] .neo-profile-chip:hover { background: transparent; box-shadow: var(--neu-in-sm); }
+
+/* Botón principal: única pieza con color de fondo (es la acción destacada) */
+:root[data-theme="light"] .neo-btn {
+  background: linear-gradient(135deg, #1089d3, #0ea5e9, #06b6d4, #1089d3);
+  background-size: 300% 300%;
+  border: none;
+  color: #ffffff;
+  box-shadow: 4px 4px 10px var(--shadow-d), -3px -3px 8px var(--shadow-l), 0 4px 14px rgba(16, 137, 211, 0.2);
+  animation: neo-hero-grad 6s ease infinite;
+}
+:root[data-theme="light"] .neo-btn:hover { box-shadow: var(--neu-in-sm), 0 4px 14px rgba(16, 137, 211, 0.24); }
+
+/* Texto */
+:root[data-theme="light"] .neo-app .text-white,
+:root[data-theme="light"] .neo-app .text-neutral-100,
+:root[data-theme="light"] .neo-app .text-neutral-200,
+:root[data-theme="light"] .neo-app .text-neutral-300 { color: var(--text); }
+:root[data-theme="light"] .neo-app .text-neutral-400,
+:root[data-theme="light"] .neo-app .text-neutral-500,
+:root[data-theme="light"] .neo-app .text-neutral-600,
+:root[data-theme="light"] .neo-label { color: var(--text-muted); }
+:root[data-theme="light"] .neo-app .text-accent-violet,
+:root[data-theme="light"] .neo-app .text-accent-violetBright { color: var(--primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="light"] .neo-navlink--active,
+  :root[data-theme="light"] .neo-navlink--active::before,
+  :root[data-theme="light"] .neo-brand-badge,
+  :root[data-theme="light"] .neo-btn { animation: none; }
 }
