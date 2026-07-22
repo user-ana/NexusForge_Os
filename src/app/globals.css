@@ -897,19 +897,25 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-/* El contenido entra escalonado, no todo de golpe */
+/* El contenido aparece escalonado SIN moverse: cualquier desplazamiento
+   vertical se percibe como que la página "se abre" y da sensación de brinco. */
 .neo-page main > * {
-  animation: neo-page-item 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: neo-page-item 0.3s ease both;
 }
-.neo-page main > *:nth-child(1) { animation-delay: 0.03s; }
-.neo-page main > *:nth-child(2) { animation-delay: 0.07s; }
-.neo-page main > *:nth-child(3) { animation-delay: 0.11s; }
-.neo-page main > *:nth-child(4) { animation-delay: 0.15s; }
-.neo-page main > *:nth-child(5) { animation-delay: 0.19s; }
-.neo-page main > *:nth-child(n + 6) { animation-delay: 0.22s; }
+.neo-page main > *:nth-child(1) { animation-delay: 0.02s; }
+.neo-page main > *:nth-child(2) { animation-delay: 0.06s; }
+.neo-page main > *:nth-child(3) { animation-delay: 0.1s; }
+.neo-page main > *:nth-child(4) { animation-delay: 0.14s; }
+.neo-page main > *:nth-child(n + 5) { animation-delay: 0.16s; }
 @keyframes neo-page-item {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Se reserva siempre el espacio de la barra de desplazamiento: si no, al
+   pasar de una página sin scroll a una con scroll, todo se corre y salta. */
+.neo-page main,
+.neo-app main {
+  scrollbar-gutter: stable;
 }
 /* La cabecera acompaña con un fundido corto */
 .neo-page .neo-topbar {
