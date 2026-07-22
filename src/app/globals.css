@@ -3992,3 +3992,118 @@ body {
   animation: neo-pdfscan 1.2s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .neo-ai-writing-bar { animation: none; } }
+
+/* ===================================================================
+   ESTUDIO DE PUBLICACIÓN (constructor + vista previa del estudiante)
+   Colores propios (violeta mate), sin neón.
+   =================================================================== */
+.neo-studio { flex: 1; overflow-y: auto; padding: 28px 32px 60px; }
+
+.neo-studio-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.neo-studio-back { font-size: 12px; color: #9a8fd0; }
+.neo-studio-back:hover { color: #cbb6ff; }
+.neo-studio-kicker { margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #6f6a86; }
+.neo-studio-title { font-size: 28px; font-weight: 800; color: #fff; line-height: 1.1; margin-top: 2px; }
+.neo-studio-title span { background: linear-gradient(120deg, #c4b3ff, #8b5cf6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.neo-studio-sub { margin-top: 6px; font-size: 13px; color: #8b8f9a; max-width: 34rem; }
+
+/* Stepper */
+.neo-stepper { display: flex; gap: 10px; margin: 22px 0; flex-wrap: wrap; }
+.neo-step { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 150px; padding: 12px 14px; border-radius: 13px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
+.neo-step-n { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #8b8f9a; background: rgba(255,255,255,0.05); }
+.neo-step-l { font-size: 13px; font-weight: 600; color: #9ca3af; }
+.neo-step--active { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); }
+.neo-step--active .neo-step-n { color: #fff; background: linear-gradient(145deg, #b89bff, #8b5cf6); }
+.neo-step--active .neo-step-l { color: #eceef2; }
+
+/* Rejilla: constructor + preview pegajoso */
+.neo-studio-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
+@media (min-width: 1100px) { .neo-studio-grid { grid-template-columns: 1.35fr 1fr; } }
+.neo-studio-left { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.neo-studio-right { min-width: 0; }
+@media (min-width: 1100px) { .neo-studio-right { position: sticky; top: 12px; align-self: start; } }
+
+.neo-sec { padding: 22px; border-radius: 18px; background: linear-gradient(155deg, #24262b, #1c1e22); box-shadow: -3px -3px 12px rgba(255,255,255,0.02), 5px 6px 18px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.04); }
+.neo-sec-head { display: flex; flex-direction: column; margin-bottom: 16px; }
+.neo-sec-n { font-size: 10.5px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #6f6a86; }
+.neo-sec-head h2 { font-size: 17px; font-weight: 700; color: #fff; margin-top: 2px; }
+
+/* Selector de tipo */
+.neo-typegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.neo-typebtn { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; text-align: left; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.06); transition: border-color .16s, background .16s, transform .12s; }
+.neo-typebtn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(139,92,246,0.35); }
+.neo-typebtn span b { display: block; font-size: 14px; color: #fff; }
+.neo-typebtn span small { font-size: 11.5px; color: #8b8f9a; }
+.neo-typebtn-ic { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; color: #cbb6ff; background: rgba(139,92,246,0.14); box-shadow: inset 1px 1px 3px rgba(255,255,255,0.08), inset -2px -2px 5px rgba(0,0,0,0.3); }
+.neo-typebtn--active { border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.09); }
+.neo-typebtn--active .neo-typebtn-ic { color: #fff; background: linear-gradient(145deg, #b89bff, #8b5cf6); }
+.neo-typebtn--soon { opacity: 0.55; cursor: not-allowed; }
+
+/* Editor de instrucciones */
+.neo-editor { margin-top: 4px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.07); background: #202226; }
+.neo-editor-bar { display: flex; gap: 4px; padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.neo-editor-bar button { padding: 3px 9px; border-radius: 7px; font-size: 12px; color: #9ca3af; transition: background .15s, color .15s; }
+.neo-editor-bar button:hover { background: rgba(255,255,255,0.06); color: #eceef2; }
+.neo-editor-area { width: 100%; resize: vertical; padding: 12px 14px; background: transparent; color: #e6e8ec; font-size: 13.5px; line-height: 1.5; outline: none; border: none; }
+
+/* Toggle rows */
+.neo-togglerow { display: flex; align-items: center; gap: 13px; width: 100%; margin-top: 12px; padding: 13px 14px; border-radius: 13px; text-align: left; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); transition: background .15s; }
+.neo-togglerow:hover { background: rgba(255,255,255,0.035); }
+.neo-togglerow-ic { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; color: #b89bff; background: rgba(139,92,246,0.1); }
+.neo-togglerow-txt { flex: 1; min-width: 0; }
+.neo-togglerow-txt b { display: block; font-size: 13px; font-weight: 600; color: #eceef2; }
+.neo-togglerow-txt small { font-size: 11.5px; color: #8b8f9a; }
+.neo-switch { flex-shrink: 0; width: 42px; height: 24px; border-radius: 999px; background: rgba(0,0,0,0.4); box-shadow: inset 1px 1px 3px rgba(0,0,0,0.5); position: relative; transition: background .2s; }
+.neo-switch-knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #7a8090; transition: transform .2s, background .2s; }
+.neo-switch--on { background: rgba(139,92,246,0.35); }
+.neo-switch--on .neo-switch-knob { transform: translateX(18px); background: linear-gradient(145deg, #c4b3ff, #8b5cf6); }
+
+/* ¿Qué debe entregar? */
+.neo-delivgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 560px) { .neo-delivgrid { grid-template-columns: 1fr; } }
+.neo-deliv { position: relative; display: flex; align-items: center; gap: 11px; padding: 12px 13px; border-radius: 12px; text-align: left; background: rgba(255,255,255,0.02); border: 1.5px solid rgba(255,255,255,0.06); transition: border-color .15s, background .15s; }
+.neo-deliv:hover { border-color: rgba(139,92,246,0.3); }
+.neo-deliv span b { display: block; font-size: 13px; color: #e6e8ec; }
+.neo-deliv span small { font-size: 11px; color: #8b8f9a; }
+.neo-deliv-check { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 7px; color: #fff; background: rgba(255,255,255,0.05); }
+.neo-deliv--on { border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.09); }
+.neo-deliv--on .neo-deliv-check { background: linear-gradient(145deg, #b89bff, #8b5cf6); }
+.neo-deliv-min { width: 52px; margin-left: auto; padding: 4px 6px; border-radius: 7px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); color: #cbb6ff; font-size: 12px; text-align: center; }
+
+/* ── Vista previa del estudiante ── */
+.neo-prev-flag { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #7fcfa6; }
+.neo-live-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgba(52,211,153,0.5); animation: neo-live 2s ease-out infinite; }
+@keyframes neo-live { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,0.45); } 100% { box-shadow: 0 0 0 8px rgba(52,211,153,0); } }
+
+.neo-prev-card { padding: 22px; border-radius: 20px; background: linear-gradient(160deg, #2a2740, #201f2b 55%, #1b1d22); border: 1px solid rgba(139,92,246,0.16); box-shadow: 6px 10px 30px -10px rgba(0,0,0,0.7); animation: neo-prev-pop .35s ease; }
+@keyframes neo-prev-pop { from { opacity: .6; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.neo-prev-top { display: flex; align-items: center; justify-content: space-between; }
+.neo-prev-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 9px; font-size: 11px; font-weight: 700; color: #cbb6ff; background: rgba(139,92,246,0.14); }
+.neo-prev-new { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: #6ee7b7; background: rgba(52,211,153,0.14); padding: 4px 8px; border-radius: 7px; }
+.neo-prev-class { margin-top: 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8b8f9a; }
+.neo-prev-title { font-size: 21px; font-weight: 800; color: #fff; line-height: 1.15; margin-top: 4px; }
+.neo-prev-instr { margin-top: 8px; font-size: 13px; line-height: 1.5; color: #b6bac4; }
+.neo-prev-author { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 12px; border-radius: 13px; background: rgba(0,0,0,0.22); }
+.neo-prev-av { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; font-size: 12px; font-weight: 800; color: #fff; background: linear-gradient(145deg, #6d5ea8, #4b4270); }
+.neo-prev-author div { flex: 1; min-width: 0; }
+.neo-prev-author small { display: block; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: #7a8090; }
+.neo-prev-author b { font-size: 13px; color: #e6e8ec; }
+.neo-prev-ago { font-size: 11px; color: #7a8090; }
+.neo-prev-facts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+.neo-prev-facts > div { padding: 11px; border-radius: 11px; background: rgba(0,0,0,0.18); }
+.neo-prev-facts small { display: block; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: #7a8090; }
+.neo-prev-facts b { font-size: 12.5px; color: #e6e8ec; }
+.neo-prev-file { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 11px 13px; border-radius: 11px; background: rgba(0,0,0,0.22); color: #b89bff; }
+.neo-prev-file span { font-size: 12.5px; color: #d6d9df; }
+.neo-prev-file-cta { margin-left: auto; font-size: 11px; color: #cbb6ff; }
+.neo-prev-delivs { margin-top: 14px; }
+.neo-prev-delivs > small { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: #7a8090; }
+.neo-prev-delivs-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.neo-prev-chip { font-size: 11px; color: #cbb6ff; background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.18); padding: 4px 9px; border-radius: 999px; }
+.neo-prev-status { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #d6a15a; }
+.neo-dot-amber { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
+.neo-prev-start { width: 100%; margin-top: 12px; padding: 13px; border-radius: 13px; font-size: 14px; font-weight: 700; color: #fff; background: linear-gradient(145deg, #b89bff, #8b5cf6); opacity: 0.85; cursor: default; box-shadow: inset 0 1px 1px rgba(255,255,255,0.25); }
+.neo-prev-note { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11.5px; color: #7a8090; }
+.neo-prev-note svg { color: #b89bff; }
+
+@media (prefers-reduced-motion: reduce) { .neo-live-dot, .neo-prev-card { animation: none; } }

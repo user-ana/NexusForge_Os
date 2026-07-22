@@ -1,0 +1,452 @@
+'use client'
+
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { getSession, displayName } from '@/frontend/session/session'
+import { getClasses, loadClasses, type Klass } from '@/backend/services/classes'
+import {
+  createClassTask,
+  uploadTaskPdf,
+  extractPdfText,
+  summarizeText,
+  type Deliverable,
+  type DeliverableKind,
+} from '@/backend/services/classTasks'
+import { PARCIAL_OPTIONS } from '@/shared/parciales'
+
+/* Tipos de evidencia que puede pedir el catedrático (definen el progreso real). */
+const DELIVERABLES: { kind: DeliverableKind; label: string; hint: string }[] = [
+  { kind: 'files', label: 'Archivos', hint: 'Documentos, código o entregables' },
+  { kind: 'screenshot', label: 'Capturas o video', hint: 'Evidencia visual del resultado' },
+  { kind: 'github', label: 'Enlace de GitHub', hint: 'Repositorio del trabajo' },
+  { kind: 'commits', label: 'Commits mínimos', hint: 'Cantidad mínima de aportes' },
+  { kind: 'per_requirement', label: 'Evidencia por requisito', hint: 'Prueba de cada punto' },
+  { kind: 'text', label: 'Texto o reflexión', hint: 'Explicación escrita' },
+]
+
+const DRAFT_KEY = 'nf_activity_draft'
+
+export default function ActivityStudioPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-neutral-500">Cargando estudio…</div>}>
+      <Studio />
+    </Suspense>
+  )
+}
+
+function Studio() {
+  const router = useRouter()
+  const search = useSearchParams()
+  const [classes, setClasses] = useState<Klass[]>([])
+
+  // ---- Estado de la actividad ----
+  const [classId, setClassId] = useState('')
+  const [title, setTitle] = useState('')
+  const [instructions, setInstructions] = useState('')
+  const [parcial, setParcial] = useState('')
+  const [due, setDue] = useState('')
+  const [points, setPoints] = useState(20)
+  const [reminders, setReminders] = useState(true)
+  const [showOnPublish, setShowOnPublish] = useState(true)
+  const [group, setGroup] = useState(false)
+  const [delivs, setDelivs] = useState<Deliverable[]>([{ kind: 'files' }])
+
+  // ---- PDF + IA ----
+  type PdfStatus = 'idle' | 'uploading' | 'reading' | 'done' | 'error'
+  const [pdfUrl, setPdfUrl] = useState('')
+  const [pdfName, setPdfName] = useState('')
+  const [pdfStatus, setPdfStatus] = useState<PdfStatus>('idle')
+  const [drag, setDrag] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const instrRef = useRef<HTMLTextAreaElement>(null)
+
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [savedNote, setSavedNote] = useState('')
+
+  // Cargar clases del catedrático + preseleccionar la del query (?class=)
+  useEffect(() => {
+    loadClasses().then(() => {
+      const me = getSession()?.id
+      const mine = getClasses().filter((c) => c.teacher === me)
+      setClasses(mine)
+      const q = search.get('class')
+      setClassId((prev) => prev || (q && mine.some((c) => c.id === q) ? q : mine[0]?.id ?? ''))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Restaurar borrador local (si existe)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw)
+      if (d.title) setTitle(d.title)
+      if (d.instructions) setInstructions(d.instructions)
+      if (d.parcial) setParcial(d.parcial)
+      if (d.due) setDue(d.due)
+      if (typeof d.points === 'number') setPoints(d.points)
+      if (typeof d.group === 'boolean') setGroup(d.group)
+      if (Array.isArray(d.delivs)) setDelivs(d.delivs)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const currentClass = useMemo(() => classes.find((c) => c.id === classId), [classes, classId])
+  const teacherName = displayName(getSession())
+
+  function toggleDeliv(kind: DeliverableKind) {
+    setDelivs((prev) =>
+      prev.some((d) => d.kind === kind)
+        ? prev.filter((d) => d.kind !== kind)
+        : [...prev, kind === 'commits' ? { kind, min: 3 } : { kind }],
+    )
+  }
+  function setCommitsMin(min: number) {
+    setDelivs((prev) => prev.map((d) => (d.kind === 'commits' ? { ...d, min } : d)))
+  }
+  const hasDeliv = (k: DeliverableKind) => delivs.some((d) => d.kind === k)
+
+  // Inserta markdown simple alrededor de la selección de instrucciones
+  function wrap(before: string, after = before) {
+    const el = instrRef.current
+    if (!el) return
+    const s = el.selectionStart, e = el.selectionEnd
+    const val = instructions
+    const sel = val.slice(s, e) || 'texto'
+    const next = val.slice(0, s) + before + sel + after + val.slice(e)
+    setInstructions(next)
+    requestAnimationFrame(() => { el.focus(); el.selectionStart = s + before.length; el.selectionEnd = s + before.length + sel.length })
+  }
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErr('El archivo debe ser un PDF.'); return
+    }
+    if (!classId) { setErr('Elige primero la clase.'); return }
+    setErr(''); setPdfName(file.name); setPdfStatus('uploading')
+    const [url, text] = await Promise.all([uploadTaskPdf(classId, file), extractPdfText(file).catch(() => '')])
+    if (!url) { setPdfStatus('error'); setErr('No se pudo subir el PDF.'); return }
+    setPdfUrl(url)
+    if (text && text.length >= 20) {
+      setPdfStatus('reading')
+      const r = await summarizeText(text)
+      if (r && r.summary) setInstructions((prev) => (prev.trim() ? prev : r.summary))
+    }
+    setPdfStatus('done')
+  }
+  function removePdf() {
+    setPdfUrl(''); setPdfName(''); setPdfStatus('idle')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, instructions, parcial, due, points, group, delivs }))
+      setSavedNote('Borrador guardado')
+      setTimeout(() => setSavedNote(''), 1800)
+    } catch { /* ignore */ }
+  }
+
+  async function publish() {
+    if (!classId) return setErr('Elige la clase destinataria.')
+    if (!title.trim()) return setErr('Ponle un título a la actividad.')
+    setErr(''); setBusy(true)
+    const ok = await createClassTask({
+      classId,
+      title,
+      description: instructions,
+      parcial,
+      pdfUrl,
+      dueDate: due ? new Date(due).getTime() : null,
+      points,
+      deliverables: delivs,
+      reminders,
+      showOnPublish,
+      group,
+    })
+    setBusy(false)
+    if (!ok) return setErr('No se pudo publicar. Intenta de nuevo.')
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+    router.push(`/dashboard/classes/${classId}`)
+  }
+
+  const busyPdf = pdfStatus === 'uploading' || pdfStatus === 'reading'
+
+  return (
+    <main className="neo-studio">
+      {/* Barra superior */}
+      <div className="neo-studio-top">
+        <div className="min-w-0">
+          <Link href={currentClass ? `/dashboard/classes/${classId}` : '/dashboard/classes'} className="neo-studio-back">← Volver a la clase</Link>
+          <p className="neo-studio-kicker">Estudio de publicación</p>
+          <h1 className="neo-studio-title">Crea una actividad <span>clara y visual</span></h1>
+          <p className="neo-studio-sub">Configura la actividad y observa en tiempo real cómo la recibirá el estudiante.</p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {savedNote && <span className="text-xs text-emerald-400">{savedNote}</span>}
+          <button onClick={saveDraft} className="neo-btn-ghost text-sm">Guardar borrador</button>
+          <button onClick={publish} disabled={busy || busyPdf} className="neo-btn text-sm">
+            {busy ? 'Publicando…' : 'Publicar y notificar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Stepper (guía visual) */}
+      <div className="neo-stepper">
+        {['Contenido', 'Configuración', 'Destinatarios', 'Publicación'].map((s, i) => (
+          <div key={s} className={`neo-step ${i === 0 ? 'neo-step--active' : ''}`}>
+            <span className="neo-step-n">{i + 1}</span>
+            <span className="neo-step-l">{s}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="neo-studio-grid">
+        {/* ── Constructor ── */}
+        <div className="neo-studio-left">
+          {/* PASO 1 · Contenido */}
+          <section className="neo-sec">
+            <div className="neo-sec-head"><span className="neo-sec-n">Paso 01</span><h2>¿Qué deseas publicar?</h2></div>
+
+            <div className="neo-typegrid">
+              <button className="neo-typebtn neo-typebtn--active">
+                <span className="neo-typebtn-ic"><CheckIc /></span>
+                <span><b>Tarea</b><small>Actividad puntual o práctica</small></span>
+              </button>
+              <button className="neo-typebtn neo-typebtn--soon" disabled title="Próximamente">
+                <span className="neo-typebtn-ic"><BranchIc /></span>
+                <span><b>Proyecto</b><small>Trabajo por fases y requisitos · pronto</small></span>
+              </button>
+            </div>
+
+            <label className="neo-label mt-4">Título</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="neo-input w-full" placeholder="Ej. Configurar servidor web seguro" />
+
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="neo-label">Clase</label>
+                <select value={classId} onChange={(e) => setClassId(e.target.value)} className="neo-input w-full">
+                  {classes.length === 0 && <option value="">No tienes clases</option>}
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.section ? `${c.name} · ${c.section}` : c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="neo-label">Destinatarios</label>
+                <div className="neo-input flex w-full items-center justify-between">
+                  <span>Toda la clase</span>
+                  <span className="text-xs text-neutral-500">{currentClass ? `${currentClass.roster.length} estudiantes` : '—'}</span>
+                </div>
+              </div>
+            </div>
+
+            <label className="neo-label mt-4">Instrucciones</label>
+            <div className="neo-editor">
+              <div className="neo-editor-bar">
+                <button onClick={() => wrap('**')} title="Negrita"><b>B</b></button>
+                <button onClick={() => wrap('*')} title="Cursiva"><i>I</i></button>
+                <button onClick={() => wrap('\n- ', '')} title="Lista">• Lista</button>
+                <button onClick={() => wrap('[', '](url)')} title="Enlace">Enlace</button>
+                <button onClick={() => wrap('`')} title="Código">Código</button>
+              </div>
+              <textarea ref={instrRef} value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={5} className="neo-editor-area" placeholder="Explica qué deben hacer, cómo y con qué evidencia." />
+            </div>
+
+            {/* PDF con lectura de IA */}
+            <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+            {pdfStatus === 'idle' ? (
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files?.[0]) }}
+                className={`neo-pdfdrop mt-4 ${drag ? 'neo-pdfdrop--over' : ''}`}
+              >
+                <FileIc />
+                <div>
+                  <p className="neo-pdfdrop-title">Arrastra archivos o selecciónalos</p>
+                  <p className="neo-pdfdrop-sub">PDF, guía o plantilla · la IA lee el PDF y redacta las instrucciones</p>
+                </div>
+              </div>
+            ) : (
+              <div className={`neo-pdffile mt-4 ${busyPdf ? 'neo-pdffile--busy' : ''}`}>
+                <FileIc />
+                <div className="neo-pdffile-info">
+                  <span className="neo-pdffile-name">{pdfName}</span>
+                  <span className="neo-pdffile-state">
+                    {pdfStatus === 'uploading' && 'Subiendo…'}
+                    {pdfStatus === 'reading' && 'La IA está leyendo el PDF…'}
+                    {pdfStatus === 'done' && 'Documento listo'}
+                    {pdfStatus === 'error' && 'No se pudo procesar'}
+                  </span>
+                </div>
+                {busyPdf ? <span className="neo-pdfspin" /> : <button onClick={removePdf} className="neo-pdffile-x">✕</button>}
+              </div>
+            )}
+          </section>
+
+          {/* PASO 2 · Configuración */}
+          <section className="neo-sec">
+            <div className="neo-sec-head"><span className="neo-sec-n">Paso 02</span><h2>Configuración de entrega</h2></div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="neo-label">Fecha de vencimiento</label>
+                <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="neo-input w-full" />
+              </div>
+              <div>
+                <label className="neo-label">Puntaje</label>
+                <div className="neo-input flex items-center gap-2">
+                  <input type="number" min={0} max={100} value={points} onChange={(e) => setPoints(Math.max(0, Math.min(100, Number(e.target.value) || 0)))} className="w-full bg-transparent outline-none" />
+                  <span className="text-xs text-neutral-500">PTS</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="neo-label">Parcial (opcional)</label>
+              <select value={parcial} onChange={(e) => setParcial(e.target.value)} className="neo-input w-full sm:w-1/2">
+                {PARCIAL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            <ToggleRow icon={<BellIc />} title="Recordatorios automáticos" sub="Notificar 72 h, 24 h y 6 h antes del vencimiento" on={reminders} onToggle={() => setReminders((v) => !v)} />
+            <ToggleRow icon={<EyeIc />} title="Mostrar al publicar" sub="La actividad aparecerá de inmediato en «Mis tareas»" on={showOnPublish} onToggle={() => setShowOnPublish((v) => !v)} />
+          </section>
+
+          {/* PASO 3 · ¿Qué debe entregar? */}
+          <section className="neo-sec">
+            <div className="neo-sec-head"><span className="neo-sec-n">Paso 03</span><h2>¿Qué debe entregar el estudiante?</h2></div>
+            <p className="mb-3 text-sm text-neutral-500">Con esto la plataforma calcula el progreso real, no solo «entregado sí/no».</p>
+            <div className="neo-delivgrid">
+              {DELIVERABLES.map((d) => {
+                const on = hasDeliv(d.kind)
+                return (
+                  <button key={d.kind} onClick={() => toggleDeliv(d.kind)} className={`neo-deliv ${on ? 'neo-deliv--on' : ''}`}>
+                    <span className="neo-deliv-check">{on ? <CheckIc /> : null}</span>
+                    <span><b>{d.label}</b><small>{d.hint}</small></span>
+                    {d.kind === 'commits' && on && (
+                      <input
+                        type="number" min={1} value={delivs.find((x) => x.kind === 'commits')?.min ?? 3}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setCommitsMin(Math.max(1, Number(e.target.value) || 1))}
+                        className="neo-deliv-min"
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <ToggleRow icon={<UsersIc />} title="Entrega grupal" sub="La entrega es por grupo, no individual" on={group} onToggle={() => setGroup((v) => !v)} />
+          </section>
+
+          {err && <p className="text-sm text-amber-400">{err}</p>}
+        </div>
+
+        {/* ── Vista previa del estudiante (en vivo) ── */}
+        <div className="neo-studio-right">
+          <div className="neo-prev-flag"><span className="neo-live-dot" /> Vista del estudiante</div>
+          <StudentPreview
+            title={title}
+            instructions={instructions}
+            className={currentClass ? (currentClass.section ? `${currentClass.name} · ${currentClass.section}` : currentClass.name) : 'Tu clase'}
+            teacherName={teacherName}
+            due={due}
+            points={points}
+            group={group}
+            pdfName={pdfName}
+            delivs={delivs}
+          />
+          <p className="neo-prev-note"><Spark /> Los cambios del formulario se reflejan aquí antes de publicar.</p>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+/* ---------- Vista previa ---------- */
+function StudentPreview({
+  title, instructions, className, teacherName, due, points, group, pdfName, delivs,
+}: {
+  title: string; instructions: string; className: string; teacherName: string
+  due: string; points: number; group: boolean; pdfName: string; delivs: Deliverable[]
+}) {
+  const dueTxt = due
+    ? new Date(due).toLocaleDateString('es', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
+    : 'Sin fecha límite'
+  const initials = teacherName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '·'
+  return (
+    <article className="neo-prev-card">
+      <div className="neo-prev-top">
+        <span className="neo-prev-badge">{group ? <UsersIc /> : <CheckIc />} {group ? 'Tarea grupal' : 'Tarea individual'}</span>
+        <span className="neo-prev-new">NUEVA</span>
+      </div>
+      <p className="neo-prev-class">{className}</p>
+      <h3 className="neo-prev-title">{title || 'Título de la actividad'}</h3>
+      <p className="neo-prev-instr">{instructions ? stripMd(instructions) : 'Las instrucciones aparecerán aquí conforme las escribas.'}</p>
+
+      <div className="neo-prev-author">
+        <span className="neo-prev-av">{initials}</span>
+        <div><small>Publicado por</small><b>{teacherName || 'Catedrático'}</b></div>
+        <span className="neo-prev-ago">Ahora</span>
+      </div>
+
+      <div className="neo-prev-facts">
+        <div><small>Vence</small><b>{dueTxt}</b></div>
+        <div><small>Valor</small><b>{points} puntos</b></div>
+        <div><small>Asignada a</small><b>{group ? 'Grupos' : 'Toda la clase'}</b></div>
+      </div>
+
+      {pdfName && (
+        <div className="neo-prev-file"><FileIc /><span>{pdfName}</span><span className="neo-prev-file-cta">Ver guía</span></div>
+      )}
+
+      {delivs.length > 0 && (
+        <div className="neo-prev-delivs">
+          <small>Debes entregar</small>
+          <div className="neo-prev-delivs-row">
+            {delivs.map((d) => <span key={d.kind} className="neo-prev-chip">{delivLabel(d)}</span>)}
+          </div>
+        </div>
+      )}
+
+      <div className="neo-prev-status"><span className="neo-dot-amber" /> Aún no iniciada</div>
+      <button className="neo-prev-start" disabled>Comenzar tarea →</button>
+    </article>
+  )
+}
+
+function ToggleRow({ icon, title, sub, on, onToggle }: { icon: React.ReactNode; title: string; sub: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} className="neo-togglerow">
+      <span className="neo-togglerow-ic">{icon}</span>
+      <span className="neo-togglerow-txt"><b>{title}</b><small>{sub}</small></span>
+      <span className={`neo-switch ${on ? 'neo-switch--on' : ''}`}><span className="neo-switch-knob" /></span>
+    </button>
+  )
+}
+
+function delivLabel(d: Deliverable): string {
+  const m: Record<DeliverableKind, string> = {
+    files: 'Archivos', screenshot: 'Capturas/video', github: 'GitHub',
+    commits: `${d.min ?? 3}+ commits`, per_requirement: 'Evidencia por requisito', text: 'Texto',
+  }
+  return m[d.kind]
+}
+/** Quita marcas markdown para el texto de la vista previa. */
+function stripMd(s: string): string {
+  return s.replace(/[*_`>#-]/g, '').replace(/\[(.*?)\]\(.*?\)/g, '$1').replace(/\s+/g, ' ').trim().slice(0, 220)
+}
+
+/* ---------- Iconos (SVG, sin emojis) ---------- */
+function CheckIc() { return (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>) }
+function BranchIc() { return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="2.4" /><circle cx="6" cy="18" r="2.4" /><circle cx="18" cy="8" r="2.4" /><path d="M6 8.4v7.2M8.2 7.2A6 6 0 0 0 15.6 9" /></svg>) }
+function FileIc() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>) }
+function BellIc() { return (<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>) }
+function EyeIc() { return (<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>) }
+function UsersIc() { return (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>) }
+function Spark() { return (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5 13.9 11.4 12 16l-1.9-4.6L5.5 9.5 10.1 7.6z" /></svg>) }

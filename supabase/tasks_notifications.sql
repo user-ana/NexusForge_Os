@@ -38,6 +38,13 @@ create index if not exists idx_ct_class on public.class_tasks(class_id, created_
 alter table public.class_tasks replica identity full;
 -- PDF del enunciado (subido a Storage) + resumen que la IA extrae de él
 alter table public.class_tasks add column if not exists pdf_url text default '';
+-- Estudio de publicación: puntaje, entregables esperados, recordatorios, alcance
+alter table public.class_tasks add column if not exists points int default 0;
+alter table public.class_tasks add column if not exists deliverables jsonb default '[]'::jsonb;
+alter table public.class_tasks add column if not exists reminders boolean default true;
+alter table public.class_tasks add column if not exists audience text default 'all';       -- 'all' (toda la clase) | (grupos, futuro)
+alter table public.class_tasks add column if not exists show_on_publish boolean default true;
+alter table public.class_tasks add column if not exists group_submission boolean default false; -- entrega grupal
 
 -- Entrega/estado de cada estudiante por tarea.
 -- La AUSENCIA de fila = tarea pendiente. La presencia de fila = entregada.

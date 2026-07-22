@@ -9,6 +9,11 @@
 import { supabase } from '@/backend/supabase'
 import { getSession } from '@/frontend/session/session'
 
+/** Tipos de evidencia que el estudiante debe entregar (define el progreso real). */
+export type DeliverableKind =
+  | 'files' | 'screenshot' | 'github' | 'commits' | 'per_requirement' | 'text'
+export type Deliverable = { kind: DeliverableKind; min?: number } // min: p. ej. commits mínimos
+
 export type ClassTask = {
   id: string
   classId: string
@@ -18,6 +23,10 @@ export type ClassTask = {
   linkUrl: string
   pdfUrl: string
   dueDate: number | null // epoch ms, o null si no tiene fecha límite
+  points: number
+  deliverables: Deliverable[]
+  audience: string // 'all'
+  group: boolean // entrega grupal
   createdByName: string
   createdAt: number
 }
@@ -56,6 +65,10 @@ function mapTask(row: any): ClassTask {
     linkUrl: row.link_url ?? '',
     pdfUrl: row.pdf_url ?? '',
     dueDate: row.due_date ? new Date(row.due_date).getTime() : null,
+    points: row.points ?? 0,
+    deliverables: Array.isArray(row.deliverables) ? (row.deliverables as Deliverable[]) : [],
+    audience: row.audience ?? 'all',
+    group: !!row.group_submission,
     createdByName: row.created_by_name ?? '',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
   }
@@ -131,6 +144,11 @@ export async function createClassTask(input: {
   linkUrl?: string
   pdfUrl?: string
   dueDate?: number | null // epoch ms
+  points?: number
+  deliverables?: Deliverable[]
+  reminders?: boolean
+  showOnPublish?: boolean
+  group?: boolean
 }): Promise<boolean> {
   if (!supabase) return false
   const { data, error } = await supabase.rpc('create_class_task', {
@@ -145,9 +163,18 @@ export async function createClassTask(input: {
     console.error('createClassTask', error)
     return false
   }
-  // La función devuelve el id de la tarea nueva; si hay PDF, lo guardamos.
-  if (input.pdfUrl && typeof data === 'string') {
-    await supabase.from('class_tasks').update({ pdf_url: input.pdfUrl }).eq('id', data)
+  // La función devuelve el id de la tarea nueva; guardamos los extras del Estudio.
+  if (typeof data === 'string') {
+    const extra: Record<string, unknown> = {}
+    if (input.pdfUrl) extra.pdf_url = input.pdfUrl
+    if (input.points != null) extra.points = input.points
+    if (input.deliverables) extra.deliverables = input.deliverables
+    if (input.reminders != null) extra.reminders = input.reminders
+    if (input.showOnPublish != null) extra.show_on_publish = input.showOnPublish
+    if (input.group != null) extra.group_submission = input.group
+    if (Object.keys(extra).length) {
+      await supabase.from('class_tasks').update(extra).eq('id', data)
+    }
   }
   dispatch()
   return true
