@@ -4175,7 +4175,7 @@ body {
   transition: transform .24s cubic-bezier(0.22,1,0.36,1), background .2s;
 }
 /* Luna (modo oscuro activo) */
-.neo-theme .neo-theme-knob { background: linear-gradient(145deg, #8272d8, #6756c8); }
+.neo-theme .neo-theme-knob { background: linear-gradient(145deg, #4fd0e6, #2196ad); }
 /* Sol (modo claro activo) */
 .neo-theme--light { background: #e9edf4; border-color: #dce2eb; box-shadow: inset 1px 1px 3px rgba(33,42,59,0.10); }
 .neo-theme--light .neo-theme-knob { transform: translateX(21px); background: linear-gradient(145deg, #e8a33e, #d68b20); }
@@ -4183,7 +4183,7 @@ body {
 /* ===================================================================
    MODO CLARO — pantalla de login
    Paleta: blanco frío #F3F5F9 · superficie #FAFBFD · campo #F0F3F8
-           texto #171B25 / #6F7888 · azul violeta #7180E8 / #7257D5
+           texto #171B25 / #6F7888 · cian del logo #35BEDA · teal #1E90A8
    Neumorfismo claro y mate: sombras suaves, sin neón ni brillos.
    =================================================================== */
 
@@ -4214,10 +4214,10 @@ body {
 /* Subtítulo bajo el título: un punto más de contraste */
 :root[data-theme="light"] .neo-auth-left h1 + p { color: #5a6373; }
 /* "¿Olvidaste tu contraseña?" y "Regístrate": azul violeta oscuro, legibles */
-:root[data-theme="light"] .neo-auth-left .neo-label--link { color: #5542b7; }
-:root[data-theme="light"] .neo-auth-left .neo-label--link:hover { color: #45359a; }
-:root[data-theme="light"] .neo-auth-left .neo-toggle { color: #5542b7; }
-:root[data-theme="light"] .neo-auth-left .neo-toggle:hover { color: #45359a; }
+:root[data-theme="light"] .neo-auth-left .neo-label--link { color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .neo-label--link:hover { color: #0f6172; }
+:root[data-theme="light"] .neo-auth-left .neo-toggle { color: #14788c; }
+:root[data-theme="light"] .neo-auth-left .neo-toggle:hover { color: #0f6172; }
 
 /* Puntos de ventana: misma animación en cadena, paleta clara.
    (El atajo `animation` reinicia el delay, por eso se vuelve a declarar.) */
@@ -4231,8 +4231,8 @@ body {
     box-shadow: inset 1px 1px 2px rgba(33,42,59,0.18), inset -1px -1px 2px rgba(255,255,255,0.8);
   }
   50% {
-    background: #7180e8;
-    box-shadow: inset 1px 1px 2px rgba(33,42,59,0.12), 0 0 6px rgba(113,128,232,0.4);
+    background: #3fc3db;
+    box-shadow: inset 1px 1px 2px rgba(33,42,59,0.12), 0 0 6px rgba(53,190,218,0.4);
   }
 }
 
@@ -4247,11 +4247,11 @@ body {
 /* Campo activo: borde azul violeta discreto pero identificable */
 :root[data-theme="light"] .neo-auth-left .neo-input:focus {
   background: #f7f9fc;
-  border-color: #6978d9;
+  border-color: #29a9c2;
   box-shadow:
-    inset 0 0 0 1px #6978d9,
+    inset 0 0 0 1px #29a9c2,
     inset 2px 2px 5px rgba(33,42,59,0.05),
-    0 0 0 3px rgba(105,120,217,0.14);
+    0 0 0 3px rgba(53,190,218,0.14);
   transform: none;
 }
 :root[data-theme="light"] .neo-auth-left .neo-input:-webkit-autofill,
@@ -4261,13 +4261,13 @@ body {
   -webkit-box-shadow: 0 0 0 1000px #f0f3f8 inset;
 }
 
-/* Botón principal — degradado azul violeta, sombra suave, sin brillo neón */
+/* Botón principal — degradado cian del logo, sombra suave, sin brillo neón */
 :root[data-theme="light"] .neo-auth-left .neo-cta {
-  background: linear-gradient(145deg, #7180e8, #7257d5);
+  background: linear-gradient(145deg, #3fc3db, #1e90a8);
   background-size: 160% 160%;
   background-position: 0% 50%;
   color: #ffffff;
-  box-shadow: 0 5px 12px -6px rgba(76, 66, 150, 0.22), inset 0 1px 1px rgba(255,255,255,0.18);
+  box-shadow: 0 5px 12px -6px rgba(20, 110, 130, 0.22), inset 0 1px 1px rgba(255,255,255,0.18);
   transition:
     background-position 0.45s ease,
     box-shadow 0.28s ease,
@@ -4278,12 +4278,12 @@ body {
   background-position: 100% 50%;
   transform: translateY(-1.5px);
   filter: none;
-  box-shadow: 0 9px 20px -8px rgba(76, 66, 150, 0.3), inset 0 1px 1px rgba(255,255,255,0.22);
+  box-shadow: 0 9px 20px -8px rgba(20, 110, 130, 0.3), inset 0 1px 1px rgba(255,255,255,0.22);
 }
 :root[data-theme="light"] .neo-auth-left .neo-cta:active {
   transform: translateY(0);
-  background: #6250c7;
-  box-shadow: 0 3px 8px -5px rgba(76, 66, 150, 0.28), inset 0 1px 2px rgba(0,0,0,0.12);
+  background: #17849a;
+  box-shadow: 0 3px 8px -5px rgba(20, 110, 130, 0.28), inset 0 1px 2px rgba(0,0,0,0.12);
 }
 
 /* Aviso de advertencia — chip ámbar legible */
@@ -4306,12 +4306,12 @@ body {
 }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { border-color: #c9d2df; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active {
-  border-color: #6978d9;
-  background: #e4e2fa;
+  border-color: #29a9c2;
+  background: #dff2f5;
   box-shadow: inset 2px 2px 5px rgba(33,42,59,0.08), inset -2px -2px 5px rgba(255,255,255,0.8);
 }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-ic { background: rgba(33,42,59,0.06); color: #596273; }
-:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(113,128,232,0.18); color: #5542b7; }
+:root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(53,190,218,0.18); color: #14788c; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-t { color: #252b36; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active .neo-rolecard-t { color: #171b25; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard-d { color: #6f7888; }
@@ -4323,5 +4323,5 @@ body {
 /* Selector de idioma */
 :root[data-theme="light"] .neo-auth-left .border-white\/8 { border-color: #dce2eb; }
 :root[data-theme="light"] .neo-auth-left .bg-white\/\[0\.03\] { background: transparent; }
-:root[data-theme="light"] .neo-auth-left .bg-accent-violet.text-white { background: #e4e2fa; color: #5542b7; }
+:root[data-theme="light"] .neo-auth-left .bg-accent-violet.text-white { background: #dff2f5; color: #14788c; }
 
