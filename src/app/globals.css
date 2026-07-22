@@ -4190,12 +4190,13 @@ body {
 
 /* Botón principal: degradado cian que se desplaza + leve zoom al pasar el mouse */
 .neo-scene .neo-cta {
-  background: linear-gradient(145deg, #3fc3db, #1e90a8);
+  /* Pastel aqua con texto teal profundo: suave a la vista y bien legible */
+  background: linear-gradient(145deg, #a9e6e2, #7fcede);
   background-size: 160% 160%;
   background-position: 0% 50%;
-  color: #ffffff;
+  color: #0f5560;
   /* Sombra apenas insinuada: el relieve lo da el degradado, no una sombra dura */
-  box-shadow: 0 3px 9px -7px rgba(9, 40, 48, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.16);
+  box-shadow: 0 3px 9px -7px rgba(9, 40, 48, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.45);
   transition:
     background-position 0.45s ease,
     box-shadow 0.28s ease,
@@ -4205,12 +4206,12 @@ body {
   background-position: 100% 50%;
   transform: translateY(-1.5px) scale(1.015);
   filter: none;
-  box-shadow: 0 4px 11px -7px rgba(9, 40, 48, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 11px -7px rgba(9, 40, 48, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 .neo-scene .neo-cta:active {
   transform: scale(0.995);
-  background: #17849a;
-  box-shadow: 0 2px 5px -5px rgba(9, 40, 48, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.16);
+  background: #93dcdb;
+  box-shadow: 0 2px 5px -5px rgba(9, 40, 48, 0.45), inset 0 1px 2px rgba(15, 85, 96, 0.16);
 }
 
 /* Puntos de ventana en cadena, con el cian de la marca */
@@ -4251,7 +4252,7 @@ body {
 .neo-auth-left .neo-rolecard--active .neo-rolecard-ic { background: rgba(53, 190, 218, 0.2); }
 
 /* Idioma seleccionado */
-.neo-auth-left .bg-accent-violet.text-white { background: #1e90a8; color: #ffffff; }
+.neo-auth-left .bg-accent-violet.text-white { background: #cdeef1; color: #0f5560; }
 
 /* ===================================================================
    MODO CLARO — pantalla de login
@@ -4320,9 +4321,9 @@ body {
 /* Campo activo: borde azul violeta discreto pero identificable */
 :root[data-theme="light"] .neo-auth-left .neo-input:focus {
   background: #f7f9fc;
-  border-color: #29a9c2;
+  border-color: #7fcede;
   box-shadow:
-    inset 0 0 0 1px #29a9c2,
+    inset 0 0 0 1px #7fcede,
     inset 2px 2px 5px rgba(33,42,59,0.05),
     0 0 0 3px rgba(53,190,218,0.14);
   transform: none;
@@ -4336,11 +4337,11 @@ body {
 
 /* Botón principal — degradado cian del logo, sombra suave, sin brillo neón */
 :root[data-theme="light"] .neo-auth-left .neo-cta {
-  background: linear-gradient(145deg, #3fc3db, #1e90a8);
+  background: linear-gradient(145deg, #a9e6e2, #7fcede);
   background-size: 160% 160%;
   background-position: 0% 50%;
-  color: #ffffff;
-  box-shadow: 0 3px 8px -6px rgba(20, 110, 130, 0.28), inset 0 1px 1px rgba(255,255,255,0.18);
+  color: #0f5560;
+  box-shadow: 0 3px 8px -6px rgba(20, 110, 130, 0.22), inset 0 1px 1px rgba(255,255,255,0.5);
   transition:
     background-position 0.45s ease,
     box-shadow 0.28s ease,
@@ -4355,8 +4356,8 @@ body {
 }
 :root[data-theme="light"] .neo-auth-left .neo-cta:active {
   transform: scale(0.995);
-  background: #17849a;
-  box-shadow: 0 2px 5px -5px rgba(20, 110, 130, 0.25), inset 0 1px 2px rgba(0,0,0,0.1);
+  background: #93dcdb;
+  box-shadow: 0 2px 5px -5px rgba(20, 110, 130, 0.22), inset 0 1px 2px rgba(15,85,96,0.14);
 }
 
 /* Aviso de advertencia — chip ámbar legible */
@@ -4379,7 +4380,7 @@ body {
 }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard:hover { border-color: #c9d2df; }
 :root[data-theme="light"] .neo-auth-left .neo-rolecard--active {
-  border-color: #29a9c2;
+  border-color: #7fcede;
   background: #dff2f5;
   box-shadow: inset 2px 2px 5px rgba(33,42,59,0.08), inset -2px -2px 5px rgba(255,255,255,0.8);
 }
