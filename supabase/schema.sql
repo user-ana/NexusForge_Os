@@ -595,6 +595,8 @@ create table if not exists public.class_tasks (
 create index if not exists idx_ct_class on public.class_tasks(class_id, created_at desc);
 alter table public.class_tasks replica identity full;
 alter table public.class_tasks add column if not exists pdf_url text default '';
+alter table public.task_submissions add column if not exists evidence jsonb default '{}'::jsonb;
+alter table public.task_submissions add column if not exists status text default 'submitted';
 alter table public.class_tasks add column if not exists points int default 0;
 alter table public.class_tasks add column if not exists deliverables jsonb default '[]'::jsonb;
 alter table public.class_tasks add column if not exists reminders boolean default true;

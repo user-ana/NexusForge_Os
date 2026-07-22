@@ -210,3 +210,14 @@ begin
 end $$;
 
 -- Fin del parche de tareas + notificaciones
+
+-- ----------------------------------------------------------------------
+--  ESPACIO DE TRABAJO DEL ESTUDIANTE
+--  evidence: las pruebas que sube el alumno, por tipo de entregable
+--            { files:[{name,url}], screenshot:[...], github:'url',
+--              commits:5, per_requirement:[...], text:'...' }
+--  status  : 'working'   -> la empezó, aún no entrega
+--            'submitted' -> entregada
+-- ----------------------------------------------------------------------
+alter table public.task_submissions add column if not exists evidence jsonb default '{}'::jsonb;
+alter table public.task_submissions add column if not exists status text default 'submitted';

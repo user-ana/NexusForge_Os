@@ -1,18 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import Header from '@/frontend/components/layout/Header'
 import {
   loadMyTasks,
-  submitTask,
-  unsubmitTask,
   subscribeClassTasks,
   CLASSTASKS_EVENT,
   type MyTask,
   type TaskState,
 } from '@/backend/services/classTasks'
 
-type Filter = 'all' | 'pending' | 'submitted' | 'overdue'
+type Filter = 'all' | 'pending' | 'working' | 'submitted' | 'overdue'
 
 const PARCIAL_LABEL: Record<string, string> = {
   p1: 'I Parcial', p2: 'II Parcial', p3: 'III Parcial', final: 'Final',
@@ -21,7 +20,6 @@ const PARCIAL_LABEL: Record<string, string> = {
 export default function MyTasksPage() {
   const [tasks, setTasks] = useState<MyTask[]>([])
   const [filter, setFilter] = useState<Filter>('all')
-  const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
     const refresh = () => loadMyTasks().then(setTasks)
@@ -35,7 +33,7 @@ export default function MyTasksPage() {
   }, [])
 
   const counts = useMemo(() => {
-    const c = { all: tasks.length, pending: 0, submitted: 0, overdue: 0 }
+    const c = { all: tasks.length, pending: 0, working: 0, submitted: 0, overdue: 0 }
     tasks.forEach((t) => { c[t.state]++ })
     return c
   }, [tasks])
@@ -45,22 +43,15 @@ export default function MyTasksPage() {
     [tasks, filter],
   )
 
-  async function toggle(t: MyTask) {
-    setBusy(t.id)
-    if (t.state === 'submitted') await unsubmitTask(t.id)
-    else await submitTask(t.id)
-    await loadMyTasks().then(setTasks)
-    setBusy(null)
-  }
-
   return (
     <>
       <Header title="Mis tareas" subtitle="Todo lo que tus catedráticos han publicado" />
       <main className="flex-1 overflow-auto p-8">
         <div className="mx-auto max-w-4xl">
           {/* Resumen */}
-          <div className="mb-6 grid grid-cols-3 gap-4">
+          <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Pendientes" value={counts.pending} tone="pending" />
+            <Stat label="En progreso" value={counts.working} tone="working" />
             <Stat label="Entregadas" value={counts.submitted} tone="submitted" />
             <Stat label="Vencidas" value={counts.overdue} tone="overdue" />
           </div>
@@ -70,6 +61,7 @@ export default function MyTasksPage() {
             {([
               ['all', `Todas (${counts.all})`],
               ['pending', `Pendientes (${counts.pending})`],
+              ['working', `En progreso (${counts.working})`],
               ['submitted', `Entregadas (${counts.submitted})`],
               ['overdue', `Vencidas (${counts.overdue})`],
             ] as [Filter, string][]).map(([key, label]) => (
@@ -117,13 +109,12 @@ export default function MyTasksPage() {
                     </div>
                   </div>
                   <div className="neo-task-actions">
-                    <button
-                      onClick={() => toggle(t)}
-                      disabled={busy === t.id}
+                    <Link
+                      href={`/dashboard/tasks/${t.id}`}
                       className={t.state === 'submitted' ? 'neo-btn-ghost' : 'neo-btn'}
                     >
-                      {busy === t.id ? '…' : t.state === 'submitted' ? 'Deshacer' : 'Marcar entregada'}
-                    </button>
+                      {t.state === 'submitted' ? 'Ver entrega' : t.state === 'working' ? 'Continuar →' : 'Comenzar tarea →'}
+                    </Link>
                   </div>
                 </article>
               ))}
@@ -147,6 +138,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: Task
 function StateBadge({ state }: { state: TaskState }) {
   const map = {
     pending: ['Pendiente', 'neo-badge--pending'],
+    working: ['En progreso', 'neo-badge--working'],
     submitted: ['Entregada', 'neo-badge--submitted'],
     overdue: ['Vencida', 'neo-badge--overdue'],
   } as const

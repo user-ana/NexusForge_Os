@@ -31,7 +31,7 @@ export type ClassTask = {
   createdAt: number
 }
 
-export type TaskState = 'pending' | 'submitted' | 'overdue'
+export type TaskState = 'pending' | 'working' | 'submitted' | 'overdue'
 
 export type MyTask = ClassTask & {
   className: string
@@ -39,6 +39,7 @@ export type MyTask = ClassTask & {
   submittedAt: number | null
   myNote: string
   myLink: string
+  evidence: Evidence
 }
 
 export type Submission = {
@@ -47,6 +48,22 @@ export type Submission = {
   note: string
   linkUrl: string
   submittedAt: number
+  status: SubmissionStatus
+  evidence: Evidence
+}
+
+/** Estado de la entrega del estudiante. */
+export type SubmissionStatus = 'working' | 'submitted'
+
+/** Evidencia que sube el estudiante, por tipo de entregable. */
+export type EvidenceFile = { name: string; url: string }
+export type Evidence = {
+  files?: EvidenceFile[]
+  screenshot?: EvidenceFile[]
+  github?: string
+  commits?: number
+  per_requirement?: string
+  text?: string
 }
 
 export const CLASSTASKS_EVENT = 'nf:classtasks'
@@ -74,8 +91,8 @@ function mapTask(row: any): ClassTask {
   }
 }
 
-function stateOf(dueDate: number | null, submitted: boolean): TaskState {
-  if (submitted) return 'submitted'
+function stateOf(dueDate: number | null, sub: { status?: string } | null | undefined): TaskState {
+  if (sub) return sub.status === 'working' ? 'working' : 'submitted'
   if (dueDate != null && Date.now() > dueDate) return 'overdue'
   return 'pending'
 }
@@ -294,10 +311,11 @@ export async function loadMyTasks(): Promise<MyTask[]> {
     return {
       ...t,
       className: nameByClass.get(t.classId) ?? 'Clase',
-      state: stateOf(t.dueDate, !!sub),
+      state: stateOf(t.dueDate, sub),
       submittedAt: sub?.submitted_at ? new Date(sub.submitted_at).getTime() : null,
       myNote: sub?.note ?? '',
       myLink: sub?.link_url ?? '',
+      evidence: (sub?.evidence && typeof sub.evidence === 'object' ? sub.evidence : {}) as Evidence,
     } as MyTask
   })
 }
@@ -331,17 +349,105 @@ export async function unsubmitTask(taskId: string): Promise<void> {
   dispatch()
 }
 
-/** El catedrático ve quién entregó una tarea (matriz de entregas). */
-export async function loadSubmissions(taskId: string): Promise<Submission[]> {
-  if (!supabase) return []
-  const { data } = await supabase.from('task_submissions').select('*').eq('task_id', taskId)
-  return (data ?? []).map((s: any) => ({
+function mapSubmission(s: any): Submission {
+  return {
     taskId: s.task_id,
     studentId: s.student_id,
     note: s.note ?? '',
     linkUrl: s.link_url ?? '',
     submittedAt: s.submitted_at ? new Date(s.submitted_at).getTime() : 0,
-  }))
+    status: s.status === 'working' ? 'working' : 'submitted',
+    evidence: (s.evidence && typeof s.evidence === 'object' ? s.evidence : {}) as Evidence,
+  }
+}
+
+/** El catedrático ve quién entregó una tarea (matriz de entregas). */
+export async function loadSubmissions(taskId: string): Promise<Submission[]> {
+  if (!supabase) return []
+  const { data } = await supabase
+    .from('task_submissions')
+    .select('*')
+    .eq('task_id', taskId)
+    .eq('status', 'submitted')
+  return (data ?? []).map(mapSubmission)
+}
+
+/** Una tarea concreta (para el espacio de trabajo). */
+export async function loadTask(taskId: string): Promise<ClassTask | null> {
+  if (!supabase) return null
+  const { data } = await supabase.from('class_tasks').select('*').eq('id', taskId).maybeSingle()
+  return data ? mapTask(data) : null
+}
+
+/** Mi entrega de una tarea (null si aún no la empecé). */
+export async function loadMySubmission(taskId: string): Promise<Submission | null> {
+  if (!supabase) return null
+  const uid = await currentUid()
+  if (!uid) return null
+  const { data } = await supabase
+    .from('task_submissions')
+    .select('*')
+    .eq('task_id', taskId)
+    .eq('student_id', uid)
+    .maybeSingle()
+  return data ? mapSubmission(data) : null
+}
+
+/** Guarda el avance (evidencia) sin entregar todavía. */
+export async function saveEvidence(taskId: string, evidence: Evidence, status: SubmissionStatus = 'working'): Promise<boolean> {
+  if (!supabase) return false
+  const uid = await currentUid()
+  if (!uid) return false
+  const { error } = await supabase.from('task_submissions').upsert({
+    task_id: taskId,
+    student_id: uid,
+    evidence,
+    status,
+    submitted_at: new Date().toISOString(),
+  })
+  if (error) {
+    console.error('saveEvidence', error)
+    return false
+  }
+  dispatch()
+  return true
+}
+
+/** Sube un archivo de evidencia al Storage y devuelve su URL. */
+export async function uploadEvidence(taskId: string, file: File): Promise<EvidenceFile | null> {
+  if (!supabase) return null
+  const uid = await currentUid()
+  if (!uid) return null
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `submissions/${taskId}/${uid}/${crypto.randomUUID()}-${safe}`
+  const { error } = await supabase.storage.from('project-briefs').upload(path, file, { upsert: false })
+  if (error) {
+    console.error('uploadEvidence', error)
+    return null
+  }
+  const url = supabase.storage.from('project-briefs').getPublicUrl(path).data.publicUrl
+  return { name: file.name, url }
+}
+
+/**
+ * Progreso real: qué proporción de los entregables pedidos tiene evidencia.
+ * Es lo que hace que el avance no sea "entregado sí/no" sino un porcentaje.
+ */
+export function progressOf(deliverables: Deliverable[], ev: Evidence): { done: number; total: number; pct: number } {
+  const total = deliverables.length
+  if (!total) return { done: 0, total: 0, pct: 0 }
+  let done = 0
+  for (const d of deliverables) {
+    switch (d.kind) {
+      case 'files': if ((ev.files?.length ?? 0) > 0) done++; break
+      case 'screenshot': if ((ev.screenshot?.length ?? 0) > 0) done++; break
+      case 'github': if ((ev.github ?? '').trim().length > 8) done++; break
+      case 'commits': if ((ev.commits ?? 0) >= (d.min ?? 1)) done++; break
+      case 'per_requirement': if ((ev.per_requirement ?? '').trim().length > 0) done++; break
+      case 'text': if ((ev.text ?? '').trim().length > 0) done++; break
+    }
+  }
+  return { done, total, pct: Math.round((done / total) * 100) }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 

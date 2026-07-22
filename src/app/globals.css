@@ -5694,3 +5694,117 @@ body {
 .neo-deliv--on span small { color: rgba(255, 255, 255, 0.82); }
 .neo-switch--on { background: rgba(29, 123, 166, 0.4); }
 .neo-switch--on .neo-switch-knob { background: linear-gradient(145deg, #4ab8dd, #15597f); }
+
+/* ===================================================================
+   ESPACIO DE TRABAJO DEL ESTUDIANTE
+   =================================================================== */
+.neo-ws-top {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 20px 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(165deg, #242830, #1b1e24);
+  box-shadow: 0 16px 34px -24px rgba(0, 0, 0, 0.85);
+}
+/* Anillo de progreso dibujado con un degradado cónico */
+.neo-ws-ring {
+  position: relative;
+  flex-shrink: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#1d7ba6 calc(var(--p) * 1%), rgba(255, 255, 255, 0.07) 0);
+}
+.neo-ws-ring::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: #1b1e24;
+}
+.neo-ws-ring span {
+  position: relative;
+  font-size: 20px;
+  font-weight: 800;
+  color: #eaf2f8;
+}
+.neo-ws-ring small { font-size: 11px; font-weight: 700; color: #8b93a3; margin-left: 1px; }
+.neo-ws-state { font-size: 15px; font-weight: 700; color: #eceef2; }
+.neo-ws-sub { font-size: 12.5px; color: #9099a8; margin-top: 2px; }
+.neo-ws-bar {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.neo-ws-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #23a6dd, #15597f);
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.neo-ws-due { flex-shrink: 0; text-align: right; }
+.neo-ws-due small { display: block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #7d8697; }
+.neo-ws-due b { font-size: 13px; color: #dfe4ec; }
+.neo-ws-left { display: block; margin-top: 3px; font-size: 11.5px; color: #9099a8; }
+.neo-ws-left--soon { color: #e0b15c; font-weight: 600; }
+.neo-ws-left--over { color: #e08585; font-weight: 600; }
+.neo-ws-h {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8b93a3;
+  margin-bottom: 14px;
+}
+
+/* Tarjeta de requisito */
+.neo-req-card {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(165deg, #23262d, #1c1f25);
+  padding: 14px;
+  transition: background 0.22s ease, border-color 0.22s ease;
+}
+.neo-req-card--done { border-color: rgba(255, 255, 255, 0.1); background: linear-gradient(165deg, #1d3a4a, #17262f); }
+.neo-req-head { display: flex; align-items: flex-start; gap: 11px; }
+.neo-req-head b { display: block; font-size: 13.5px; color: #eceef2; }
+.neo-req-head small { font-size: 11.5px; color: #8b93a3; }
+.neo-req-check {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+.neo-req-card--done .neo-req-check { background: #1d7ba6; }
+.neo-req-body { margin-top: 11px; padding-left: 33px; }
+.neo-req-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+}
+.neo-req-file a { color: #9fd3ea; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-req-file a:hover { color: #c5e8f7; }
+.neo-req-file button { color: #7d8697; }
+.neo-req-file button:hover { color: #e08585; }
+
+/* Insignia de "en progreso" */
+.neo-badge--working { color: #9fd3ea; background: rgba(29, 123, 166, 0.2); }
+.neo-taskstat--working { border-left-color: #1d7ba6; }
+.neo-task--working { border-left-color: #1d7ba6; }
