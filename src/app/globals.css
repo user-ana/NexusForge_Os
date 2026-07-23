@@ -5967,3 +5967,17 @@ body {
   transition: background 0.18s ease;
 }
 .neo-hist-del:hover { background: #bd4c59; }
+
+/* Boton de la vista previa: es una simulacion, no una accion real */
+.neo-prev-start--demo { cursor: default; }
+.neo-prev-hint {
+  margin-top: 9px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: rgba(29, 123, 166, 0.16);
+  border: 1px solid rgba(53, 198, 240, 0.24);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #cfe9f5;
+  animation: neo-page-item 0.28s ease both;
+}

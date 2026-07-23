@@ -451,6 +451,7 @@ function StudentPreview({
   pdfName: string; delivs: Deliverable[]
 }) {
   const esProyecto = kind === 'proyecto'
+  const [hint, setHint] = useState(false)
   const dueTxt = dueEpoch
     ? new Date(dueEpoch).toLocaleDateString('es', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Sin fecha límite'
@@ -491,9 +492,19 @@ function StudentPreview({
       )}
 
       <div className="neo-prev-status"><span className="neo-dot-amber" /> Aún no iniciada</div>
-      <button type="button" className="neo-prev-start" title="Así lo verá el estudiante">
+      <button
+        type="button"
+        className="neo-prev-start neo-prev-start--demo"
+        onClick={() => { setHint(true); setTimeout(() => setHint(false), 3500) }}
+        title="Simulación: así lo verá el estudiante"
+      >
         {esProyecto ? 'Elegir proyecto y comenzar →' : 'Comenzar tarea →'}
       </button>
+      {hint && (
+        <p className="neo-prev-hint">
+          Este botón es una simulación. Publica la actividad y el estudiante lo verá así en <b>Mis tareas</b>.
+        </p>
+      )}
     </article>
   )
 }
