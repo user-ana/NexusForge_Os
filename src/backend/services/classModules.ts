@@ -250,20 +250,24 @@ export async function addModuleFile(
 }
 
 /** Agrega un enlace (video, artículo, repositorio) como recurso del módulo. */
-export async function addModuleLink(moduleId: string, name: string, url: string): Promise<boolean> {
-  if (!supabase) return false
-  const { error } = await supabase.from('module_files').insert({
-    module_id: moduleId,
-    name: name.trim() || url,
-    url: url.trim(),
-    kind: 'link',
-  })
+export async function addModuleLink(moduleId: string, name: string, url: string): Promise<ModuleFile | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('module_files')
+    .insert({
+      module_id: moduleId,
+      name: name.trim() || url,
+      url: url.trim(),
+      kind: 'link',
+    })
+    .select('id, module_id, name, url, kind, size_bytes, text_content, created_at')
+    .maybeSingle()
   if (error) {
     console.error('addModuleLink', error)
-    return false
+    return null
   }
   dispatch()
-  return true
+  return data ? mapFile(data) : null
 }
 
 export async function deleteModuleFile(id: string): Promise<void> {

@@ -94,7 +94,11 @@ export default function ClassModulesSection({ classId, isTeacher }: { classId: s
 }
 
 /**
- * Modal para crear el módulo (título, semana, parcial y descripción).
+ * Modal para crear el módulo, en dos pasos.
+ *   1) Datos: título, semana, parcial y descripción.
+ *   2) Material: se adjunta la presentación y los enlaces SIN salir del modal,
+ *      y desde ahí mismo se puede publicar.
+ * El paso 2 necesita el id del módulo, por eso el guardado ocurre en medio.
  * Mismo patrón que CreateProjectModal: portal al body sobre el fondo oscuro.
  */
 function NewModuleModal({ classId, open, onClose }: { classId: string; open: boolean; onClose: () => void }) {
@@ -104,8 +108,24 @@ function NewModuleModal({ classId, open, onClose }: { classId: string; open: boo
   const [parcial, setParcial] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [moduleId, setModuleId] = useState<string | null>(null)
+  const [added, setAdded] = useState<ModuleFile[]>([])
 
   useEffect(() => setMounted(true), [])
+
+  function reset() {
+    setTitle('')
+    setWeek('')
+    setParcial('')
+    setDescription('')
+    setModuleId(null)
+    setAdded([])
+  }
+
+  function finish() {
+    reset()
+    onClose()
+  }
 
   async function save() {
     if (!title.trim() || saving) return
@@ -119,71 +139,118 @@ function NewModuleModal({ classId, open, onClose }: { classId: string; open: boo
       week: Number.isFinite(n) && n > 0 ? n : null,
     })
     setSaving(false)
-    if (!id) return
-    setTitle('')
-    setWeek('')
-    setParcial('')
-    setDescription('')
-    onClose()
+    if (id) setModuleId(id) // pasa al paso 2
+  }
+
+  async function publishNow() {
+    if (!moduleId) return
+    await publishModule(moduleId, true)
+    finish()
   }
 
   if (!open || !mounted) return null
 
   return createPortal(
-    <div className="neo-modal-backdrop" onClick={onClose}>
+    <div className="neo-modal-backdrop" onClick={finish}>
       <div className="neo-modal neo-modal--form space-y-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h4 className="text-base font-semibold text-white">Nuevo módulo</h4>
-          <button onClick={onClose} className="text-neutral-500 hover:text-white">✕</button>
+          <h4 className="text-base font-semibold text-white">
+            {moduleId ? 'Material del módulo' : 'Nuevo módulo'}
+          </h4>
+          <button onClick={finish} className="text-neutral-500 hover:text-white">✕</button>
         </div>
 
-        <div className="space-y-2">
-          <label className="neo-label">Título</label>
-          <input
-            className="neo-input w-full"
-            placeholder="Introducción a los patrones de diseño"
-            value={title}
-            onChange={(e) => setTitle(e.target.value.normalize('NFC'))}
-            autoFocus
-          />
-        </div>
+        {/* ---------- PASO 1: datos del módulo ---------- */}
+        {!moduleId && (
+          <>
+            <div className="space-y-2">
+              <label className="neo-label">Título</label>
+              <input
+                className="neo-input w-full"
+                placeholder="Introducción a los patrones de diseño"
+                value={title}
+                onChange={(e) => setTitle(e.target.value.normalize('NFC'))}
+                autoFocus
+              />
+            </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="neo-label">Semana</label>
-            <input
-              className="neo-input w-full"
-              type="number"
-              min={1}
-              placeholder="1"
-              value={week}
-              onChange={(e) => setWeek(e.target.value)}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="neo-label">Semana</label>
+                <input
+                  className="neo-input w-full"
+                  type="number"
+                  min={1}
+                  placeholder="1"
+                  value={week}
+                  onChange={(e) => setWeek(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="neo-label">Parcial</label>
+                <NeoSelect value={parcial} options={PARCIAL_OPTIONS} onChange={setParcial} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="neo-label">Descripción</label>
+              <textarea
+                className="neo-input w-full resize-none"
+                rows={3}
+                placeholder="Qué se cubre en esta semana y qué debe repasar el estudiante."
+                value={description}
+                onChange={(e) => setDescription(e.target.value.normalize('NFC'))}
+              />
+            </div>
+
+            <p className="text-xs text-neutral-500">
+              Después de crearlo le adjuntas la presentación. El módulo nace oculto: nadie lo ve hasta que lo publiques.
+            </p>
+
+            <button
+              onClick={save}
+              disabled={!title.trim() || saving}
+              className="neo-btn w-full justify-center disabled:opacity-40"
+            >
+              {saving ? 'Creando…' : 'Crear y adjuntar material'}
+            </button>
+          </>
+        )}
+
+        {/* ---------- PASO 2: adjuntar el material ---------- */}
+        {moduleId && (
+          <>
+            <div className="rounded-xl bg-black/20 px-4 py-3 shadow-[inset_2px_2px_6px_rgba(0,0,0,0.4)]">
+              <p className="text-sm font-semibold text-white">{title}</p>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                Módulo creado. Súbele la presentación, el PDF de la clase o los enlaces de apoyo.
+              </p>
+            </div>
+
+            {added.length > 0 && (
+              <div className="space-y-1.5">
+                {added.map((f) => (
+                  <FileRow key={f.id} file={f} isTeacher />
+                ))}
+              </div>
+            )}
+
+            <ResourceTools
+              moduleId={moduleId}
+              classId={classId}
+              onAdded={(f) => setAdded((prev) => [...prev, f])}
             />
-          </div>
-          <div className="space-y-2">
-            <label className="neo-label">Parcial</label>
-            <NeoSelect value={parcial} options={PARCIAL_OPTIONS} onChange={setParcial} />
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <label className="neo-label">Descripción</label>
-          <textarea
-            className="neo-input w-full resize-none"
-            rows={3}
-            placeholder="Qué se cubre en esta semana y qué debe repasar el estudiante."
-            value={description}
-            onChange={(e) => setDescription(e.target.value.normalize('NFC'))}
-          />
-        </div>
-
-        <p className="text-xs text-neutral-500">
-          El módulo nace oculto. Le adjuntas el material y lo publicas cuando quieras que la clase lo vea.
-        </p>
-
-        <button onClick={save} disabled={!title.trim() || saving} className="neo-btn w-full justify-center disabled:opacity-40">
-          {saving ? 'Creando…' : 'Crear módulo'}
-        </button>
+            <div className="flex flex-col gap-2 border-t border-white/5 pt-4 sm:flex-row">
+              <button onClick={finish} className="neo-btn-ghost flex-1 justify-center text-sm">
+                Guardar oculto
+              </button>
+              <button onClick={publishNow} className="neo-btn flex-1 justify-center text-sm">
+                Publicar a la clase
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>,
     document.body,
@@ -201,20 +268,6 @@ function ModuleCard({
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(m.published || isTeacher)
-  const [busy, setBusy] = useState('')
-  const [linking, setLinking] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  /** Sube los archivos elegidos uno por uno (del PDF se extrae el texto). */
-  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    e.target.value = '' // permite volver a elegir el mismo archivo
-    for (const f of files) {
-      setBusy(`Subiendo ${f.name}…`)
-      await addModuleFile(m.id, m.classId, f)
-    }
-    setBusy('')
-  }
 
   return (
     <article className="neo-panel p-5">
@@ -265,27 +318,7 @@ function ModuleCard({
             </div>
           )}
 
-          {isTeacher && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                multiple
-                className="hidden"
-                accept=".pdf,.ppt,.pptx,.odp,.key,.doc,.docx,.odt,.txt,.md"
-                onChange={onFiles}
-              />
-              <button onClick={() => fileRef.current?.click()} disabled={!!busy} className="neo-btn-ghost text-xs disabled:opacity-40">
-                Adjuntar archivo
-              </button>
-              <button onClick={() => setLinking((v) => !v)} className="neo-btn-ghost text-xs">
-                {linking ? 'Cancelar enlace' : 'Agregar enlace'}
-              </button>
-              {busy && <span className="text-xs text-accent-violet">{busy}</span>}
-            </div>
-          )}
-
-          {isTeacher && linking && <LinkForm moduleId={m.id} onDone={() => setLinking(false)} />}
+          {isTeacher && <ResourceTools moduleId={m.id} classId={m.classId} />}
 
           {isTeacher && m.files.some((f) => f.hasText) && (
             <p className="mt-3 text-xs text-neutral-600">
@@ -296,6 +329,61 @@ function ModuleCard({
         </div>
       )}
     </article>
+  )
+}
+
+/**
+ * Botones para sumarle material al módulo (archivo o enlace). Se usa en la
+ * tarjeta del módulo y en el segundo paso del modal de creación, para que
+ * adjuntar sea lo mismo se llegue por donde se llegue.
+ */
+function ResourceTools({
+  moduleId,
+  classId,
+  onAdded,
+}: {
+  moduleId: string
+  classId: string
+  onAdded?: (f: ModuleFile) => void
+}) {
+  const [busy, setBusy] = useState('')
+  const [linking, setLinking] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  /** Sube los archivos elegidos uno por uno (del PDF se extrae el texto). */
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = '' // permite volver a elegir el mismo archivo
+    for (const f of files) {
+      setBusy(`Subiendo ${f.name}…`)
+      const added = await addModuleFile(moduleId, classId, f)
+      if (added) onAdded?.(added)
+    }
+    setBusy('')
+  }
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept=".pdf,.ppt,.pptx,.odp,.key,.doc,.docx,.odt,.txt,.md"
+          onChange={onFiles}
+        />
+        <button onClick={() => fileRef.current?.click()} disabled={!!busy} className="neo-btn-ghost text-xs disabled:opacity-40">
+          Adjuntar archivo
+        </button>
+        <button onClick={() => setLinking((v) => !v)} className="neo-btn-ghost text-xs">
+          {linking ? 'Cancelar enlace' : 'Agregar enlace'}
+        </button>
+        {busy && <span className="text-xs text-accent-violet">{busy}</span>}
+      </div>
+
+      {linking && <LinkForm moduleId={moduleId} onDone={() => setLinking(false)} onAdded={onAdded} />}
+    </>
   )
 }
 
@@ -329,14 +417,24 @@ function FileRow({ file, isTeacher }: { file: ModuleFile; isTeacher: boolean }) 
 }
 
 /** Alta rápida de un enlace externo (video, artículo, repositorio). */
-function LinkForm({ moduleId, onDone }: { moduleId: string; onDone: () => void }) {
+function LinkForm({
+  moduleId,
+  onDone,
+  onAdded,
+}: {
+  moduleId: string
+  onDone: () => void
+  onAdded?: (f: ModuleFile) => void
+}) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
 
   async function save() {
     if (!url.trim()) return
-    const ok = await addModuleLink(moduleId, name, url)
-    if (ok) onDone()
+    const added = await addModuleLink(moduleId, name, url)
+    if (!added) return
+    onAdded?.(added)
+    onDone()
   }
 
   return (
