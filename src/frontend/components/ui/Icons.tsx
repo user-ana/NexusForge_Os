@@ -32,6 +32,14 @@ export function TrashIcon(p: P) {
   )
 }
 
+export function CheckIcon(p: P) {
+  return (
+    <svg {...base(p)} strokeWidth={2.4}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
 export function PencilIcon(p: P) {
   return (
     <svg {...base(p)}>

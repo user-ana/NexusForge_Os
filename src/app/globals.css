@@ -5981,3 +5981,124 @@ body {
   color: #cfe9f5;
   animation: neo-page-item 0.28s ease both;
 }
+
+/* ----------------------------------------------------------------------
+   INDICADOR DE PASOS — para los modales que llevan más de una etapa.
+   Cada paso es una columna igual de ancha; la línea que los une se dibuja
+   con ::before/::after detrás del círculo, y se tiñe cuando el paso ya se
+   completó. Así el usuario ve de un vistazo que todavía falta algo.
+---------------------------------------------------------------------- */
+.neo-steps {
+  display: flex;
+  align-items: flex-start;
+  padding: 2px 0 4px;
+}
+
+.neo-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Tramos de la línea (izquierdo y derecho de cada círculo) */
+.neo-step::before,
+.neo-step::after {
+  content: '';
+  position: absolute;
+  top: 17px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  transition: background 0.4s ease;
+}
+.neo-step::before { left: 0;   right: 50%; margin-right: 24px; }
+.neo-step::after  { left: 50%; right: 0;   margin-left: 24px; }
+.neo-step:first-child::before,
+.neo-step:last-child::after { display: none; }
+
+/* El tramo se ilumina cuando el paso ya quedó atrás */
+.neo-step--done::before,
+.neo-step--done::after,
+.neo-step--active::before { background: rgba(63, 195, 232, 0.45); }
+
+/* Círculo del paso */
+.neo-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: #24272c;
+  color: #6b7280;
+  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.55), inset -1px -1px 3px rgba(255, 255, 255, 0.03);
+  transition: color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Paso en curso: relleno mate + halo suave (sin neón) */
+.neo-step--active .neo-step-dot {
+  background: linear-gradient(145deg, #43c8ec, #2494b6);
+  color: #10141a;
+  box-shadow: 0 0 0 4px rgba(63, 195, 232, 0.13), 0 5px 14px rgba(0, 0, 0, 0.45);
+  transform: scale(1.06);
+}
+
+/* Paso cumplido: contorno tenue con el check */
+.neo-step--done .neo-step-dot {
+  background: rgba(63, 195, 232, 0.13);
+  color: #4fc9f0;
+  box-shadow: inset 0 0 0 1px rgba(63, 195, 232, 0.32);
+}
+
+.neo-step-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5d6674;
+  text-align: center;
+  transition: color 0.35s ease;
+}
+.neo-step--done   .neo-step-label { color: #97a1b0; }
+.neo-step--active .neo-step-label { color: #eceef2; }
+
+.neo-step-hint {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: #4c545f;
+  transition: color 0.35s ease;
+}
+.neo-step--active .neo-step-hint { color: #3fc3e8; }
+
+/* ---- Tema claro ---- */
+:root[data-theme="light"] .neo-step::before,
+:root[data-theme="light"] .neo-step::after { background: rgba(33, 42, 59, 0.12); }
+:root[data-theme="light"] .neo-step--done::before,
+:root[data-theme="light"] .neo-step--done::after,
+:root[data-theme="light"] .neo-step--active::before { background: rgba(30, 145, 180, 0.42); }
+:root[data-theme="light"] .neo-step-dot {
+  background: #e8ecf2;
+  color: #8a93a3;
+  box-shadow: inset 2px 2px 5px rgba(33, 42, 59, 0.13), inset -1px -1px 3px rgba(255, 255, 255, 0.8);
+}
+:root[data-theme="light"] .neo-step--active .neo-step-dot {
+  background: linear-gradient(145deg, #35b6da, #1d8fb4);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(53, 182, 218, 0.16), 0 4px 12px rgba(33, 42, 59, 0.18);
+}
+:root[data-theme="light"] .neo-step--done .neo-step-dot {
+  background: rgba(53, 182, 218, 0.14);
+  color: #1d8fb4;
+  box-shadow: inset 0 0 0 1px rgba(53, 182, 218, 0.4);
+}
+:root[data-theme="light"] .neo-step-label { color: #7b8494; }
+:root[data-theme="light"] .neo-step--done   .neo-step-label { color: #596273; }
+:root[data-theme="light"] .neo-step--active .neo-step-label { color: #171b25; }
+:root[data-theme="light"] .neo-step-hint { color: #9aa3b2; }
+:root[data-theme="light"] .neo-step--active .neo-step-hint { color: #1d8fb4; }

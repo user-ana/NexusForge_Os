@@ -26,6 +26,7 @@ import {
 } from '@/backend/services/classModules'
 import { PARCIAL_OPTIONS, parcialLabel } from '@/shared/parciales'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
+import NeoSteps from '@/frontend/components/ui/NeoSteps'
 import ConfirmDialog from '@/frontend/components/ui/ConfirmDialog'
 import { ClipboardIcon, LinkIcon, LockIcon, TrashIcon } from '@/frontend/components/ui/Icons'
 
@@ -94,6 +95,13 @@ export default function ClassModulesSection({ classId, isTeacher }: { classId: s
 }
 
 /**
+ * Las tres etapas por las que pasa un módulo. La tercera no es una pantalla:
+ * queda pendiente hasta que el catedrático pulsa "Publicar a la clase", y está
+ * en el indicador justamente para que se vea que crear no es publicar.
+ */
+const MODULE_STEPS = [{ label: 'Datos' }, { label: 'Material' }, { label: 'Publicar' }]
+
+/**
  * Modal para crear el módulo, en dos pasos.
  *   1) Datos: título, semana, parcial y descripción.
  *   2) Material: se adjunta la presentación y los enlaces SIN salir del modal,
@@ -159,6 +167,8 @@ function NewModuleModal({ classId, open, onClose }: { classId: string; open: boo
           </h4>
           <button onClick={finish} className="text-neutral-500 hover:text-white">✕</button>
         </div>
+
+        <NeoSteps steps={MODULE_STEPS} current={moduleId ? 1 : 0} />
 
         {/* ---------- PASO 1: datos del módulo ---------- */}
         {!moduleId && (
