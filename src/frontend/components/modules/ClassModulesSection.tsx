@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   loadModules,
   createModule,
@@ -49,14 +50,14 @@ export default function ClassModulesSection({ classId, isTeacher }: { classId: s
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-neutral-500">Módulos de aprendizaje</h3>
         {isTeacher && (
-          <button onClick={() => setCreating((v) => !v)} className="neo-btn text-sm">
-            {creating ? 'Cancelar' : 'Nuevo módulo'}
+          <button onClick={() => setCreating(true)} className="neo-btn text-sm">
+            Nuevo módulo
           </button>
         )}
       </div>
 
-      {isTeacher && creating && (
-        <NewModuleForm classId={classId} onDone={() => setCreating(false)} />
+      {isTeacher && (
+        <NewModuleModal classId={classId} open={creating} onClose={() => setCreating(false)} />
       )}
 
       {modules.length === 0 ? (
@@ -92,19 +93,25 @@ export default function ClassModulesSection({ classId, isTeacher }: { classId: s
   )
 }
 
-/** Formulario para crear el módulo (título, semana, parcial y descripción). */
-function NewModuleForm({ classId, onDone }: { classId: string; onDone: () => void }) {
+/**
+ * Modal para crear el módulo (título, semana, parcial y descripción).
+ * Mismo patrón que CreateProjectModal: portal al body sobre el fondo oscuro.
+ */
+function NewModuleModal({ classId, open, onClose }: { classId: string; open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
   const [title, setTitle] = useState('')
   const [week, setWeek] = useState('')
   const [parcial, setParcial] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => setMounted(true), [])
+
   async function save() {
     if (!title.trim() || saving) return
     setSaving(true)
     const n = parseInt(week, 10)
-    const ok = await createModule({
+    const id = await createModule({
       classId,
       title,
       description,
@@ -112,59 +119,74 @@ function NewModuleForm({ classId, onDone }: { classId: string; onDone: () => voi
       week: Number.isFinite(n) && n > 0 ? n : null,
     })
     setSaving(false)
-    if (ok) onDone()
+    if (!id) return
+    setTitle('')
+    setWeek('')
+    setParcial('')
+    setDescription('')
+    onClose()
   }
 
-  return (
-    <div className="neo-panel mb-4 space-y-4 p-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_120px_180px]">
-        <div>
-          <label className="neo-label mb-1.5 block">Título</label>
+  if (!open || !mounted) return null
+
+  return createPortal(
+    <div className="neo-modal-backdrop" onClick={onClose}>
+      <div className="neo-modal neo-modal--form space-y-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-white">Nuevo módulo</h4>
+          <button onClick={onClose} className="text-neutral-500 hover:text-white">✕</button>
+        </div>
+
+        <div className="space-y-2">
+          <label className="neo-label">Título</label>
           <input
             className="neo-input w-full"
             placeholder="Introducción a los patrones de diseño"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value.normalize('NFC'))}
             autoFocus
           />
         </div>
-        <div>
-          <label className="neo-label mb-1.5 block">Semana</label>
-          <input
-            className="neo-input w-full"
-            type="number"
-            min={1}
-            placeholder="1"
-            value={week}
-            onChange={(e) => setWeek(e.target.value)}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="neo-label">Semana</label>
+            <input
+              className="neo-input w-full"
+              type="number"
+              min={1}
+              placeholder="1"
+              value={week}
+              onChange={(e) => setWeek(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="neo-label">Parcial</label>
+            <NeoSelect value={parcial} options={PARCIAL_OPTIONS} onChange={setParcial} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="neo-label">Descripción</label>
+          <textarea
+            className="neo-input w-full resize-none"
+            rows={3}
+            placeholder="Qué se cubre en esta semana y qué debe repasar el estudiante."
+            value={description}
+            onChange={(e) => setDescription(e.target.value.normalize('NFC'))}
           />
         </div>
-        <div>
-          <label className="neo-label mb-1.5 block">Parcial</label>
-          <NeoSelect value={parcial} options={PARCIAL_OPTIONS} onChange={setParcial} />
-        </div>
-      </div>
 
-      <div>
-        <label className="neo-label mb-1.5 block">Descripción</label>
-        <textarea
-          className="neo-input w-full resize-y"
-          rows={2}
-          placeholder="Qué se cubre en esta semana y qué debe repasar el estudiante."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-neutral-500">
-          El módulo nace oculto. Lo publicas cuando quieras que la clase lo vea.
+          El módulo nace oculto. Le adjuntas el material y lo publicas cuando quieras que la clase lo vea.
         </p>
-        <button onClick={save} disabled={!title.trim() || saving} className="neo-btn text-sm disabled:opacity-40">
+
+        <button onClick={save} disabled={!title.trim() || saving} className="neo-btn w-full justify-center disabled:opacity-40">
           {saving ? 'Creando…' : 'Crear módulo'}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
