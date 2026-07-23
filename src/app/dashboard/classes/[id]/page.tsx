@@ -12,6 +12,7 @@ import Icon3D from '@/frontend/components/ui/Icon3D'
 import { TrashIcon } from '@/frontend/components/ui/Icons'
 import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
 import ClassTasksSection from '@/frontend/components/tasks/ClassTasksSection'
+import ClassModulesSection from '@/frontend/components/modules/ClassModulesSection'
 import { useT } from '@/frontend/hooks/useT'
 import { parcialLabel } from '@/shared/parciales'
 
@@ -166,6 +167,9 @@ export default function ClassDetailPage({ params }: { params: { id: string } }) 
             </div>
           )}
         </section>
+
+        {/* Material de la semana (el catedrático lo prepara oculto y lo publica) */}
+        <ClassModulesSection classId={params.id} isTeacher={isTeacher} />
 
         {/* Tareas de la clase (publicar + matriz de entregas) */}
         <ClassTasksSection classId={params.id} isTeacher={isTeacher} roster={klass.roster} />
