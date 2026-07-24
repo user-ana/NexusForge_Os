@@ -49,3 +49,6 @@ Thumbs.db
 
 # Respaldo local de avatares originales (recortados a 512px en el repo)
 public/avatars/_orig/
+
+# .next-check: build de verificacion (no toca el .next del dev server)
+.next-check/

@@ -304,7 +304,7 @@ function ModuleCard({
         <div className="flex flex-shrink-0 items-center gap-2">
           {m.files.length > 0 && (
             <button onClick={() => setReading(true)} className="neo-btn text-xs">
-              Estudiar
+              {isTeacher ? 'Revisar' : 'Estudiar'}
             </button>
           )}
           {isTeacher && (
@@ -323,7 +323,7 @@ function ModuleCard({
         </div>
       </div>
 
-      {reading && <ModuleReader module={m} onClose={() => setReading(false)} />}
+      {reading && <ModuleReader module={m} isTeacher={isTeacher} onClose={() => setReading(false)} />}
 
       {open && (
         <div className="mt-4 border-t border-white/5 pt-4">

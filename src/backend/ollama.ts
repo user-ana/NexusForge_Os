@@ -17,6 +17,16 @@ export function ollamaModel(): string {
 }
 
 /**
+ * Modelo con VISIÓN, para cuando el estudiante adjunta una captura
+ * (OLLAMA_VISION_MODEL, p. ej. 'moondream' o 'llava'). El modelo de texto no
+ * puede leer imágenes, así que sin esta variable esa función queda apagada
+ * y se avisa en pantalla en vez de fallar en silencio.
+ */
+export function ollamaVisionModel(): string {
+  return process.env.OLLAMA_VISION_MODEL || ''
+}
+
+/**
  * Hilos de CPU que puede usar el modelo (OLLAMA_NUM_THREAD).
  *
  * Sin la variable, Ollama decide solo — que es lo correcto cuando corre en GPU.

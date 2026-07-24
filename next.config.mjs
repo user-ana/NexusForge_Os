@@ -35,6 +35,10 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // Permite compilar en una carpeta aparte (NEXT_DIST_DIR=.next-check) para
+  // verificar que todo compila SIN pisar el .next que está usando `npm run dev`.
+  // Si se pisa, el servidor de desarrollo se rompe con "Cannot find module".
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

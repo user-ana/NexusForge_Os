@@ -313,7 +313,12 @@ export async function askModule(input: {
   text: string
   title?: string
   question?: string
-  mode?: 'resumen' | 'pregunta'
+  /** Atajo con instrucción fija; sin él, se usa `question`. */
+  mode?: 'resumen' | 'examen' | 'tarea' | 'huecos'
+  /** Cambia el criterio: el tutor guía al alumno, el asistente le prepara clase al profe. */
+  role?: 'teacher' | 'student'
+  /** Captura adjunta en base64, sin el prefijo data: */
+  image?: string
   history?: { role: string; content: string }[]
 }): Promise<{ answer?: string; error?: string }> {
   if (!supabase) return { error: 'Sin conexión.' }

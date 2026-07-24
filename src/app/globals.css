@@ -6502,3 +6502,170 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-reader-chat::-webkit-scrollbar-thumb,
 :root[data-theme="light"] .neo-reader-page::-webkit-scrollbar-thumb { background-color: rgba(33, 42, 59, 0.16); }
 
+
+/* ---- Pestañas del panel (asistente / apuntes) ---- */
+.neo-reader-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  flex-shrink: 0;
+}
+.neo-reader-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 10px 10px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b7280;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+.neo-reader-tab:hover { color: #a3abb9; background: rgba(255, 255, 255, 0.03); }
+.neo-reader-tab--on { color: #eceef2; background: rgba(63, 195, 232, 0.07); border-bottom-color: #3fc3e8; }
+.neo-reader-tabn {
+  min-width: 17px;
+  padding: 0 5px;
+  border-radius: 99px;
+  font-size: 10px;
+  line-height: 16px;
+  color: #10141a;
+  background: #3fc3e8;
+}
+
+/* ---- Botón de ajustar al ancho ---- */
+.neo-reader-fit {
+  padding: 5px 10px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8b93a3;
+  background: rgba(255, 255, 255, 0.05);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.neo-reader-fit:hover { color: #eceef2; background: rgba(255, 255, 255, 0.1); }
+.neo-reader-fit--on { color: #10141a; background: linear-gradient(145deg, #43c8ec, #2494b6); }
+
+/* ---- Explicar esta página ---- */
+.neo-reader-askpage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #a9d9ea;
+  background: rgba(63, 195, 232, 0.1);
+  border: 1px solid rgba(63, 195, 232, 0.2);
+  transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.neo-reader-askpage:hover:not(:disabled) { color: #10141a; background: #3fc3e8; transform: translateY(-1px); }
+
+/* ---- Atajo principal del panel ---- */
+.neo-reader-chip--main {
+  color: #10141a;
+  font-weight: 600;
+  background: linear-gradient(145deg, #43c8ec, #2494b6);
+  border-color: transparent;
+}
+.neo-reader-chip--main:hover:not(:disabled) { color: #10141a; background: linear-gradient(145deg, #55d0f0, #2ea3c7); }
+
+/* ---- Guardar una respuesta en apuntes ---- */
+.neo-reader-save {
+  display: block;
+  margin-top: 9px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #8b93a3;
+  background: rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.neo-reader-msg:hover .neo-reader-save { opacity: 1; }
+.neo-reader-save:hover { color: #3fc3e8; background: rgba(63, 195, 232, 0.12); }
+/* En pantallas táctiles no hay "pasar el puntero": el botón va siempre visible */
+@media (hover: none) {
+  .neo-reader-save { opacity: 1; }
+}
+
+/* ---- Apuntes ---- */
+.neo-reader-noteitem {
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: neo-reader-msg-in 0.3s ease both;
+}
+.neo-reader-notetop { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.neo-reader-notetag {
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #8b93a3;
+  background: rgba(255, 255, 255, 0.06);
+}
+.neo-reader-notetag--ai { color: #10141a; background: linear-gradient(145deg, #43c8ec, #2494b6); }
+.neo-reader-notebody {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cdd3dc;
+  white-space: pre-wrap;
+}
+
+/* ---- Adjuntar captura ---- */
+.neo-reader-clip {
+  flex-shrink: 0;
+  width: 36px;
+  border-radius: 11px;
+  font-size: 18px;
+  color: #8b93a3;
+  background: rgba(255, 255, 255, 0.05);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.neo-reader-clip:hover:not(:disabled) { color: #3fc3e8; background: rgba(63, 195, 232, 0.12); }
+.neo-reader-img {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  color: #a9d9ea;
+  background: rgba(63, 195, 232, 0.09);
+  border: 1px solid rgba(63, 195, 232, 0.18);
+}
+.neo-reader-img button { flex-shrink: 0; color: #8b93a3; }
+.neo-reader-img button:hover { color: #f87171; }
+
+/* La barra de abajo apila la captura sobre la fila de escribir */
+.neo-reader-ask { flex-direction: column; }
+
+/* ---- Tema claro ---- */
+:root[data-theme="light"] .neo-reader-tab { color: #7b8494; }
+:root[data-theme="light"] .neo-reader-tab--on { color: #171b25; background: #e3f6fc; }
+:root[data-theme="light"] .neo-reader-tabn { color: #ffffff; background: #1d8fb4; }
+:root[data-theme="light"] .neo-reader-fit { color: #596273; background: #eef1f6; }
+:root[data-theme="light"] .neo-reader-fit--on { color: #ffffff; background: linear-gradient(145deg, #35b6da, #1d8fb4); }
+:root[data-theme="light"] .neo-reader-askpage { color: #1a6a85; background: #e3f6fc; border-color: #a9dcec; }
+:root[data-theme="light"] .neo-reader-askpage:hover:not(:disabled) { color: #ffffff; background: #1d8fb4; }
+:root[data-theme="light"] .neo-reader-chip--main { color: #ffffff; background: linear-gradient(145deg, #35b6da, #1d8fb4); }
+:root[data-theme="light"] .neo-reader-chip--main:hover:not(:disabled) { color: #ffffff; }
+:root[data-theme="light"] .neo-reader-save { color: #7b8494; background: #eef1f6; }
+:root[data-theme="light"] .neo-reader-noteitem { background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-reader-notetag { color: #7b8494; background: #e0e6ef; }
+:root[data-theme="light"] .neo-reader-notetag--ai { color: #ffffff; background: linear-gradient(145deg, #35b6da, #1d8fb4); }
+:root[data-theme="light"] .neo-reader-notebody { color: #2b3240; }
+:root[data-theme="light"] .neo-reader-clip { color: #596273; background: #eef1f6; }
+:root[data-theme="light"] .neo-reader-img { color: #1a6a85; background: #e3f6fc; border-color: #a9dcec; }
+
