@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
 
 /**
  * Asistente con IA (Fase 3a — solo lectura). Recibe la pregunta del catedrático
@@ -94,9 +95,7 @@ export async function POST(req: Request) {
         .slice(-8)
     : []
 
-  const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-  // llama3.2 (3B) cabe en GPUs de ~6GB (RTX 4050) -> respuestas rápidas.
-  const model = process.env.OLLAMA_MODEL || 'llama3.2'
+  // La URL, el modelo y los hilos salen de @/backend/ollama (una sola fuente).
 
   // ¿El mensaje pide de verdad una ACCIÓN (crear/eliminar)? Solo entonces le
   // ofrecemos las herramientas al modelo. Así un saludo o una consulta no se
@@ -139,12 +138,12 @@ export async function POST(req: Request) {
 
   try {
     const payload: Record<string, unknown> = {
-      model,
+      model: ollamaModel(),
       stream: false,
       keep_alive: '30m', // mantiene el modelo cargado en memoria (evita el arranque en frío)
       // Tope de tokens acotado: en CPU cada token es lento y el túnel gratis
       // corta a los 100s. Acciones necesitan poco; consultas un poco más.
-      options: { temperature: 0.2, num_predict: wantsAction ? 80 : 200 },
+      options: ollamaOptions({ temperature: 0.2, num_predict: wantsAction ? 80 : 200 }),
       messages: [
         { role: 'system', content: system },
         ...history,
@@ -155,7 +154,7 @@ export async function POST(req: Request) {
     // y de esas, SOLO la que encaja con lo que pidió (ver pickTools).
     if (wantsAction) payload.tools = pickTools(question, tools)
 
-    const r = await fetch(`${base}/api/chat`, {
+    const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

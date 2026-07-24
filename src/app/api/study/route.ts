@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
 
 /**
  * TUTOR DEL MÓDULO — responde dudas del estudiante APOYÁNDOSE EN EL MATERIAL
@@ -92,20 +93,17 @@ export async function POST(req: Request) {
       ].join('\n')
     : question
 
-  const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-  const model = process.env.OLLAMA_MODEL || 'llama3.2'
-
   try {
-    const r = await fetch(`${base}/api/chat`, {
+    const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
+        model: ollamaModel(),
         stream: false,
         keep_alive: '30m',
         // Explicar necesita más margen que una acción, pero acotado: en CPU
         // cada token cuesta y el estudiante no espera un ensayo.
-        options: { temperature: 0.3, num_predict: resumen ? 300 : 400 },
+        options: ollamaOptions({ temperature: 0.3, num_predict: resumen ? 300 : 400 }),
         messages: [{ role: 'system', content: system }, ...history, { role: 'user', content: userMsg }],
       }),
       signal: AbortSignal.timeout(280_000),

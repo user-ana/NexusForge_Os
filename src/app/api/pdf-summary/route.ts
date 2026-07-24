@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
 
 /**
  * Resume el texto de un enunciado con la IA (Ollama/Llama).
@@ -43,17 +44,15 @@ export async function POST(req: Request) {
   const clipped = raw.slice(0, MAX_TEXT)
   const fallback = raw.slice(0, 700).trim() + (raw.length > 700 ? '…' : '')
 
-  const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-  const model = process.env.OLLAMA_MODEL || 'llama3.2'
   try {
-    const r = await fetch(`${base}/api/chat`, {
+    const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
+        model: ollamaModel(),
         stream: false,
         keep_alive: '30m',
-        options: { temperature: 0.2, num_predict: 220 },
+        options: ollamaOptions({ temperature: 0.2, num_predict: 220 }),
         messages: [
           {
             role: 'system',
