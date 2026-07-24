@@ -4,10 +4,11 @@
  * LECTOR DE MÓDULO — abre la lección dentro de la plataforma en vez de mandar
  * al estudiante a descargar un PDF suelto.
  *
- * A la izquierda el documento se dibuja página por página con pdfjs (el mismo
- * que ya usamos para extraer texto, con su worker servido desde public/).
- * A la derecha, el tutor: resume la lección y responde dudas apoyándose SOLO
- * en el material que subió el catedrático.
+ * A la izquierda el documento se dibuja con pdfjs y encima lleva una capa de
+ * texto invisible: eso es lo que permite SELECCIONAR un párrafo y preguntarle
+ * al tutor justo por esa parte, en vez de tener que reescribirlo.
+ * A la derecha el tutor, que responde apoyándose SOLO en el material que subió
+ * el catedrático. El ancho del panel se ajusta arrastrando la división.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,10 +18,18 @@ import { parcialLabel } from '@/shared/parciales'
 import { LinkIcon, SearchIcon } from '@/frontend/components/ui/Icons'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
+/** Petición que viaja del documento al tutor. El contador permite repetir la misma selección. */
+type AskRequest = { text: string; seq: number }
+
+const TUTOR_MIN = 320
+const TUTOR_MAX = 720
 
 export default function ModuleReader({ module: m, onClose }: { module: ClassModule; onClose: () => void }) {
   const [mounted, setMounted] = useState(false)
   const [file, setFile] = useState<ModuleFile | null>(m.files.find((f) => f.kind === 'pdf') ?? null)
+  const [tutorWidth, setTutorWidth] = useState(400)
+  const [request, setRequest] = useState<AskRequest | null>(null)
+  const seqRef = useRef(0)
 
   useEffect(() => setMounted(true), [])
 
@@ -32,6 +41,29 @@ export default function ModuleReader({ module: m, onClose }: { module: ClassModu
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  /** Arrastre de la división: se escucha en toda la ventana para que el puntero
+   *  pueda salirse del asa sin que se corte el gesto. */
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const move = (ev: MouseEvent) => {
+      const w = window.innerWidth - ev.clientX
+      setTutorWidth(Math.min(TUTOR_MAX, Math.max(TUTOR_MIN, w)))
+    }
+    const up = () => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      document.body.classList.remove('neo-resizing')
+    }
+    document.body.classList.add('neo-resizing')
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }, [])
+
+  function askAbout(text: string) {
+    seqRef.current += 1
+    setRequest({ text, seq: seqRef.current })
+  }
 
   if (!mounted) return null
 
@@ -67,7 +99,7 @@ export default function ModuleReader({ module: m, onClose }: { module: ClassModu
           )}
 
           {file ? (
-            <PdfCanvas url={file.url} />
+            <PdfCanvas url={file.url} onAskAbout={askAbout} />
           ) : (
             <div className="neo-reader-empty">
               <p className="text-sm text-neutral-400">Esta lección no tiene un PDF para mostrar aquí.</p>
@@ -84,7 +116,11 @@ export default function ModuleReader({ module: m, onClose }: { module: ClassModu
           )}
         </section>
 
-        <TutorPanel module={m} />
+        <div className="neo-reader-grip" onMouseDown={startResize} title="Arrastra para ajustar el ancho">
+          <span />
+        </div>
+
+        <TutorPanel module={m} width={tutorWidth} request={request} />
       </div>
     </div>,
     document.body,
@@ -92,11 +128,14 @@ export default function ModuleReader({ module: m, onClose }: { module: ClassModu
 }
 
 /**
- * Dibuja el PDF a canvas. Renderiza solo la página visible (no las 40 de golpe)
- * para que no se coma la memoria del navegador en documentos largos.
+ * Dibuja el PDF a canvas y monta encima la capa de texto seleccionable.
+ * Renderiza solo la página visible (no las 40 de golpe) para no comerse la
+ * memoria del navegador en documentos largos.
  */
-function PdfCanvas({ url }: { url: string }) {
+function PdfCanvas({ url, onAskAbout }: { url: string; onAskAbout: (t: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const docRef = useRef<any>(null)
   const [page, setPage] = useState(1)
@@ -104,8 +143,9 @@ function PdfCanvas({ url }: { url: string }) {
   const [zoom, setZoom] = useState(1.35)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  // Botón flotante que aparece junto al texto que el estudiante marcó
+  const [sel, setSel] = useState<{ text: string; x: number; y: number } | null>(null)
 
-  // Carga del documento (una sola vez por URL)
   useEffect(() => {
     let cancel = false
     setLoading(true)
@@ -133,27 +173,66 @@ function PdfCanvas({ url }: { url: string }) {
     }
   }, [url])
 
-  // Dibujo de la página actual
+  /** Dibuja la página actual: primero el canvas, luego la capa de texto encima. */
   const draw = useCallback(async () => {
     const doc = docRef.current
     const canvas = canvasRef.current
-    if (!doc || !canvas) return
+    const textDiv = textRef.current
+    if (!doc || !canvas || !textDiv) return
+
     const p = await doc.getPage(page)
-    // Se multiplica por la densidad de pantalla para que no se vea borroso
+    // El canvas se dibuja a la densidad real de la pantalla (nítido); la capa
+    // de texto usa el tamaño CSS, que es donde el usuario hace la selección.
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    const viewport = p.getViewport({ scale: zoom * dpr })
+    const vpCss = p.getViewport({ scale: zoom })
+    const vpHi = p.getViewport({ scale: zoom * dpr })
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    canvas.style.width = `${viewport.width / dpr}px`
-    canvas.style.height = `${viewport.height / dpr}px`
-    await p.render({ canvasContext: ctx, viewport }).promise
+    canvas.width = vpHi.width
+    canvas.height = vpHi.height
+    canvas.style.width = `${vpCss.width}px`
+    canvas.style.height = `${vpCss.height}px`
+    await p.render({ canvasContext: ctx, viewport: vpHi }).promise
+
+    // Capa de texto: spans transparentes colocados sobre cada palabra
+    textDiv.innerHTML = ''
+    textDiv.style.width = `${vpCss.width}px`
+    textDiv.style.height = `${vpCss.height}px`
+    textDiv.style.setProperty('--total-scale-factor', String(zoom))
+    const pdfjs = await import('pdfjs-dist')
+    const layer = new pdfjs.TextLayer({
+      textContentSource: await p.getTextContent(),
+      container: textDiv,
+      viewport: vpCss,
+    })
+    await layer.render()
   }, [page, zoom])
 
   useEffect(() => {
     if (!loading && !error) draw()
   }, [draw, loading, error])
+
+  // Al cambiar de página o de zoom, la selección anterior deja de tener sentido
+  useEffect(() => setSel(null), [page, zoom])
+
+  /** Si el estudiante marcó texto del documento, ofrecemos preguntarle al tutor. */
+  function onMouseUp() {
+    const s = window.getSelection()
+    const texto = s?.toString().trim() ?? ''
+    if (!s || texto.length < 3 || !textRef.current?.contains(s.anchorNode)) {
+      setSel(null)
+      return
+    }
+    const rect = s.getRangeAt(0).getBoundingClientRect()
+    const wrap = wrapRef.current?.getBoundingClientRect()
+    if (!wrap) return
+    setSel({
+      text: texto.replace(/\s+/g, ' '),
+      x: rect.left - wrap.left + rect.width / 2,
+      y: rect.top - wrap.top,
+    })
+  }
 
   if (error) {
     return (
@@ -168,8 +247,29 @@ function PdfCanvas({ url }: { url: string }) {
 
   return (
     <>
-      <div className="neo-reader-page">
-        {loading ? <p className="text-sm text-neutral-500">Abriendo el documento…</p> : <canvas ref={canvasRef} />}
+      <div className="neo-reader-page" ref={wrapRef} onMouseUp={onMouseUp}>
+        {loading ? (
+          <p className="text-sm text-neutral-500">Abriendo el documento…</p>
+        ) : (
+          <div className="neo-reader-sheet">
+            <canvas ref={canvasRef} />
+            <div className="neo-reader-textlayer" ref={textRef} />
+          </div>
+        )}
+
+        {sel && (
+          <button
+            className="neo-reader-selbtn"
+            style={{ left: sel.x, top: sel.y }}
+            onClick={() => {
+              onAskAbout(sel.text)
+              setSel(null)
+              window.getSelection()?.removeAllRanges()
+            }}
+          >
+            <SearchIcon size={13} /> Preguntar al tutor
+          </button>
+        )}
       </div>
 
       {!loading && pages > 0 && (
@@ -191,6 +291,8 @@ function PdfCanvas({ url }: { url: string }) {
           <button onClick={() => setZoom((z) => Math.min(2.6, +(z + 0.2).toFixed(2)))} className="neo-reader-nav" title="Acercar">
             +
           </button>
+          <span className="neo-reader-sep" />
+          <span className="neo-reader-tip">Marca un párrafo para preguntar por él</span>
         </div>
       )}
     </>
@@ -205,7 +307,15 @@ const ATAJOS = [
 ]
 
 /** Panel del tutor: resume la lección y responde dudas sobre ESTE material. */
-function TutorPanel({ module: m }: { module: ClassModule }) {
+function TutorPanel({
+  module: m,
+  width,
+  request,
+}: {
+  module: ClassModule
+  width: number
+  request: AskRequest | null
+}) {
   const [text, setText] = useState<string | null>(null) // material en texto (null = cargando)
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [draft, setDraft] = useState('')
@@ -221,28 +331,33 @@ function TutorPanel({ module: m }: { module: ClassModule }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, busy])
 
-  async function ask(question: string, mode: 'resumen' | 'pregunta' = 'pregunta') {
-    if (busy || !text) return
-    setError('')
-    setBusy(true)
-    if (mode === 'pregunta') setMsgs((p) => [...p, { role: 'user', content: question }])
+  const ask = useCallback(
+    async (question: string, mode: 'resumen' | 'pregunta' = 'pregunta') => {
+      if (!text) return
+      setError('')
+      setBusy(true)
+      if (mode === 'pregunta') setMsgs((p) => [...p, { role: 'user', content: question }])
 
-    const res = await askModule({
-      text,
-      title: m.title,
-      question,
-      mode,
-      history: msgs.slice(-6),
-    })
-    setBusy(false)
+      const res = await askModule({ text, title: m.title, question, mode, history: msgs.slice(-6) })
+      setBusy(false)
 
-    if (res.error) setError(res.error)
-    else if (res.answer) setMsgs((p) => [...p, { role: 'assistant', content: res.answer as string }])
-  }
+      if (res.error) setError(res.error)
+      else if (res.answer) setMsgs((p) => [...p, { role: 'assistant', content: res.answer as string }])
+    },
+    [text, m.title, msgs],
+  )
+
+  // Llega una selección desde el documento: se pregunta por ese fragmento
+  const lastSeq = useRef(0)
+  useEffect(() => {
+    if (!request || request.seq === lastSeq.current || busy || !text) return
+    lastSeq.current = request.seq
+    ask(`Explícame esta parte del material: "${request.text}"`)
+  }, [request, ask, busy, text])
 
   function send() {
     const q = draft.trim()
-    if (!q) return
+    if (!q || busy) return
     setDraft('')
     ask(q)
   }
@@ -251,15 +366,27 @@ function TutorPanel({ module: m }: { module: ClassModule }) {
   const sinTexto = text !== null && text.length === 0
 
   return (
-    <aside className="neo-reader-tutor">
+    <aside className="neo-reader-tutor" style={{ width }}>
       <div className="neo-reader-tutor-top">
         <span className="neo-reader-tutor-badge">
           <SearchIcon size={13} />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-white">Tutor de la lección</p>
-          <p className="text-[11px] text-neutral-500">Responde con el material de tu catedrático</p>
+          <p className="truncate text-[11px] text-neutral-500">Responde con el material de tu catedrático</p>
         </div>
+        {msgs.length > 0 && (
+          <button
+            onClick={() => {
+              setMsgs([])
+              setError('')
+            }}
+            className="neo-reader-reset"
+            title="Volver al inicio del tutor"
+          >
+            Inicio
+          </button>
+        )}
       </div>
 
       <div className="neo-reader-chat">
@@ -271,14 +398,21 @@ function TutorPanel({ module: m }: { module: ClassModule }) {
         ) : msgs.length === 0 && !busy ? (
           <div className="space-y-3">
             <p className="neo-reader-note">
-              Puedo explicarte esta lección con el material que subió tu catedrático. Empieza por donde quieras.
+              Puedo explicarte esta lección con el material que subió tu catedrático. Marca un párrafo del documento o
+              empieza por aquí.
             </p>
             <button onClick={() => ask('', 'resumen')} disabled={!text} className="neo-btn w-full justify-center text-sm disabled:opacity-40">
               Resumir la lección
             </button>
             <div className="space-y-1.5">
-              {ATAJOS.map((a) => (
-                <button key={a} onClick={() => ask(a)} disabled={!text} className="neo-reader-chip disabled:opacity-40">
+              {ATAJOS.map((a, i) => (
+                <button
+                  key={a}
+                  onClick={() => ask(a)}
+                  disabled={!text}
+                  className="neo-reader-chip disabled:opacity-40"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
                   {a}
                 </button>
               ))}
@@ -291,7 +425,13 @@ function TutorPanel({ module: m }: { module: ClassModule }) {
                 {msg.content}
               </div>
             ))}
-            {busy && <div className="neo-reader-msg neo-reader-msg--wait">Pensando…</div>}
+            {busy && (
+              <div className="neo-reader-msg neo-reader-msg--wait">
+                <span className="neo-reader-dots">
+                  <i /><i /><i />
+                </span>
+              </div>
+            )}
             <div ref={endRef} />
           </div>
         )}
