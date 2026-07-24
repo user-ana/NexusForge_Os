@@ -27,6 +27,7 @@ import {
 import { PARCIAL_OPTIONS, parcialLabel } from '@/shared/parciales'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
 import NeoSteps from '@/frontend/components/ui/NeoSteps'
+import ModuleReader from '@/frontend/components/modules/ModuleReader'
 import ConfirmDialog from '@/frontend/components/ui/ConfirmDialog'
 import { ClipboardIcon, LinkIcon, LockIcon, TrashIcon } from '@/frontend/components/ui/Icons'
 
@@ -278,6 +279,7 @@ function ModuleCard({
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(m.published || isTeacher)
+  const [reading, setReading] = useState(false)
 
   return (
     <article className="neo-panel p-5">
@@ -299,20 +301,29 @@ function ModuleCard({
           {m.description && <p className="mt-1 text-sm text-neutral-400">{m.description}</p>}
         </button>
 
-        {isTeacher && (
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <button
-              onClick={() => publishModule(m.id, !m.published)}
-              className={`neo-btn-ghost text-xs ${m.published ? '' : 'text-accent-violet'}`}
-            >
-              {m.published ? 'Ocultar' : 'Publicar'}
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {m.files.length > 0 && (
+            <button onClick={() => setReading(true)} className="neo-btn text-xs">
+              Estudiar
             </button>
-            <button onClick={onDelete} className="text-neutral-600 hover:text-red-400" title="Eliminar módulo">
-              <TrashIcon size={15} />
-            </button>
-          </div>
-        )}
+          )}
+          {isTeacher && (
+            <>
+              <button
+                onClick={() => publishModule(m.id, !m.published)}
+                className={`neo-btn-ghost text-xs ${m.published ? '' : 'text-accent-violet'}`}
+              >
+                {m.published ? 'Ocultar' : 'Publicar'}
+              </button>
+              <button onClick={onDelete} className="text-neutral-600 hover:text-red-400" title="Eliminar módulo">
+                <TrashIcon size={15} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {reading && <ModuleReader module={m} onClose={() => setReading(false)} />}
 
       {open && (
         <div className="mt-4 border-t border-white/5 pt-4">

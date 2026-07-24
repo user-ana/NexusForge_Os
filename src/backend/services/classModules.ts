@@ -277,6 +277,64 @@ export async function deleteModuleFile(id: string): Promise<void> {
 }
 
 /**
+ * Texto de UN módulo (todos sus PDF juntos), para que la IA responda dudas
+ * sobre esa lección concreta. RLS decide si se puede leer: el alumno solo
+ * accede a los módulos publicados.
+ */
+export async function loadModuleText(moduleId: string, maxChars = 9000): Promise<string> {
+  if (!supabase) return ''
+  const { data } = await supabase
+    .from('module_files')
+    .select('name, text_content')
+    .eq('module_id', moduleId)
+    .order('created_at', { ascending: true })
+
+  let out = ''
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  for (const f of (data ?? []) as any[]) {
+    const texto = (f.text_content ?? '').trim()
+    if (!texto) continue
+    const bloque = `[${f.name}]\n${texto}\n\n`
+    if (out.length + bloque.length > maxChars) {
+      out += bloque.slice(0, Math.max(0, maxChars - out.length))
+      break
+    }
+    out += bloque
+  }
+  return out.trim()
+}
+
+/**
+ * Le pide al tutor que explique algo del módulo. `mode: 'resumen'` genera el
+ * resumen de la lección; si no, responde la pregunta del estudiante.
+ * Devuelve el texto o un mensaje de error legible (nunca lanza).
+ */
+export async function askModule(input: {
+  text: string
+  title?: string
+  question?: string
+  mode?: 'resumen' | 'pregunta'
+  history?: { role: string; content: string }[]
+}): Promise<{ answer?: string; error?: string }> {
+  if (!supabase) return { error: 'Sin conexión.' }
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return { error: 'Necesitas iniciar sesión.' }
+  try {
+    const res = await fetch('/api/study', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return { error: json.error ?? 'La IA no respondió.' }
+    return { answer: json.answer ?? '' }
+  } catch {
+    return { error: 'No se pudo conectar con la IA.' }
+  }
+}
+
+/**
  * Texto del material publicado de una clase, para dárselo como contexto a la IA
  * (base de la sesión de estudio). Se acota el tamaño porque el modelo tiene un
  * límite de tokens y el material de un semestre completo no cabe.
