@@ -7,6 +7,7 @@ import AuthGuard from '@/frontend/components/auth/AuthGuard'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
 import CreateProjectModal from '@/frontend/components/projects/CreateProjectModal'
+import ClassModulesSection from '@/frontend/components/modules/ClassModulesSection'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
 import { getClass, loadClasses, subscribeClasses, setProjectMode, setGroupFormation, CLASSES_EVENT, type Klass } from '@/backend/services/classes'
 import {
@@ -134,8 +135,8 @@ function Aula({ id }: { id: string }) {
   // es exactamente lo que se crea. Antes se sincronizaba con el total y se
   // reseteaba solo, que es lo que hacía que el número "volviera a cero".
 
-  // canal de chat según vista activa
-  const channel = active === 'manage' ? 'general' : active
+  // canal de chat según vista activa ('manage' y 'material' no son chats)
+  const channel = active === 'manage' || active === 'material' ? 'general' : active
   useEffect(() => {
     const sync = () => setMsgs(getMessages(id, channel))
     sync()
@@ -159,12 +160,13 @@ function Aula({ id }: { id: string }) {
   // al cambiar de canal, vuelve a la pestaña de chat
   useEffect(() => setTab('chat'), [active])
 
-  // si llega ?ch=<groupId> (desde Comunidad), abre ese canal de grupo
+  // si llega ?ch=<groupId> (desde Comunidad) o ?ch=material (desde la campanita),
+  // abre ese canal directamente
   const chApplied = useRef(false)
   useEffect(() => {
     if (chApplied.current || typeof window === 'undefined') return
     const ch = new URLSearchParams(window.location.search).get('ch')
-    if (ch && groups.some((g) => g.id === ch)) {
+    if (ch && (ch === 'material' || groups.some((g) => g.id === ch))) {
       chApplied.current = true
       setActive(ch)
       window.history.replaceState(null, '', `/aula/${id}`)
@@ -332,6 +334,13 @@ function Aula({ id }: { id: string }) {
             <span className="neo-aula-hash">#</span> general
           </button>
 
+          <button
+            onClick={() => setActive('material')}
+            className={`neo-aula-ch ${active === 'material' ? 'neo-aula-ch--active' : ''}`}
+          >
+            <ClipboardIcon size={15} /> material de clase
+          </button>
+
           {isTeacher && (
             <button
               onClick={() => setActive('manage')}
@@ -415,6 +424,10 @@ function Aula({ id }: { id: string }) {
                 <>
                   <span className="text-neutral-500">#</span> general
                 </>
+              ) : active === 'material' ? (
+                <>
+                  <ClipboardIcon size={14} /> material de clase
+                </>
               ) : active === 'manage' ? (
                 <>
                   <GearIcon /> gestión de grupos
@@ -439,8 +452,15 @@ function Aula({ id }: { id: string }) {
           </button>
         </header>
 
-        {/* ── GESTIÓN DE GRUPOS (catedrático) ── */}
-        {active === 'manage' && isTeacher ? (
+        {/* ── MATERIAL DE CLASE (todos: el alumno solo ve lo publicado) ── */}
+        {active === 'material' ? (
+          <div className="neo-aula-body">
+            <div className="mx-auto w-full max-w-5xl space-y-6">
+              <ClassModulesSection classId={id} isTeacher={isTeacher} />
+            </div>
+          </div>
+        ) : /* ── GESTIÓN DE GRUPOS (catedrático) ── */
+        active === 'manage' && isTeacher ? (
           <div className="neo-aula-body">
             <div className="mx-auto w-full max-w-5xl space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-3">

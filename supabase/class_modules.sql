@@ -139,7 +139,7 @@ begin
            'Nuevo material: ' || m.title,
            coalesce(cname, 'Tu clase')
              || case when m.week is not null then ' — Semana ' || m.week else '' end,
-           '/dashboard/classes/' || m.class_id,
+           '/aula/' || m.class_id || '?ch=material',
            m.class_id
     from public.enrollments e
     where e.class_id = m.class_id;
