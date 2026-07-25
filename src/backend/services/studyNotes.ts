@@ -89,6 +89,19 @@ export async function addNote(input: {
   if (!uid) return false
   const content = input.content.trim()
   if (!content) return false
+  // Red de seguridad contra duplicados: si ya existe el mismo apunte en este
+  // módulo, no se vuelve a insertar (el clic repetido en "Guardar" no acumula).
+  const { data: dup } = await supabase
+    .from('study_notes')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('module_id', input.moduleId)
+    .eq('content', content)
+    .limit(1)
+  if (dup && dup.length) {
+    dispatch()
+    return true
+  }
   const { error } = await supabase.from('study_notes').insert({
     user_id: uid,
     module_id: input.moduleId,

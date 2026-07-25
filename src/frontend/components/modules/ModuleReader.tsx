@@ -426,16 +426,30 @@ function AssistantPanel({
   const [error, setError] = useState('')
   const [notes, setNotes] = useState<StudyNote[]>([])
   const [image, setImage] = useState<{ name: string; b64: string } | null>(null)
+  // Respuestas ya guardadas (por su texto), para no insertar el mismo apunte dos veces
+  const [saved, setSaved] = useState<Set<string>>(new Set())
   const endRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
 
   const atajos = isTeacher ? ATAJOS_PROFE : ATAJOS_ALUMNO
 
+  /** Guarda una respuesta como apunte, una sola vez aunque se pulse varias veces. */
+  async function saveAnswer(content: string) {
+    if (saved.has(content)) return
+    setSaved((p) => new Set(p).add(content)) // marca de inmediato: corta el doble clic
+    const ok = await addNote({ moduleId: m.id, classId: m.classId, content, source: 'tutor' })
+    if (!ok) setSaved((p) => { const n = new Set(p); n.delete(content); return n }) // si falló, se puede reintentar
+  }
+
   // Material, conversación previa y apuntes
   useEffect(() => {
     loadModuleText(m.id).then(setText)
     loadTutorHistory(m.id).then(setMsgs)
-    loadNotes(m.id).then(setNotes)
+    loadNotes(m.id).then((ns) => {
+      setNotes(ns)
+      // Al reabrir, marca como guardadas las respuestas que ya están en apuntes
+      setSaved(new Set(ns.filter((n) => n.source === 'tutor').map((n) => n.content)))
+    })
   }, [m.id])
 
   useEffect(() => {
@@ -594,11 +608,12 @@ function AssistantPanel({
                     {msg.content}
                     {msg.role === 'assistant' && (
                       <button
-                        onClick={() => addNote({ moduleId: m.id, classId: m.classId, content: msg.content, source: 'tutor' })}
-                        className="neo-reader-save"
-                        title="Guardar esta explicación en mis apuntes"
+                        onClick={() => saveAnswer(msg.content)}
+                        disabled={saved.has(msg.content)}
+                        className={`neo-reader-save ${saved.has(msg.content) ? 'neo-reader-save--done' : ''}`}
+                        title={saved.has(msg.content) ? 'Ya está en tus apuntes' : 'Guardar esta explicación en mis apuntes'}
                       >
-                        Guardar en apuntes
+                        {saved.has(msg.content) ? 'Guardado ✓' : 'Guardar en apuntes'}
                       </button>
                     )}
                   </div>

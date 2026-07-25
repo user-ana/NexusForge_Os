@@ -6669,3 +6669,8 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-reader-clip { color: #596273; background: #eef1f6; }
 :root[data-theme="light"] .neo-reader-img { color: #1a6a85; background: #e3f6fc; border-color: #a9dcec; }
 
+
+/* Apunte ya guardado: el botón se apaga y deja de invitar al clic */
+.neo-reader-save--done { color: #4fc9f0; background: rgba(63, 195, 232, 0.12); opacity: 1; cursor: default; }
+.neo-reader-msg:hover .neo-reader-save--done { opacity: 1; }
+:root[data-theme="light"] .neo-reader-save--done { color: #1d8fb4; background: #e3f6fc; }
