@@ -43,10 +43,26 @@ const TIME_OPTIONS: { value: string; label: string }[] = (() => {
   return out
 })()
 
+/**
+ * Quita el markdown que suele venir en la respuesta de la IA (**negritas**,
+ * ### títulos, `código`), porque la tarea se muestra como texto plano y el
+ * alumno no debe ver los asteriscos ni las almohadillas.
+ */
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1') // **negrita**
+    .replace(/__(.+?)__/g, '$1') // __negrita__
+    .replace(/(^|\s)\*(?!\s)(.+?)\*/g, '$1$2') // *cursiva*
+    .replace(/`([^`]+)`/g, '$1') // `código`
+    .replace(/^#{1,6}\s*/gm, '') // ### títulos
+    .replace(/^\s*[-*]\s+/gm, '• ') // viñetas -/* -> •
+    .trim()
+}
+
 /** Saca un título corto de la primera línea de lo que generó el asistente. */
 function deriveTitle(text: string, fallback: string): string {
-  const first = text.replace(/\s+/g, ' ').trim().split(/[.\n:]/)[0] ?? ''
-  const clean = first.replace(/^(tarea|actividad|t[ií]tulo|tema)\s*[:\-]?\s*/i, '').trim()
+  const first = cleanMarkdown(text).split(/[.\n:]/)[0]?.replace(/\s+/g, ' ').trim() ?? ''
+  const clean = first.replace(/^(tarea|actividad|t[ií]tulo|tema)\s*\d*\s*[:\-]?\s*/i, '').trim()
   const words = clean.split(' ')
   const short = (words.length > 9 ? words.slice(0, 9).join(' ') : clean).trim()
   return short ? short.charAt(0).toUpperCase() + short.slice(1) : fallback
@@ -69,7 +85,7 @@ export default function PublishTaskModal({
 }) {
   const [mounted, setMounted] = useState(false)
   const [title, setTitle] = useState(() => deriveTitle(source, moduleTitle))
-  const [description, setDescription] = useState(source)
+  const [description, setDescription] = useState(() => cleanMarkdown(source))
   const [parcial, setParcial] = useState(defaultParcial || '')
   const [dueDate, setDueDate] = useState('') // 'YYYY-MM-DD'
   const [dueTime, setDueTime] = useState('23:59')
@@ -125,7 +141,7 @@ export default function PublishTaskModal({
   return createPortal(
     // z-index por encima del lector (90): sin esto el modal salía detrás del PDF
     <div className="neo-modal-backdrop" style={{ zIndex: 120 }} onClick={onClose}>
-      <div className="neo-modal neo-modal--form space-y-5" onClick={(e) => e.stopPropagation()}>
+      <div className="neo-modal neo-modal--form neo-modal--scroll space-y-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-base font-semibold text-white">Revisar y publicar tarea</h4>

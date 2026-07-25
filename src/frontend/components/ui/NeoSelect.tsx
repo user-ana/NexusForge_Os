@@ -56,7 +56,7 @@ export default function NeoSelect({
         mounted &&
         createPortal(
           <>
-            <div className="fixed inset-0 z-[95]" onClick={() => setOpen(false)} />
+            <div className="fixed inset-0 z-[129]" onClick={() => setOpen(false)} />
             <div
               className="neo-sel-menu"
               style={{

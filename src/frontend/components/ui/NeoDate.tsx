@@ -70,7 +70,7 @@ export default function NeoDate({
         mounted &&
         createPortal(
           <>
-            <div className="fixed inset-0 z-[95]" onClick={() => setOpen(false)} />
+            <div className="fixed inset-0 z-[129]" onClick={() => setOpen(false)} />
             <div className="neo-cal" style={{ position: 'fixed', top: pos.top, left: pos.left }}>
               <div className="mb-2 flex items-center justify-between">
                 <button type="button" onClick={prev} className="neo-cal-nav">‹</button>
