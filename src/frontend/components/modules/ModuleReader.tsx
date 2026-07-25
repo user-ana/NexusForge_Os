@@ -28,6 +28,7 @@ import {
 } from '@/backend/services/studyNotes'
 import { parcialLabel } from '@/shared/parciales'
 import { LinkIcon, SearchIcon, TrashIcon, ClipboardIcon } from '@/frontend/components/ui/Icons'
+import PublishTaskModal from '@/frontend/components/modules/PublishTaskModal'
 
 /** Petición que viaja del documento al asistente. El contador permite repetir lo mismo. */
 type AskRequest = { text: string; kind: 'fragmento' | 'pagina'; seq: number }
@@ -428,6 +429,9 @@ function AssistantPanel({
   const [image, setImage] = useState<{ name: string; b64: string } | null>(null)
   // Respuestas ya guardadas (por su texto), para no insertar el mismo apunte dos veces
   const [saved, setSaved] = useState<Set<string>>(new Set())
+  // Respuesta que el catedrático está publicando como tarea (null = ninguna)
+  const [publishing, setPublishing] = useState<string | null>(null)
+  const [published, setPublished] = useState<Set<string>>(new Set())
   const endRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
 
@@ -607,14 +611,28 @@ function AssistantPanel({
                   <div key={i} className={`neo-reader-msg ${msg.role === 'user' ? 'neo-reader-msg--me' : ''}`}>
                     {msg.content}
                     {msg.role === 'assistant' && (
-                      <button
-                        onClick={() => saveAnswer(msg.content)}
-                        disabled={saved.has(msg.content)}
-                        className={`neo-reader-save ${saved.has(msg.content) ? 'neo-reader-save--done' : ''}`}
-                        title={saved.has(msg.content) ? 'Ya está en tus apuntes' : 'Guardar esta explicación en mis apuntes'}
-                      >
-                        {saved.has(msg.content) ? 'Guardado ✓' : 'Guardar en apuntes'}
-                      </button>
+                      <div className="neo-reader-actions">
+                        <button
+                          onClick={() => saveAnswer(msg.content)}
+                          disabled={saved.has(msg.content)}
+                          className={`neo-reader-save ${saved.has(msg.content) ? 'neo-reader-save--done' : ''}`}
+                          title={saved.has(msg.content) ? 'Ya está en tus apuntes' : 'Guardar esta explicación en mis apuntes'}
+                        >
+                          {saved.has(msg.content) ? 'Guardado ✓' : 'Guardar en apuntes'}
+                        </button>
+                        {isTeacher &&
+                          (published.has(msg.content) ? (
+                            <span className="neo-reader-save neo-reader-save--done">Publicada ✓</span>
+                          ) : (
+                            <button
+                              onClick={() => setPublishing(msg.content)}
+                              className="neo-reader-save neo-reader-save--pub"
+                              title="Publicar esta respuesta como tarea de la clase"
+                            >
+                              Publicar como tarea
+                            </button>
+                          ))}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -675,6 +693,20 @@ function AssistantPanel({
             </div>
           )}
         </>
+      )}
+
+      {publishing !== null && (
+        <PublishTaskModal
+          classId={m.classId}
+          defaultParcial={m.parcial}
+          source={publishing}
+          moduleTitle={m.title}
+          onClose={() => setPublishing(null)}
+          onPublished={() => {
+            setPublished((p) => new Set(p).add(publishing))
+            setPublishing(null)
+          }}
+        />
       )}
     </aside>
   )

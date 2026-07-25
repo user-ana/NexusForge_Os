@@ -6674,3 +6674,11 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 .neo-reader-save--done { color: #4fc9f0; background: rgba(63, 195, 232, 0.12); opacity: 1; cursor: default; }
 .neo-reader-msg:hover .neo-reader-save--done { opacity: 1; }
 :root[data-theme="light"] .neo-reader-save--done { color: #1d8fb4; background: #e3f6fc; }
+
+/* Acciones bajo una respuesta del asistente (guardar / publicar) */
+.neo-reader-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.neo-reader-actions .neo-reader-save { margin-top: 0; }
+.neo-reader-save--pub { color: #cdab63; background: rgba(205, 171, 99, 0.12); }
+.neo-reader-msg:hover .neo-reader-save--pub { opacity: 1; }
+.neo-reader-save--pub:hover { color: #10141a; background: #cdab63; }
+:root[data-theme="light"] .neo-reader-save--pub { color: #8a6a1f; background: rgba(205, 171, 99, 0.16); }
