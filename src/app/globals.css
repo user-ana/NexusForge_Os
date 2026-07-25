@@ -2067,6 +2067,12 @@ body {
   background: linear-gradient(145deg, #4fc9f0, #1089d3);
   box-shadow: 0 3px 10px rgba(16, 137, 211, 0.4);
 }
+/* Día de hoy: solo un anillo, para distinguirlo del día elegido */
+.neo-cal-day--today {
+  color: #4fc9f0;
+  box-shadow: inset 0 0 0 1.5px rgba(63, 195, 232, 0.55);
+}
+:root[data-theme="light"] .neo-cal-day--today { color: #1089d3; box-shadow: inset 0 0 0 1.5px rgba(16, 137, 211, 0.5); }
 
 /* Modal grande con scroll interno (formularios largos) */
 .neo-modal--lg {

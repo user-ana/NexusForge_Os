@@ -29,7 +29,12 @@ export default function NeoDate({
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0 })
-  const [view, setView] = useState(() => (value ? { y: +value.slice(0, 4), m: +value.slice(5, 7) - 1 } : { y: 2026, m: 5 }))
+  // Sin fecha elegida, el calendario abre en el MES ACTUAL (no en uno fijo).
+  const [view, setView] = useState(() => {
+    if (value) return { y: +value.slice(0, 4), m: +value.slice(5, 7) - 1 }
+    const now = new Date()
+    return { y: now.getFullYear(), m: now.getMonth() }
+  })
   const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => setMounted(true), [])
@@ -38,6 +43,12 @@ export default function NeoDate({
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
       setPos({ top: r.bottom + 6, left: r.left })
+      // Al abrir, encuadra el mes de la fecha elegida o, si no hay, el mes actual
+      if (value) setView({ y: +value.slice(0, 4), m: +value.slice(5, 7) - 1 })
+      else {
+        const now = new Date()
+        setView({ y: now.getFullYear(), m: now.getMonth() })
+      }
     }
     setOpen((o) => !o)
   }
@@ -56,6 +67,9 @@ export default function NeoDate({
   const blanks = firstWeekdayMon(view.y, view.m)
   const total = daysInMonth(view.y, view.m)
   const selected = value && +value.slice(0, 4) === view.y && +value.slice(5, 7) - 1 === view.m ? +value.slice(8, 10) : -1
+  // Día de hoy, para resaltarlo cuando el mes a la vista es el actual
+  const now = new Date()
+  const today = now.getFullYear() === view.y && now.getMonth() === view.m ? now.getDate() : -1
 
   return (
     <>
@@ -87,7 +101,12 @@ export default function NeoDate({
                 {Array.from({ length: total }).map((_, i) => {
                   const day = i + 1
                   return (
-                    <button key={day} type="button" onClick={() => pick(day)} className={`neo-cal-day ${day === selected ? 'neo-cal-day--sel' : ''}`}>
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => pick(day)}
+                      className={`neo-cal-day ${day === selected ? 'neo-cal-day--sel' : ''} ${day === today && day !== selected ? 'neo-cal-day--today' : ''}`}
+                    >
                       {day}
                     </button>
                   )
