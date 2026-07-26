@@ -17,6 +17,8 @@ import {
   type EvidenceFile,
   type SubmissionStatus,
 } from '@/backend/services/classTasks'
+import TaskInstructions from '@/frontend/components/tasks/TaskInstructions'
+import { downloadTask } from '@/frontend/components/tasks/downloadTask'
 
 const LABEL: Record<DeliverableKind, { title: string; hint: string }> = {
   files: { title: 'Archivos', hint: 'Documentos, código o entregables' },
@@ -147,9 +149,14 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.15fr]">
             {/* Instrucciones */}
             <section className="neo-panel p-6">
-              <h3 className="neo-ws-h">Instrucciones</h3>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="neo-ws-h !mb-0">Instrucciones</h3>
+                <button onClick={() => downloadTask(task)} className="neo-tk-icon" title="Descargar en PDF">
+                  <DownloadIc />
+                </button>
+              </div>
               {task.description ? (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-300">{task.description}</p>
+                <TaskInstructions text={task.description} />
               ) : (
                 <p className="text-sm text-neutral-500">El catedrático no dejó instrucciones escritas.</p>
               )}
@@ -350,6 +357,14 @@ function CheckIc() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+function DownloadIc() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   )
 }

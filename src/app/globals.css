@@ -6950,3 +6950,45 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-rem-class { color: #7b8494; }
 :root[data-theme="light"] .neo-rem-dot { background: rgba(33,42,59,.2); }
 
+
+/* ======================================================================
+   ENUNCIADO ESTRUCTURADO (TaskInstructions) — secciones con color
+====================================================================== */
+.neo-ins { font-size: 13.5px; line-height: 1.62; color: #b8bdc7; }
+.neo-ins > * + * { margin-top: 12px; }
+
+.neo-ins-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.01em; line-height: 1.3; }
+
+/* Encabezado de sección: barra de color + etiqueta */
+.neo-ins-head { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; }
+.neo-ins-bar { flex-shrink: 0; width: 3px; align-self: stretch; min-height: 18px; border-radius: 3px; margin-top: 2px; }
+.neo-ins-label { display: block; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.neo-ins-body { margin-top: 3px; font-size: 13.5px; color: #b8bdc7; }
+
+.neo-ins-head--cyan   .neo-ins-bar { background: linear-gradient(#5fd0f0, #1089d3); } .neo-ins-head--cyan   .neo-ins-label { color: #6fd6f2; }
+.neo-ins-head--gold   .neo-ins-bar { background: linear-gradient(#f0cf7a, #cdab63); } .neo-ins-head--gold   .neo-ins-label { color: #e0c07f; }
+.neo-ins-head--green  .neo-ins-bar { background: linear-gradient(#68e0b0, #2a9d6e); } .neo-ins-head--green  .neo-ins-label { color: #62d6a2; }
+.neo-ins-head--blue   .neo-ins-bar { background: linear-gradient(#7ab0f5, #3b82f6); } .neo-ins-head--blue   .neo-ins-label { color: #8ab4f8; }
+.neo-ins-head--violet .neo-ins-bar { background: linear-gradient(#b79bf0, #8b5cf0); } .neo-ins-head--violet .neo-ins-label { color: #b79bf0; }
+
+/* Listas numeradas */
+.neo-ins-ol { display: flex; flex-direction: column; gap: 8px; }
+.neo-ins-ol li { display: flex; gap: 11px; align-items: flex-start; }
+.neo-ins-num {
+  flex-shrink: 0; display: grid; place-items: center; width: 22px; height: 22px; margin-top: 1px;
+  border-radius: 7px; font-size: 11px; font-weight: 800; color: #10141a;
+  background: linear-gradient(145deg, #5fd0f0, #2494b6);
+}
+
+/* Viñetas */
+.neo-ins-ul { display: flex; flex-direction: column; gap: 7px; }
+.neo-ins-ul li { display: flex; gap: 11px; align-items: flex-start; }
+.neo-ins-dot { flex-shrink: 0; width: 6px; height: 6px; margin-top: 8px; border-radius: 99px; background: #3fc3e8; }
+
+.neo-ins-p { color: #b8bdc7; }
+
+/* Tema claro */
+:root[data-theme="light"] .neo-ins { color: #4a5160; }
+:root[data-theme="light"] .neo-ins-title { color: #171b25; }
+:root[data-theme="light"] .neo-ins-body, :root[data-theme="light"] .neo-ins-p { color: #4a5160; }
+:root[data-theme="light"] .neo-ins-num { color: #fff; background: linear-gradient(145deg, #35b6da, #1d8fb4); }

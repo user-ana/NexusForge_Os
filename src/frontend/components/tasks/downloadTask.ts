@@ -4,7 +4,10 @@
  * en su diálogo ofrece "Guardar como PDF". Así el estudiante se lleva el
  * enunciado en un archivo, no solo como texto en pantalla.
  */
-import type { MyTask } from '@/backend/services/classTasks'
+import type { ClassTask } from '@/backend/services/classTasks'
+
+/** Lo que la hoja necesita: una tarea (con o sin el nombre de la clase). */
+type Printable = ClassTask & { className?: string }
 
 const PARCIAL: Record<string, string> = {
   p1: 'I Parcial', p2: 'II Parcial', p3: 'III Parcial', final: 'Final',
@@ -22,7 +25,8 @@ function esc(s: string): string {
   ))
 }
 
-export function downloadTask(t: MyTask): void {
+export function downloadTask(t: Printable): void {
+  const className = t.className ?? ''
   const due = t.dueDate
     ? new Date(t.dueDate).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : 'Sin fecha límite'
@@ -53,7 +57,7 @@ export function downloadTask(t: MyTask): void {
   @media print { body { padding: 24px 30px; } }
 </style></head><body>
   <div class="top">
-    <div class="cls">${esc(t.className)}${parcial ? ' · ' + esc(parcial) : ''}</div>
+    <div class="cls">${className ? esc(className) + (parcial ? ' · ' : '') : ''}${esc(parcial)}</div>
     <h1>${esc(t.title)}</h1>
     <div class="meta">
       <span><b>Fecha límite:</b> ${esc(due)}</span>
