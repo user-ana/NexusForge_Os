@@ -9,6 +9,7 @@ import {
   loadMySubmission,
   saveEvidence,
   uploadEvidence,
+  validateDoc,
   progressOf,
   type ClassTask,
   type Deliverable,
@@ -17,6 +18,7 @@ import {
   type EvidenceFile,
   type SubmissionStatus,
 } from '@/backend/services/classTasks'
+import { verifyGithub } from '@/backend/external/github'
 import TaskInstructions from '@/frontend/components/tasks/TaskInstructions'
 import { downloadTask } from '@/frontend/components/tasks/downloadTask'
 
@@ -37,6 +39,8 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
+  const [grade, setGrade] = useState<number | null>(null)
+  const [feedback, setFeedback] = useState('')
 
   useEffect(() => {
     Promise.all([loadTask(params.id), loadMySubmission(params.id)]).then(([t, s]) => {
@@ -44,6 +48,9 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       if (s) {
         setEv(s.evidence ?? {})
         setStatus(s.status)
+        setGrade(s.grade)
+        setFeedback(s.feedback)
+        if (s.note) setNote(s.note)
       }
       setLoading(false)
     })
@@ -122,6 +129,19 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
           <Link href="/dashboard/tasks" className="mb-4 inline-block text-sm text-neutral-500 hover:text-accent-violet">
             ← Volver a Mis tareas
           </Link>
+
+          {/* Nota del catedrático (si ya calificó) */}
+          {grade != null && (
+            <section className="neo-graded">
+              <div className="neo-graded-score">
+                <b>{grade}</b><small>/ {task.points || 100}</small>
+              </div>
+              <div className="min-w-0">
+                <p className="neo-graded-title">Calificada por tu catedrático</p>
+                {feedback && <p className="neo-graded-fb">{feedback}</p>}
+              </div>
+            </section>
+          )}
 
           {/* Resumen: progreso + fecha + estado */}
           <section className="neo-ws-top">
@@ -236,6 +256,9 @@ function Requirement({
 }) {
   const meta = LABEL[d.kind]
   const [busy, setBusy] = useState(false)
+  const [check, setCheck] = useState<{ ok: boolean; reason: string } | null>(null)
+  const [ghBusy, setGhBusy] = useState(false)
+  const [ghMsg, setGhMsg] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const done = isDone(d, ev)
 
@@ -243,12 +266,39 @@ function Requirement({
     if (!list?.length) return
     setBusy(true)
     const uploaded: EvidenceFile[] = []
+    let docText = ev.docText ?? ''
     for (const f of Array.from(list)) {
-      const r = await uploadEvidence(taskId, f)
-      if (r) uploaded.push(r)
+      // Solo los 'files' (documentos) se validan de formato; las capturas no.
+      if (key === 'files') {
+        const v = await validateDoc(f)
+        setCheck({ ok: v.ok, reason: v.reason })
+        if (v.text) docText += (docText ? '\n\n' : '') + v.text
+        const r = await uploadEvidence(taskId, f)
+        if (r) uploaded.push({ ...r, pages: v.pages, ok: v.ok })
+      } else {
+        const r = await uploadEvidence(taskId, f)
+        if (r) uploaded.push(r)
+      }
     }
     setBusy(false)
-    if (uploaded.length) onChange({ [key]: [...(ev[key] ?? []), ...uploaded] } as Partial<Evidence>)
+    if (uploaded.length) {
+      const patch: Partial<Evidence> = { [key]: [...(ev[key] ?? []), ...uploaded] } as Partial<Evidence>
+      if (key === 'files' && docText !== (ev.docText ?? '')) patch.docText = docText
+      onChange(patch)
+    }
+  }
+
+  /** Verifica el repo contra GitHub: que exista y cuántos commits reales tiene. */
+  async function verifyRepo() {
+    const url = (ev.github ?? '').trim()
+    if (!url) return
+    setGhBusy(true); setGhMsg('')
+    const r = await verifyGithub(url)
+    setGhBusy(false)
+    if (!r) { setGhMsg('No encontramos ese repositorio público.'); onChange({ ghVerified: false }); return }
+    setGhMsg(`Repositorio verificado: ${r.name} · ${r.commits} commits reales.`)
+    // Guarda los commits REALES (no el número que el alumno escribiría)
+    onChange({ ghVerified: true, commits: r.commits })
   }
   function removeFile(key: 'files' | 'screenshot', url: string) {
     onChange({ [key]: (ev[key] ?? []).filter((f) => f.url !== url) } as Partial<Evidence>)
@@ -281,22 +331,38 @@ function Requirement({
             <div className="mt-2 space-y-1.5">
               {(ev[d.kind as 'files' | 'screenshot'] ?? []).map((f) => (
                 <div key={f.url} className="neo-req-file">
-                  <a href={f.url} target="_blank" rel="noreferrer">{f.name}</a>
+                  <a href={f.url} target="_blank" rel="noreferrer">
+                    {f.name}{f.pages ? ` · ${f.pages} pág.` : ''}
+                  </a>
                   {!disabled && <button onClick={() => removeFile(d.kind as 'files' | 'screenshot', f.url)}>✕</button>}
                 </div>
               ))}
             </div>
+            {d.kind === 'files' && check && (
+              <p className={`mt-1.5 text-xs ${check.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {check.ok ? '✓ ' : '⚠ '}{check.reason}
+              </p>
+            )}
           </>
         )}
 
         {d.kind === 'github' && (
-          <input
-            value={ev.github ?? ''}
-            onChange={(e) => onChange({ github: e.target.value })}
-            disabled={disabled}
-            placeholder="https://github.com/usuario/repositorio"
-            className="neo-input w-full text-sm"
-          />
+          <>
+            <input
+              value={ev.github ?? ''}
+              onChange={(e) => { onChange({ github: e.target.value, ghVerified: false }); setGhMsg('') }}
+              disabled={disabled}
+              placeholder="https://github.com/usuario/repositorio"
+              className="neo-input w-full text-sm"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <button onClick={verifyRepo} disabled={disabled || ghBusy || !(ev.github ?? '').trim()} className="neo-btn-ghost text-xs disabled:opacity-40">
+                {ghBusy ? 'Verificando…' : 'Verificar repositorio'}
+              </button>
+              {ev.ghVerified && <span className="text-xs text-emerald-400">✓ verificado</span>}
+            </div>
+            {ghMsg && <p className={`mt-1.5 text-xs ${ev.ghVerified ? 'text-emerald-400' : 'text-amber-400'}`}>{ghMsg}</p>}
+          </>
         )}
 
         {d.kind === 'commits' && (

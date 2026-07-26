@@ -13,6 +13,9 @@ import { createPortal } from 'react-dom'
 import {
   loadSubmissions,
   progressOf,
+  aiPreGrade,
+  gradeSubmission,
+  compileSubmissionText,
   type ClassTask,
   type Submission,
 } from '@/backend/services/classTasks'
@@ -164,7 +167,85 @@ function SubCard({ sub, name, task }: { sub: Submission; name: string; task: Cla
       {(ev.text || sub.note) && (
         <p className="neo-subcard-note">{ev.text || sub.note}</p>
       )}
+
+      <GradeBox sub={sub} task={task} />
     </article>
+  )
+}
+
+/** Calificación de una entrega: pre-nota con IA, ajuste y guardado. */
+function GradeBox({ sub, task }: { sub: Submission; task: ClassTask }) {
+  const [open, setOpen] = useState(false)
+  const [grade, setGrade] = useState<string>(sub.grade != null ? String(sub.grade) : '')
+  const [feedback, setFeedback] = useState(sub.feedback ?? '')
+  const [suggestion, setSuggestion] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [saved, setSaved] = useState<null | boolean>(sub.grade != null ? true : null)
+  const [error, setError] = useState('')
+  const max = task.points || 100
+
+  async function preGrade() {
+    setBusy(true); setError('')
+    const entrega = compileSubmissionText(sub.evidence ?? {})
+    if (!entrega.trim()) { setBusy(false); setError('Esta entrega no tiene texto para revisar (solo archivos sin texto legible).'); return }
+    const r = await aiPreGrade({ enunciado: task.description ?? '', entrega, points: max })
+    setBusy(false)
+    if (r.error) { setError(r.error); return }
+    setSuggestion(r.suggestion ?? '')
+    if (typeof r.score === 'number') setGrade(String(r.score))
+    // Rescata "FORTALEZAS/A MEJORAR" como retro editable
+    const fb = (r.suggestion ?? '').replace(/^NOTA:.*$/im, '').trim()
+    if (fb) setFeedback(fb)
+  }
+
+  async function save() {
+    const n = parseFloat(grade.replace(',', '.'))
+    if (!Number.isFinite(n)) { setError('Escribe una nota.'); return }
+    setBusy(true); setError('')
+    const ok = await gradeSubmission(sub.taskId, sub.studentId, Math.max(0, Math.min(max, n)), feedback)
+    setBusy(false)
+    setSaved(ok)
+    if (ok) setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="neo-grade-open">
+        {saved ? `Calificada: ${sub.grade}/${max} · editar` : 'Calificar'}
+      </button>
+    )
+  }
+
+  return (
+    <div className="neo-grade">
+      <button onClick={preGrade} disabled={busy} className="neo-grade-ai">
+        {busy ? 'Revisando…' : 'Pre-calificar con IA'}
+      </button>
+      {suggestion && <p className="neo-grade-sug">{suggestion}</p>}
+      <div className="neo-grade-row">
+        <label>Nota</label>
+        <input
+          type="number" min={0} max={max} step="0.5"
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+          className="neo-input w-24"
+        />
+        <span className="text-xs text-neutral-500">/ {max}</span>
+      </div>
+      <textarea
+        value={feedback}
+        onChange={(e) => setFeedback(e.target.value)}
+        rows={3}
+        placeholder="Retroalimentación para el estudiante…"
+        className="neo-input w-full resize-none text-sm"
+      />
+      {error && <p className="text-xs text-amber-400">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button onClick={save} disabled={busy} className="neo-btn text-xs">Guardar nota</button>
+        <button onClick={() => setOpen(false)} className="neo-btn-ghost text-xs">Cancelar</button>
+        <span className="text-[10px] text-neutral-600">La nota de la IA es una sugerencia.</span>
+      </div>
+    </div>
   )
 }
 

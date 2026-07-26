@@ -74,6 +74,45 @@ export function prettifyRepoName(name: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+/**
+ * Verifica que el repo EXISTE y cuenta sus commits REALES (no el número que el
+ * alumno escribe). Devuelve el conteo de la rama por defecto, o null si no
+ * existe o es privado. Cuenta vía la cabecera Link de la API (última página).
+ */
+export async function verifyGithub(url: string): Promise<{ commits: number; name: string; description: string } | null> {
+  const parsed = parseGithubRepo(url)
+  if (!parsed) return null
+  const { owner, repo } = parsed
+  const headers = { Accept: 'application/vnd.github+json' }
+
+  const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers })
+  if (!repoRes.ok) return null
+  const data = await repoRes.json()
+
+  let commits = 0
+  try {
+    const cRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`, { headers })
+    if (cRes.ok) {
+      const link = cRes.headers.get('link') ?? ''
+      const m = link.match(/&page=(\d+)>;\s*rel="last"/)
+      if (m) commits = parseInt(m[1], 10)
+      else {
+        // Sin cabecera Link: hay 1 página; contamos lo que vino.
+        const arr = await cRes.json()
+        commits = Array.isArray(arr) ? arr.length : 0
+      }
+    }
+  } catch {
+    // sin conteo: dejamos commits en 0 pero el repo sí existe
+  }
+
+  return {
+    commits,
+    name: typeof data.name === 'string' ? data.name : repo,
+    description: typeof data.description === 'string' ? data.description : '',
+  }
+}
+
 /** Consulta el repo y su README. Devuelve null si el repo no es público o no existe. */
 export async function fetchGithubRepo(url: string): Promise<GithubRepoInfo | null> {
   const parsed = parseGithubRepo(url)

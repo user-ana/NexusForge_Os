@@ -50,13 +50,15 @@ export type Submission = {
   submittedAt: number
   status: SubmissionStatus
   evidence: Evidence
+  grade: number | null
+  feedback: string
 }
 
 /** Estado de la entrega del estudiante. */
 export type SubmissionStatus = 'working' | 'submitted'
 
 /** Evidencia que sube el estudiante, por tipo de entregable. */
-export type EvidenceFile = { name: string; url: string }
+export type EvidenceFile = { name: string; url: string; pages?: number; ok?: boolean }
 export type Evidence = {
   files?: EvidenceFile[]
   screenshot?: EvidenceFile[]
@@ -64,6 +66,8 @@ export type Evidence = {
   commits?: number
   per_requirement?: string
   text?: string
+  docText?: string // texto extraído de los PDF subidos, para validar y pre-calificar
+  ghVerified?: boolean // el repo se comprobó contra GitHub (existe + commits reales)
 }
 
 export const CLASSTASKS_EVENT = 'nf:classtasks'
@@ -213,6 +217,55 @@ export async function uploadTaskPdf(classId: string, file: File): Promise<string
   return supabase.storage.from('project-briefs').getPublicUrl(path).data.publicUrl
 }
 
+/** Extensiones que cuentan como "documento" válido para un entregable de archivos. */
+const DOC_EXT = ['pdf', 'doc', 'docx', 'odt', 'txt', 'md', 'rtf']
+
+/**
+ * Valida el FORMATO de un archivo entregado (regla dura, sin IA): que sea un
+ * documento y, si es PDF, que tenga al menos `minPages` páginas. Extrae también
+ * el texto del PDF para poder pre-calificar después. No juzga el contenido.
+ */
+export async function validateDoc(
+  file: File,
+  minPages = 0,
+): Promise<{ ok: boolean; reason: string; pages?: number; text?: string }> {
+  const ext = file.name.toLowerCase().split('.').pop() ?? ''
+  if (!DOC_EXT.includes(ext)) {
+    return { ok: false, reason: `No parece un documento (.${ext}). Se espera PDF o Word.` }
+  }
+  if (ext !== 'pdf') return { ok: true, reason: 'Documento válido.' } // Word/txt: no leemos páginas
+
+  try {
+    const { text, pages } = await extractPdfMeta(file)
+    if (minPages > 0 && pages < minPages) {
+      return { ok: false, reason: `El PDF tiene ${pages} página${pages === 1 ? '' : 's'} (se piden ${minPages}).`, pages, text }
+    }
+    if (!text.trim()) {
+      return { ok: true, reason: `PDF de ${pages} página${pages === 1 ? '' : 's'} (parece escaneado: sin texto).`, pages, text }
+    }
+    return { ok: true, reason: `PDF válido · ${pages} página${pages === 1 ? '' : 's'}.`, pages, text }
+  } catch {
+    return { ok: true, reason: 'Documento adjuntado (no se pudo leer el PDF).' }
+  }
+}
+
+/** Texto + número de páginas de un PDF (en el navegador). */
+export async function extractPdfMeta(file: File): Promise<{ text: string; pages: number }> {
+  const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
+  const buf = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise
+  const pages = pdf.numPages
+  const read = Math.min(pages, 20)
+  let out = ''
+  for (let i = 1; i <= read; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    out += content.items.map((it) => (it as { str?: string }).str ?? '').join(' ') + '\n'
+  }
+  return { text: out.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim(), pages }
+}
+
 /**
  * Extrae el texto de un PDF EN EL NAVEGADOR con pdfjs (donde funciona de forma
  * confiable). Devuelve '' si el PDF no tiene texto (p. ej. es una imagen).
@@ -358,6 +411,8 @@ function mapSubmission(s: any): Submission {
     submittedAt: s.submitted_at ? new Date(s.submitted_at).getTime() : 0,
     status: s.status === 'working' ? 'working' : 'submitted',
     evidence: (s.evidence && typeof s.evidence === 'object' ? s.evidence : {}) as Evidence,
+    grade: s.grade == null ? null : Number(s.grade),
+    feedback: s.feedback ?? '',
   }
 }
 
@@ -370,6 +425,60 @@ export async function loadSubmissions(taskId: string): Promise<Submission[]> {
     .eq('task_id', taskId)
     .eq('status', 'submitted')
   return (data ?? []).map(mapSubmission)
+}
+
+/** Pide a la IA una nota SUGERIDA (el catedrático la revisa y confirma). */
+export async function aiPreGrade(input: { enunciado: string; entrega: string; points: number }): Promise<{ suggestion?: string; score?: number | null; error?: string }> {
+  if (!supabase) return { error: 'Sin conexión.' }
+  const { data } = await supabase.auth.getSession()
+  const token = data.session?.access_token
+  if (!token) return { error: 'Necesitas iniciar sesión.' }
+  try {
+    const res = await fetch('/api/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(input),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return { error: json.error ?? 'La IA no respondió.' }
+    return { suggestion: json.suggestion ?? '', score: json.score ?? null }
+  } catch {
+    return { error: 'No se pudo conectar con la IA.' }
+  }
+}
+
+/** El catedrático guarda la nota y la retroalimentación (vía RPC seguro). */
+export async function gradeSubmission(taskId: string, studentId: string, grade: number, feedback: string): Promise<boolean> {
+  if (!supabase) return false
+  const { error } = await supabase.rpc('grade_submission', {
+    p_task_id: taskId,
+    p_student_id: studentId,
+    p_grade: grade,
+    p_feedback: feedback,
+  })
+  if (error) {
+    console.error('gradeSubmission', error)
+    return false
+  }
+  dispatch()
+  return true
+}
+
+/**
+ * Arma un texto legible con TODO lo que el alumno entregó, para dárselo a la IA
+ * al pre-calificar. Junta su reflexión, el texto de sus PDF, lo de por-requisito,
+ * el repo y los commits. Es lo que la IA "lee" de la entrega.
+ */
+export function compileSubmissionText(ev: Evidence): string {
+  const partes: string[] = []
+  if (ev.text?.trim()) partes.push(`Reflexión del estudiante:\n${ev.text.trim()}`)
+  if (ev.per_requirement?.trim()) partes.push(`Evidencia por requisito:\n${ev.per_requirement.trim()}`)
+  if (ev.docText?.trim()) partes.push(`Contenido del documento entregado:\n${ev.docText.trim()}`)
+  if (ev.github?.trim()) partes.push(`Repositorio: ${ev.github.trim()}${ev.ghVerified ? ' (verificado)' : ''}`)
+  if (typeof ev.commits === 'number' && ev.commits > 0) partes.push(`Commits: ${ev.commits}`)
+  const files = [...(ev.files ?? []), ...(ev.screenshot ?? [])]
+  if (files.length) partes.push(`Archivos adjuntos: ${files.map((f) => f.name).join(', ')}`)
+  return partes.join('\n\n').slice(0, 9000)
 }
 
 /** Una tarea concreta (para el espacio de trabajo). */

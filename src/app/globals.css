@@ -7023,3 +7023,27 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-hist { background: #f0f3f8; border-color: #dce2eb; }
 :root[data-theme="light"] .neo-hist:hover { background: #e3f6fc; border-color: #9adcee; }
 :root[data-theme="light"] .neo-hist-title { color: #171b25; }
+
+/* ---- Calificación (panel del catedrático) ---- */
+.neo-grade-open { margin-top: 11px; padding: 6px 12px; border-radius: 9px; font-size: 11.5px; font-weight: 700; color: #6fd6f2; background: rgba(63,195,232,.1); transition: color .16s ease, background .16s ease; }
+.neo-grade-open:hover { color: #10141a; background: #3fc3e8; }
+.neo-grade { margin-top: 11px; padding: 12px; border-radius: 12px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.06); display: flex; flex-direction: column; gap: 9px; }
+.neo-grade-ai { align-self: flex-start; padding: 7px 13px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #10141a; background: linear-gradient(145deg,#c9a45f,#a9863f); }
+.neo-grade-ai:hover:not(:disabled) { filter: brightness(1.08); }
+.neo-grade-ai:disabled { opacity: .5; }
+.neo-grade-sug { font-size: 12px; line-height: 1.55; color: #cdd3dc; white-space: pre-wrap; padding: 9px 11px; border-radius: 9px; background: rgba(205,171,99,.08); border: 1px solid rgba(205,171,99,.18); }
+.neo-grade-row { display: flex; align-items: center; gap: 8px; }
+.neo-grade-row label { font-size: 12px; font-weight: 600; color: #8b93a3; }
+
+/* ---- Nota vista por el estudiante ---- */
+.neo-graded { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; padding: 16px 18px; border-radius: 16px; background: linear-gradient(120deg, rgba(87,217,163,.1), rgba(255,255,255,.02)); border: 1px solid rgba(87,217,163,.24); animation: neo-tk-in .4s cubic-bezier(.22,1,.36,1) both; }
+.neo-graded-score { flex-shrink: 0; display: flex; align-items: baseline; gap: 3px; }
+.neo-graded-score b { font-size: 30px; font-weight: 800; color: #62d6a2; }
+.neo-graded-score small { font-size: 13px; color: #8b93a3; }
+.neo-graded-title { font-size: 13px; font-weight: 700; color: #eceef2; }
+.neo-graded-fb { margin-top: 3px; font-size: 12.5px; line-height: 1.55; color: #b3b9c4; white-space: pre-wrap; }
+
+:root[data-theme="light"] .neo-grade { background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-grade-sug { color: #4a5160; background: #faf5e8; border-color: #e5d6ad; }
+:root[data-theme="light"] .neo-graded-title { color: #171b25; }
+:root[data-theme="light"] .neo-graded-fb { color: #4a5160; }
