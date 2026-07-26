@@ -7047,3 +7047,76 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-grade-sug { color: #4a5160; background: #faf5e8; border-color: #e5d6ad; }
 :root[data-theme="light"] .neo-graded-title { color: #171b25; }
 :root[data-theme="light"] .neo-graded-fb { color: #4a5160; }
+
+/* ======================================================================
+   PANEL DE ENTREGAS v2 — más moderno (glass, brillo, jerarquía)
+====================================================================== */
+.neo-subs { max-width: 660px; }
+.neo-subs-head { margin-bottom: 4px; }
+.neo-subs-eyebrow { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: #6fd6f2; margin-bottom: 3px; }
+.neo-subs-summary { margin-top: 2px; font-size: 12.5px; color: #8b93a3; }
+
+/* Anillo con brillo */
+.neo-ring svg circle:last-of-type { filter: drop-shadow(0 0 5px rgba(63,195,232,.55)); }
+.neo-ring-num { font-weight: 800; }
+
+/* Pestañas como control segmentado */
+.neo-subs-tabs {
+  display: flex; gap: 4px; padding: 4px;
+  border-radius: 13px; background: rgba(0,0,0,.28);
+  box-shadow: inset 1px 1px 4px rgba(0,0,0,.4);
+}
+.neo-subs-tab {
+  flex: 1; padding: 9px 12px; border: none; border-radius: 10px;
+  font-size: 12.5px; font-weight: 700; color: #8b93a3; background: transparent;
+  transition: color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.neo-subs-tab:hover { color: #cfd4dc; }
+.neo-subs-tab--on { color: #10141a; background: linear-gradient(145deg, #5fd0f0, #2494b6); box-shadow: 0 4px 12px -3px rgba(16,137,211,.55); }
+
+/* Avatar con anillo */
+.neo-subs-av {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; flex-shrink: 0;
+  border-radius: 50%; font-size: 10px; font-weight: 800; color: #10141a;
+  background: linear-gradient(145deg, #7cd6f2, #2494b6);
+}
+.neo-subs-av--lg { width: 40px; height: 40px; font-size: 14px; box-shadow: 0 0 0 3px rgba(63,195,232,.14), 0 4px 12px -3px rgba(16,137,211,.5); }
+
+/* Tarjeta de entrega: glass + glow al pasar */
+.neo-subcard {
+  position: relative; overflow: hidden;
+  padding: 15px 16px; border-radius: 16px;
+  background: radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,.04), transparent 55%), linear-gradient(160deg, #23262d, #191b20);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 6px 18px -10px rgba(0,0,0,.5);
+  transition: transform .2s cubic-bezier(.22,1,.36,1), box-shadow .2s ease, border-color .2s ease;
+  animation: neo-tk-in .3s ease both;
+}
+.neo-subcard:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -14px rgba(0,0,0,.55); border-color: rgba(255,255,255,.1); }
+.neo-subcard-top { display: flex; align-items: center; gap: 12px; }
+.neo-subcard-prog { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.neo-subcard-progbar { width: 66px; height: 7px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.neo-subcard-progbar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg,#2494b6,#5fd0f0); box-shadow: 0 0 9px rgba(63,195,232,.55); transition: width .5s cubic-bezier(.22,1,.36,1); }
+
+.neo-subcard-ev { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 13px; }
+.neo-ev { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 5px 11px; border-radius: 9px; color: #a3abb9; background: rgba(255,255,255,.055); }
+.neo-ev--link { color: #7cd6f2; background: rgba(63,195,232,.12); transition: color .16s ease, background .16s ease, transform .16s ease; }
+.neo-ev--link:hover { color: #10141a; background: #3fc3e8; transform: translateY(-1px); }
+.neo-subcard-note { margin-top: 11px; padding: 10px 12px; border-radius: 11px; font-size: 12px; line-height: 1.55; color: #b3b9c4; background: rgba(0,0,0,.25); border-left: 2px solid rgba(63,195,232,.35); white-space: pre-wrap; }
+
+/* Pendientes con avatar */
+.neo-subs-pend { display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px 6px 6px; border-radius: 99px; font-size: 12.5px; color: #b3b9c4; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.06); transition: border-color .18s ease; }
+.neo-subs-pend:hover { border-color: rgba(255,255,255,.14); }
+.neo-subs-pend .neo-subs-av { background: rgba(255,255,255,.12); color: #cfd4dc; }
+
+/* Botón calificar más presente */
+.neo-grade-open { margin-top: 13px; padding: 8px 15px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #10141a; background: linear-gradient(145deg, #5fd0f0, #2494b6); box-shadow: 0 4px 12px -4px rgba(16,137,211,.5); transition: transform .16s ease, filter .16s ease; }
+.neo-grade-open:hover { transform: translateY(-1px); filter: brightness(1.06); color: #10141a; background: linear-gradient(145deg, #5fd0f0, #2494b6); }
+
+:root[data-theme="light"] .neo-subs-tabs { background: #e8edf3; box-shadow: inset 1px 1px 3px rgba(33,42,59,.12); }
+:root[data-theme="light"] .neo-subs-tab { color: #7b8494; }
+:root[data-theme="light"] .neo-subs-tab--on { color: #fff; background: linear-gradient(145deg,#35b6da,#1d8fb4); }
+:root[data-theme="light"] .neo-subcard { background: linear-gradient(160deg,#ffffff,#f4f7fb); border-color: #dce2eb; box-shadow: 0 6px 16px -10px rgba(33,42,59,.2); }
+:root[data-theme="light"] .neo-subcard-note { color: #4a5160; background: #eef1f6; }
+:root[data-theme="light"] .neo-ev { color: #596273; background: #e8edf3; }
+:root[data-theme="light"] .neo-subs-pend { color: #4a5160; background: #f0f3f8; border-color: #dce2eb; }
