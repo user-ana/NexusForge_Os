@@ -1,17 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   loadClassTasks,
   deleteClassTask,
-  loadSubmissions,
   subscribeClassTasks,
   CLASSTASKS_EVENT,
   type ClassTask,
-  type Submission,
 } from '@/backend/services/classTasks'
 import { parcialLabel } from '@/shared/parciales'
+import TaskSubmissionsModal from '@/frontend/components/tasks/TaskSubmissionsModal'
 
 type Roster = { id: string; name: string }[]
 
@@ -65,20 +64,7 @@ export default function ClassTasksSection({
 
 
 function TaskRow({ task, isTeacher, roster }: { task: ClassTask; isTeacher: boolean; roster: Roster }) {
-  const [expanded, setExpanded] = useState(false)
-  const [subs, setSubs] = useState<Submission[] | null>(null)
-
-  useEffect(() => {
-    if (isTeacher && expanded && subs === null) loadSubmissions(task.id).then(setSubs)
-  }, [expanded, isTeacher, subs, task.id])
-
-  const { entregados, pendientes } = useMemo(() => {
-    const done = new Set((subs ?? []).map((s) => s.studentId))
-    return {
-      entregados: roster.filter((r) => done.has(r.id)),
-      pendientes: roster.filter((r) => !done.has(r.id)),
-    }
-  }, [subs, roster])
+  const [reviewing, setReviewing] = useState(false)
 
   return (
     <article className="neo-panel p-5">
@@ -89,7 +75,7 @@ function TaskRow({ task, isTeacher, roster }: { task: ClassTask; isTeacher: bool
             <DueTag due={task.dueDate} />
           </div>
           <h4 className="font-semibold text-white">{task.title}</h4>
-          {task.description && <p className="mt-1 text-sm text-neutral-400">{task.description}</p>}
+          {task.description && <p className="mt-1 line-clamp-2 text-sm text-neutral-400">{task.description}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-3">
             {task.pdfUrl && (
               <a href={task.pdfUrl} target="_blank" rel="noreferrer" className="neo-pdflink">
@@ -105,53 +91,22 @@ function TaskRow({ task, isTeacher, roster }: { task: ClassTask; isTeacher: bool
         </div>
         {isTeacher && (
           <div className="flex flex-shrink-0 items-center gap-2">
-            <button onClick={() => setExpanded((v) => !v)} className="neo-btn-ghost text-xs">
-              {expanded ? 'Ocultar' : 'Ver entregas'}
+            <button onClick={() => setReviewing(true)} className="neo-btn text-xs">
+              Ver entregas
             </button>
             <button onClick={() => deleteClassTask(task.id)} className="text-neutral-600 hover:text-red-400" title="Eliminar tarea">✕</button>
           </div>
         )}
       </div>
 
-      {isTeacher && expanded && (
-        <div className="mt-4 border-t border-white/5 pt-4">
-          {subs === null ? (
-            <p className="text-xs text-neutral-500">Cargando entregas…</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <p className="mb-2 text-xs font-semibold text-emerald-400">Entregaron ({entregados.length})</p>
-                {entregados.length === 0 ? (
-                  <p className="text-xs text-neutral-600">Nadie aún.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {entregados.map((r) => (
-                      <span key={r.id} className="rounded-lg bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300">{r.name}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold text-neutral-400">Pendientes ({pendientes.length})</p>
-                {pendientes.length === 0 ? (
-                  <p className="text-xs text-neutral-600">Todos entregaron.</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1.5">
-                    {pendientes.map((r) => (
-                      <span key={r.id} className="rounded-lg bg-black/25 px-2 py-1 text-xs text-neutral-400">{r.name}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {!isTeacher && (
         <p className="mt-3 border-t border-white/5 pt-3 text-xs text-neutral-500">
           Gestiona tu entrega desde <span className="text-accent-violet">Mis tareas</span>.
         </p>
+      )}
+
+      {isTeacher && reviewing && (
+        <TaskSubmissionsModal task={task} roster={roster} onClose={() => setReviewing(false)} />
       )}
     </article>
   )

@@ -6827,3 +6827,141 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-tk-prog-bar { background: rgba(33,42,59,.1); }
 :root[data-theme="light"] .neo-tk-icon { color: #596273; background: #eef1f6; }
 
+
+/* ======================================================================
+   PANEL DE ENTREGAS DEL CATEDRÁTICO
+====================================================================== */
+.neo-subs { max-width: 640px; }
+.neo-subs-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.neo-subs-eyebrow { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #4fc9f0; margin-bottom: 2px; }
+.neo-subs-summary { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12.5px; color: #8b93a3; }
+
+/* Anillo de avance de la clase */
+.neo-ring { position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+.neo-ring-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #eceef2; }
+
+/* Pestañas entregadas / pendientes */
+.neo-subs-tabs { display: flex; gap: 6px; }
+.neo-subs-tab {
+  flex: 1; padding: 8px 12px; border-radius: 11px; font-size: 12.5px; font-weight: 600;
+  color: #8b93a3; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.neo-subs-tab:hover { color: #cfd4dc; }
+.neo-subs-tab--on { color: #10141a; background: linear-gradient(145deg, #43c8ec, #2494b6); border-color: transparent; }
+
+/* Avatar de iniciales */
+.neo-subs-av {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0;
+  border-radius: 50%; font-size: 10px; font-weight: 700; color: #10141a;
+  background: linear-gradient(145deg, #7cd6f2, #2494b6);
+}
+.neo-subs-av--lg { width: 36px; height: 36px; font-size: 13px; }
+
+/* Pendientes */
+.neo-subs-pend {
+  display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px 5px 6px;
+  border-radius: 99px; font-size: 12.5px; color: #b3b9c4;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.05);
+}
+.neo-subs-pend .neo-subs-av { background: rgba(255,255,255,.1); color: #cfd4dc; }
+
+/* Tarjeta de entrega */
+.neo-subcard { padding: 13px 14px; border-radius: 14px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.055); animation: neo-tk-in .3s ease both; }
+.neo-subcard-top { display: flex; align-items: center; gap: 11px; }
+.neo-subcard-prog { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.neo-subcard-progbar { width: 60px; height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.neo-subcard-progbar span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(63,195,232,.5), #3fc3e8); transition: width .5s cubic-bezier(.22,1,.36,1); }
+
+.neo-subcard-ev { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+.neo-ev { font-size: 11.5px; padding: 4px 10px; border-radius: 8px; color: #a3abb9; background: rgba(255,255,255,.05); }
+.neo-ev--link { color: #7cd6f2; background: rgba(63,195,232,.1); transition: color .16s ease, background .16s ease; }
+.neo-ev--link:hover { color: #10141a; background: #3fc3e8; }
+.neo-subcard-note { margin-top: 10px; padding: 9px 11px; border-radius: 10px; font-size: 12px; line-height: 1.5; color: #b3b9c4; background: rgba(0,0,0,.2); white-space: pre-wrap; }
+
+/* ---- Tema claro ---- */
+:root[data-theme="light"] .neo-subs-tab { color: #7b8494; background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-subs-tab--on { color: #fff; background: linear-gradient(145deg, #35b6da, #1d8fb4); }
+:root[data-theme="light"] .neo-ring-num { color: #171b25; }
+:root[data-theme="light"] .neo-subs-summary { color: #6f7888; }
+:root[data-theme="light"] .neo-subcard { background: #f5f7fa; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-subcard-note { color: #4a5160; background: #eef1f6; }
+:root[data-theme="light"] .neo-ev { color: #596273; background: #e8edf3; }
+:root[data-theme="light"] .neo-subs-pend { color: #4a5160; background: #f0f3f8; border-color: #dce2eb; }
+
+
+/* ======================================================================
+   RECORDATORIO FLOTANTE (abajo a la izquierda)
+====================================================================== */
+.neo-rem {
+  position: fixed; left: 24px; bottom: 24px; z-index: 60;
+  width: 288px; padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #23262c, #1a1c21);
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,.6);
+  animation: neo-rem-in .45s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes neo-rem-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+
+.neo-rem-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+.neo-rem-title { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #cfd4dc; }
+.neo-rem-badge { font-size: 9.5px; font-weight: 700; color: #10141a; background: #f0674f; padding: 2px 7px; border-radius: 99px; text-transform: none; letter-spacing: 0; }
+.neo-rem-ic { width: 24px; height: 24px; border-radius: 8px; font-size: 15px; color: #8b93a3; background: rgba(255,255,255,.05); transition: color .18s ease, background .18s ease; }
+.neo-rem-ic:hover { color: #eceef2; background: rgba(255,255,255,.1); }
+
+/* Tarjeta de la tarea que rota */
+.neo-rem-card {
+  display: block; padding: 12px; border-radius: 13px;
+  background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.05);
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+  animation: neo-rem-swap .5s cubic-bezier(.22,1,.36,1);
+}
+.neo-rem-card:hover { background: rgba(63,195,232,.08); border-color: rgba(63,195,232,.3); transform: translateY(-2px); }
+@keyframes neo-rem-swap { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+
+.neo-rem-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.neo-rem-class { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #7a828f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-rem-tasktitle { font-size: 13.5px; font-weight: 600; color: #fff; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.neo-rem-due { flex-shrink: 0; font-size: 10.5px; font-weight: 600; color: #8b93a3; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.06); }
+.neo-rem-due--soon { color: #f0c14f; background: rgba(240,193,79,.12); }
+.neo-rem-due--over { color: #f0674f; background: rgba(240,103,79,.14); }
+
+/* Puntos de rotación */
+.neo-rem-dots { display: flex; align-items: center; gap: 6px; margin-top: 11px; }
+.neo-rem-dot { width: 6px; height: 6px; border-radius: 99px; background: rgba(255,255,255,.18); transition: background .2s ease, width .2s ease; }
+.neo-rem-dot--on { width: 18px; background: #3fc3e8; }
+.neo-rem-all { margin-left: auto; font-size: 11px; font-weight: 600; color: #7cd6f2; }
+.neo-rem-all:hover { color: #a9e4f7; }
+
+/* Burbuja minimizada */
+.neo-rem-bubble {
+  position: fixed; left: 24px; bottom: 24px; z-index: 60;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 14px; border-radius: 99px;
+  color: #10141a; background: linear-gradient(145deg, #43c8ec, #2494b6);
+  box-shadow: 0 10px 26px -8px rgba(16,137,211,.6);
+  animation: neo-rem-in .4s cubic-bezier(.22,1,.36,1) both;
+  transition: transform .18s ease;
+}
+.neo-rem-bubble:hover { transform: translateY(-2px) scale(1.04); }
+.neo-rem-bubble--alert { background: linear-gradient(145deg, #f08a4f, #d84f2a); box-shadow: 0 10px 26px -8px rgba(216,79,42,.6); animation: neo-rem-in .4s cubic-bezier(.22,1,.36,1) both, neo-rem-throb 2s ease-in-out .5s infinite; }
+@keyframes neo-rem-throb { 0%,100% { box-shadow: 0 10px 26px -8px rgba(216,79,42,.6); } 50% { box-shadow: 0 10px 32px -6px rgba(216,79,42,.9); } }
+.neo-rem-count { font-size: 13px; font-weight: 800; }
+
+@media (max-width: 640px) { .neo-rem { left: 12px; right: 12px; width: auto; } }
+@media (prefers-reduced-motion: reduce) {
+  .neo-rem, .neo-rem-card, .neo-rem-bubble, .neo-rem-bubble--alert { animation: none; }
+}
+
+/* ---- Tema claro ---- */
+:root[data-theme="light"] .neo-rem { background: #fafbfd; border-color: #dce2eb; box-shadow: 0 16px 38px -14px rgba(33,42,59,.35); }
+:root[data-theme="light"] .neo-rem-title { color: #4a5160; }
+:root[data-theme="light"] .neo-rem-ic { color: #7b8494; background: #eef1f6; }
+:root[data-theme="light"] .neo-rem-card { background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-rem-card:hover { background: #e3f6fc; border-color: #9adcee; }
+:root[data-theme="light"] .neo-rem-tasktitle { color: #171b25; }
+:root[data-theme="light"] .neo-rem-class { color: #7b8494; }
+:root[data-theme="light"] .neo-rem-dot { background: rgba(33,42,59,.2); }
+

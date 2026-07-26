@@ -2,6 +2,7 @@ import Sidebar from '@/frontend/components/layout/Sidebar'
 import AuthGuard from '@/frontend/components/auth/AuthGuard'
 import AssistantWidget from '@/frontend/components/layout/AssistantWidget'
 import PageTransition from '@/frontend/components/layout/PageTransition'
+import TaskReminders from '@/frontend/components/tasks/TaskReminders'
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
         <Sidebar />
         <PageTransition>{children}</PageTransition>
         <AssistantWidget />
+        <TaskReminders />
       </div>
     </AuthGuard>
   )
