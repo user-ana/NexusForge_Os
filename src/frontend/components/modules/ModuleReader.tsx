@@ -19,13 +19,20 @@ import {
   addNote,
   deleteNote,
   loadNotes,
-  loadTutorHistory,
-  clearTutorHistory,
-  saveTutorMsg,
   NOTES_EVENT,
   type StudyNote,
-  type TutorMsg,
 } from '@/backend/services/studyNotes'
+import {
+  ensureSession,
+  loadSessionMessages,
+  saveMessage,
+  markPublished,
+  archiveAndNew,
+  deleteSession,
+  listSessions,
+  type TutorMessage,
+  type TutorSession,
+} from '@/backend/services/tutorHistory'
 import { parcialLabel } from '@/shared/parciales'
 import { LinkIcon, SearchIcon, TrashIcon, ClipboardIcon } from '@/frontend/components/ui/Icons'
 import PublishTaskModal from '@/frontend/components/modules/PublishTaskModal'
@@ -394,7 +401,7 @@ const ATAJOS_PROFE: { label: string; mode?: 'resumen' | 'examen' | 'tarea' | 'hu
   { label: 'Resumen para presentar en clase', mode: 'resumen' },
 ]
 
-type Tab = 'chat' | 'notas'
+type Tab = 'chat' | 'notas' | 'historial'
 
 /**
  * ¿Hay un modelo con visión configurado? Si no, el botón de adjuntar captura ni
@@ -405,8 +412,11 @@ type Tab = 'chat' | 'notas'
 const VISION_ON = process.env.NEXT_PUBLIC_VISION_ENABLED === '1'
 
 /**
- * Panel derecho: conversación + apuntes. El criterio de la IA y los atajos
- * cambian según el rol, porque el catedrático no viene a que le expliquen.
+ * Panel derecho: conversación + apuntes + historial. El criterio de la IA y los
+ * atajos cambian según el rol, porque el catedrático no viene a que le expliquen.
+ *
+ * La conversación vive en una SESIÓN (ver tutorHistory). "Reiniciar" no borra:
+ * archiva la sesión y abre otra, y todas quedan en la pestaña Historial.
  */
 function AssistantPanel({
   module: m,
@@ -421,40 +431,48 @@ function AssistantPanel({
 }) {
   const [tab, setTab] = useState<Tab>('chat')
   const [text, setText] = useState<string | null>(null) // material en texto (null = cargando)
-  const [msgs, setMsgs] = useState<TutorMsg[]>([])
+  const [msgs, setMsgs] = useState<TutorMessage[]>([])
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notes, setNotes] = useState<StudyNote[]>([])
   const [image, setImage] = useState<{ name: string; b64: string } | null>(null)
-  // Respuestas ya guardadas (por su texto), para no insertar el mismo apunte dos veces
   const [saved, setSaved] = useState<Set<string>>(new Set())
-  // Respuesta que el catedrático está publicando como tarea (null = ninguna)
-  const [publishing, setPublishing] = useState<string | null>(null)
-  const [published, setPublished] = useState<Set<string>>(new Set())
+  // Respuesta que el catedrático está publicando (índice del mensaje) o null
+  const [publishing, setPublishing] = useState<number | null>(null)
+  const [sessions, setSessions] = useState<TutorSession[]>([])
+  const [viewing, setViewing] = useState<{ session: TutorSession; msgs: TutorMessage[] } | null>(null)
   const endRef = useRef<HTMLDivElement>(null)
   const imgRef = useRef<HTMLInputElement>(null)
+  const sessionRef = useRef<string | null>(null) // sesión activa (para usar dentro de ask)
 
   const atajos = isTeacher ? ATAJOS_PROFE : ATAJOS_ALUMNO
 
   /** Guarda una respuesta como apunte, una sola vez aunque se pulse varias veces. */
   async function saveAnswer(content: string) {
     if (saved.has(content)) return
-    setSaved((p) => new Set(p).add(content)) // marca de inmediato: corta el doble clic
+    setSaved((p) => new Set(p).add(content))
     const ok = await addNote({ moduleId: m.id, classId: m.classId, content, source: 'tutor' })
-    if (!ok) setSaved((p) => { const n = new Set(p); n.delete(content); return n }) // si falló, se puede reintentar
+    if (!ok) setSaved((p) => { const n = new Set(p); n.delete(content); return n })
   }
 
-  // Material, conversación previa y apuntes
+  const refreshSessions = useCallback(() => {
+    listSessions(m.id).then(setSessions)
+  }, [m.id])
+
+  // Material, sesión activa (con sus mensajes), apuntes e historial
   useEffect(() => {
     loadModuleText(m.id).then(setText)
-    loadTutorHistory(m.id).then(setMsgs)
+    ensureSession({ moduleId: m.id, classId: m.classId, parcial: m.parcial, role: isTeacher ? 'teacher' : 'student' }).then((sid) => {
+      sessionRef.current = sid
+      if (sid) loadSessionMessages(sid).then(setMsgs)
+      refreshSessions()
+    })
     loadNotes(m.id).then((ns) => {
       setNotes(ns)
-      // Al reabrir, marca como guardadas las respuestas que ya están en apuntes
       setSaved(new Set(ns.filter((n) => n.source === 'tutor').map((n) => n.content)))
     })
-  }, [m.id])
+  }, [m.id, m.classId, m.parcial, isTeacher, refreshSessions])
 
   useEffect(() => {
     const refresh = () => loadNotes(m.id).then(setNotes)
@@ -463,23 +481,26 @@ function AssistantPanel({
   }, [m.id])
 
   useEffect(() => {
-    if (tab === 'chat') endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [msgs, busy, tab])
+    if (tab === 'chat' && !viewing) endRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [msgs, busy, tab, viewing])
 
   const ask = useCallback(
     async (question: string, mode?: 'resumen' | 'examen' | 'tarea' | 'huecos') => {
-      if (!text && !image) return
+      if ((!text && !image) || !sessionRef.current) return
+      const sid = sessionRef.current
       setError('')
       setBusy(true)
       setTab('chat')
+      setViewing(null)
 
-      // Lo que se ve en pantalla y lo que se guarda: el atajo se muestra con su
-      // etiqueta, no con el prompt largo que viaja al modelo.
       const visible = question || atajos.find((a) => a.mode === mode)?.label || ''
+      let historial: { role: string; content: string }[] = []
       if (visible) {
-        const mio: TutorMsg = { role: 'user', content: visible }
-        setMsgs((p) => [...p, mio])
-        saveTutorMsg(m.id, mio)
+        const id = (await saveMessage(sid, m.id, 'user', visible)) ?? `tmp-${Date.now()}`
+        setMsgs((p) => {
+          historial = p.slice(-6).map((x) => ({ role: x.role, content: x.content }))
+          return [...p, { id, role: 'user', content: visible, published: false }]
+        })
       }
 
       const res = await askModule({
@@ -489,7 +510,7 @@ function AssistantPanel({
         mode,
         role: isTeacher ? 'teacher' : 'student',
         image: image?.b64,
-        history: msgs.slice(-6),
+        history: historial,
       })
       setBusy(false)
       setImage(null)
@@ -497,12 +518,12 @@ function AssistantPanel({
       if (res.error) {
         setError(res.error)
       } else if (res.answer) {
-        const suyo: TutorMsg = { role: 'assistant', content: res.answer }
-        setMsgs((p) => [...p, suyo])
-        saveTutorMsg(m.id, suyo)
+        const id = (await saveMessage(sid, m.id, 'assistant', res.answer)) ?? `tmp-${Date.now()}`
+        setMsgs((p) => [...p, { id, role: 'assistant', content: res.answer as string, published: false }])
+        refreshSessions()
       }
     },
-    [text, image, m.id, m.title, msgs, isTeacher, atajos],
+    [text, image, m.id, m.title, isTeacher, atajos, refreshSessions],
   )
 
   // Llega una selección desde el documento
@@ -524,7 +545,6 @@ function AssistantPanel({
     ask(q || 'Explícame qué se ve en esta imagen y cómo se relaciona con la lección.')
   }
 
-  /** La captura se manda en base64; se quita el prefijo data: que Ollama no usa. */
   function onImage(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
     e.target.value = ''
@@ -532,21 +552,33 @@ function AssistantPanel({
     const reader = new FileReader()
     reader.onload = () => {
       const s = String(reader.result ?? '')
-      const b64 = s.slice(s.indexOf(',') + 1)
-      setImage({ name: f.name, b64 })
+      setImage({ name: f.name, b64: s.slice(s.indexOf(',') + 1) })
     }
     reader.readAsDataURL(f)
   }
 
+  /** Reiniciar = archivar la conversación (queda en Historial) y abrir otra. */
   async function reiniciar() {
-    setMsgs([])
+    const old = sessionRef.current
+    if (!old) return
     setError('')
-    await clearTutorHistory(m.id)
+    const sid = await archiveAndNew(old, { moduleId: m.id, classId: m.classId, parcial: m.parcial, role: isTeacher ? 'teacher' : 'student' })
+    sessionRef.current = sid
+    setMsgs([])
+    refreshSessions()
+  }
+
+  /** Abre una conversación del historial en modo lectura. */
+  async function openSession(s: TutorSession) {
+    const list = await loadSessionMessages(s.id)
+    setViewing({ session: s, msgs: list })
+    setTab('chat')
   }
 
   const sinTexto = text !== null && text.length === 0
   const titulo = isTeacher ? 'Asistente de cátedra' : 'Tutor de la lección'
   const subtitulo = isTeacher ? 'Prepara tu clase con este material' : 'Responde con el material de tu catedrático'
+  const shownMsgs = viewing ? viewing.msgs : msgs
 
   return (
     <aside className="neo-reader-tutor" style={{ width }}>
@@ -558,33 +590,48 @@ function AssistantPanel({
           <p className="truncate text-sm font-semibold text-white">{titulo}</p>
           <p className="truncate text-[11px] text-neutral-500">{subtitulo}</p>
         </div>
-        {tab === 'chat' && msgs.length > 0 && (
-          <button onClick={reiniciar} className="neo-reader-reset" title="Borrar la conversación y empezar de cero">
+        {tab === 'chat' && !viewing && msgs.length > 0 && (
+          <button onClick={reiniciar} className="neo-reader-reset" title="Archiva esta conversación (queda en Historial) y empieza otra">
             Reiniciar
           </button>
         )}
       </div>
 
       <div className="neo-reader-tabs">
-        <button onClick={() => setTab('chat')} className={`neo-reader-tab ${tab === 'chat' ? 'neo-reader-tab--on' : ''}`}>
+        <button onClick={() => { setTab('chat'); setViewing(null) }} className={`neo-reader-tab ${tab === 'chat' ? 'neo-reader-tab--on' : ''}`}>
           {isTeacher ? 'Asistente' : 'Tutor'}
         </button>
         <button onClick={() => setTab('notas')} className={`neo-reader-tab ${tab === 'notas' ? 'neo-reader-tab--on' : ''}`}>
           Apuntes {notes.length > 0 && <span className="neo-reader-tabn">{notes.length}</span>}
         </button>
+        <button onClick={() => setTab('historial')} className={`neo-reader-tab ${tab === 'historial' ? 'neo-reader-tab--on' : ''}`}>
+          Historial {sessions.length > 0 && <span className="neo-reader-tabn">{sessions.length}</span>}
+        </button>
       </div>
 
       {tab === 'notas' ? (
         <NotesTab module={m} notes={notes} />
+      ) : tab === 'historial' ? (
+        <HistoryTab
+          sessions={sessions}
+          onOpen={openSession}
+          onDelete={async (id) => { await deleteSession(id); refreshSessions() }}
+        />
       ) : (
         <>
+          {viewing && (
+            <div className="neo-reader-viewing">
+              <span className="truncate">Conversación archivada · {new Date(viewing.session.updatedAt).toLocaleDateString('es', { day: '2-digit', month: 'short' })}</span>
+              <button onClick={() => setViewing(null)} className="neo-reader-viewback">Volver a la actual</button>
+            </div>
+          )}
           <div className="neo-reader-chat">
             {sinTexto ? (
               <p className="neo-reader-note">
                 Este módulo no tiene texto que la IA pueda leer. Si se sube el PDF de la presentación, podrá apoyarse en
                 ese material.
               </p>
-            ) : msgs.length === 0 && !busy ? (
+            ) : shownMsgs.length === 0 && !busy ? (
               <div className="space-y-3">
                 <p className="neo-reader-note">
                   {isTeacher
@@ -607,10 +654,10 @@ function AssistantPanel({
               </div>
             ) : (
               <div className="space-y-3">
-                {msgs.map((msg, i) => (
-                  <div key={i} className={`neo-reader-msg ${msg.role === 'user' ? 'neo-reader-msg--me' : ''}`}>
+                {shownMsgs.map((msg, i) => (
+                  <div key={msg.id || i} className={`neo-reader-msg ${msg.role === 'user' ? 'neo-reader-msg--me' : ''}`}>
                     {msg.content}
-                    {msg.role === 'assistant' && (
+                    {msg.role === 'assistant' && !viewing && (
                       <div className="neo-reader-actions">
                         <button
                           onClick={() => saveAnswer(msg.content)}
@@ -621,11 +668,11 @@ function AssistantPanel({
                           {saved.has(msg.content) ? 'Guardado ✓' : 'Guardar en apuntes'}
                         </button>
                         {isTeacher &&
-                          (published.has(msg.content) ? (
+                          (msg.published ? (
                             <span className="neo-reader-save neo-reader-save--done">Publicada ✓</span>
                           ) : (
                             <button
-                              onClick={() => setPublishing(msg.content)}
+                              onClick={() => setPublishing(i)}
                               className="neo-reader-save neo-reader-save--pub"
                               title="Publicar esta respuesta como tarea de la clase"
                             >
@@ -636,7 +683,7 @@ function AssistantPanel({
                     )}
                   </div>
                 ))}
-                {busy && (
+                {busy && !viewing && (
                   <div className="neo-reader-msg neo-reader-msg--wait">
                     <span className="neo-reader-dots">
                       <i /><i /><i />
@@ -650,7 +697,7 @@ function AssistantPanel({
             {error && <p className="mt-3 text-xs text-amber-400">{error}</p>}
           </div>
 
-          {!sinTexto && (
+          {!sinTexto && !viewing && (
             <div className="neo-reader-ask">
               {image && (
                 <div className="neo-reader-img">
@@ -695,20 +742,67 @@ function AssistantPanel({
         </>
       )}
 
-      {publishing !== null && (
+      {publishing !== null && msgs[publishing] && (
         <PublishTaskModal
           classId={m.classId}
           defaultParcial={m.parcial}
-          source={publishing}
+          source={msgs[publishing].content}
           moduleTitle={m.title}
           onClose={() => setPublishing(null)}
           onPublished={() => {
-            setPublished((p) => new Set(p).add(publishing))
+            const idx = publishing
+            const msg = msgs[idx]
+            if (msg?.id) markPublished(msg.id)
+            setMsgs((p) => p.map((x, j) => (j === idx ? { ...x, published: true } : x)))
             setPublishing(null)
           }}
         />
       )}
     </aside>
+  )
+}
+
+/** Pestaña de historial: las conversaciones pasadas, clasificadas por parcial. */
+function HistoryTab({
+  sessions,
+  onOpen,
+  onDelete,
+}: {
+  sessions: TutorSession[]
+  onOpen: (s: TutorSession) => void
+  onDelete: (id: string) => void
+}) {
+  const conCharla = sessions.filter((s) => s.count > 0)
+  return (
+    <div className="neo-reader-chat">
+      {conCharla.length === 0 ? (
+        <p className="neo-reader-note">
+          Aquí quedarán tus conversaciones con el asistente. Cuando pulses “Reiniciar”, la charla actual se guarda aquí
+          en vez de borrarse.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {conCharla.map((s) => (
+            <div key={s.id} className="neo-hist">
+              <button onClick={() => onOpen(s)} className="min-w-0 flex-1 text-left">
+                <div className="neo-hist-top">
+                  {s.parcial && <span className="neo-hist-parcial">{parcialLabel(s.parcial)}</span>}
+                  {!s.archived && <span className="neo-hist-active">Actual</span>}
+                  <span className="neo-hist-date">
+                    {new Date(s.updatedAt).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
+                  </span>
+                </div>
+                <p className="neo-hist-title">{s.title || 'Conversación'}</p>
+                <p className="neo-hist-count">{s.count} mensaje{s.count === 1 ? '' : 's'}</p>
+              </button>
+              <button onClick={() => onDelete(s.id)} className="neo-hist-del" title="Borrar del historial">
+                <TrashIcon size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
