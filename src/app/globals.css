@@ -7128,3 +7128,19 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 /* Nota en la tarjeta de Mis tareas */
 .neo-tk-grade { font-size: 11px; font-weight: 800; color: #10141a; padding: 3px 10px; border-radius: 99px; background: linear-gradient(145deg, #68e0b0, #2a9d6e); box-shadow: 0 3px 10px -3px rgba(42,157,110,.6); }
 :root[data-theme="light"] .neo-tk-grade { color: #fff; }
+
+/* ---- Entrega bloqueada tras enviar ---- */
+.neo-locked { display: flex; align-items: center; gap: 13px; padding: 13px 15px; border-radius: 14px; background: linear-gradient(120deg, rgba(87,217,163,.09), rgba(255,255,255,.02)); border: 1px solid rgba(87,217,163,.22); }
+.neo-locked-ic { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; color: #10141a; background: linear-gradient(145deg, #68e0b0, #2a9d6e); }
+
+/* ---- Requisitos de formato (checklist) ---- */
+.neo-fmt { margin-top: 12px; padding: 11px 13px; border-radius: 12px; background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.05); }
+.neo-fmt-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: 8px; }
+.neo-fmt-rule { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8b93a3; padding: 2px 0; }
+.neo-fmt-tick { display: grid; place-items: center; width: 17px; height: 17px; flex-shrink: 0; border-radius: 6px; font-size: 11px; font-weight: 800; color: #6b7280; background: rgba(255,255,255,.06); }
+.neo-fmt-rule--ok { color: #cdd3dc; }
+.neo-fmt-rule--ok .neo-fmt-tick { color: #10141a; background: linear-gradient(145deg, #68e0b0, #2a9d6e); }
+
+:root[data-theme="light"] .neo-fmt { background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-fmt-rule--ok { color: #2b3240; }
+:root[data-theme="light"] .neo-locked-ic { color: #fff; }

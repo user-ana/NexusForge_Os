@@ -90,12 +90,6 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
       router.push('/dashboard/tasks')
     }
   }
-  async function reopen() {
-    setSaving(true)
-    await saveEvidence(params.id, ev, 'working')
-    setStatus('working')
-    setSaving(false)
-  }
 
   if (loading) {
     return (
@@ -120,6 +114,13 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   const prog = progressOf(task.deliverables, ev)
   const submitted = status === 'submitted'
   const due = task.dueDate
+  // Mínimo de páginas que menciona el enunciado ("documento de 4 páginas") para validar el PDF
+  const minPages = (() => {
+    const m = (task.description || '').match(/(\d+)\s*p[aá]ginas?/i)
+    return m ? parseInt(m[1], 10) : 0
+  })()
+  // ¿Algún archivo entregado NO cumple el formato? Bloquea la entrega.
+  const badFile = (ev.files ?? []).some((f) => f.ok === false)
 
   return (
     <>
@@ -213,26 +214,35 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                       ev={ev}
                       taskId={params.id}
                       disabled={submitted}
+                      minPages={minPages}
                       onChange={patch}
                     />
                   ))}
                 </div>
               )}
 
-              <div className="mt-5 flex items-center gap-3 border-t border-white/5 pt-5">
+              <div className="mt-5 border-t border-white/5 pt-5">
                 {submitted ? (
-                  <>
-                    <span className="neo-badge neo-badge--submitted">Entregada</span>
-                    <button onClick={reopen} disabled={saving} className="neo-btn-ghost text-sm">Reabrir para editar</button>
-                  </>
+                  <div className="neo-locked">
+                    <span className="neo-locked-ic"><LockIc /></span>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-100">Entrega enviada</p>
+                      <p className="text-xs text-neutral-500">Ya no puedes editarla. Si necesitas cambiar algo, avísale a tu catedrático.</p>
+                    </div>
+                  </div>
                 ) : (
                   <>
-                    <button onClick={submit} disabled={saving} className="neo-btn">
-                      {saving ? 'Guardando…' : 'Entregar tarea'}
-                    </button>
-                    <span className="text-xs text-neutral-500">
-                      {saving ? 'Guardando tu avance…' : 'Tu avance se guarda solo'}
-                    </span>
+                    {badFile && (
+                      <p className="mb-3 text-xs text-amber-400">⚠ Uno de tus archivos no cumple el formato pedido. Corrígelo antes de entregar.</p>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <button onClick={submit} disabled={saving || badFile} className="neo-btn disabled:opacity-40">
+                        {saving ? 'Guardando…' : 'Entregar tarea'}
+                      </button>
+                      <span className="text-xs text-neutral-500">
+                        {saving ? 'Guardando tu avance…' : 'Tu avance se guarda solo · al entregar ya no podrás editar'}
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
@@ -246,12 +256,13 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
 
 /* ---------- Un requisito ---------- */
 function Requirement({
-  d, ev, taskId, disabled, onChange,
+  d, ev, taskId, disabled, minPages, onChange,
 }: {
   d: Deliverable
   ev: Evidence
   taskId: string
   disabled: boolean
+  minPages: number
   onChange: (p: Partial<Evidence>) => void
 }) {
   const meta = LABEL[d.kind]
@@ -270,7 +281,7 @@ function Requirement({
     for (const f of Array.from(list)) {
       // Solo los 'files' (documentos) se validan de formato; las capturas no.
       if (key === 'files') {
-        const v = await validateDoc(f)
+        const v = await validateDoc(f, minPages)
         setCheck({ ok: v.ok, reason: v.reason })
         if (v.text) docText += (docText ? '\n\n' : '') + v.text
         const r = await uploadEvidence(taskId, f)
@@ -338,10 +349,17 @@ function Requirement({
                 </div>
               ))}
             </div>
-            {d.kind === 'files' && check && (
-              <p className={`mt-1.5 text-xs ${check.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {check.ok ? '✓ ' : '⚠ '}{check.reason}
-              </p>
+            {d.kind === 'files' && (
+              <div className="neo-fmt">
+                <p className="neo-fmt-title">Requisitos de formato</p>
+                <FmtRule ok label="Documento PDF o Word" />
+                {minPages > 0 && <FmtRule ok label={`Mínimo ${minPages} páginas`} />}
+                {check && (
+                  <p className={`mt-1.5 text-xs ${check.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {check.ok ? '✓ ' : '⚠ '}{check.reason}
+                  </p>
+                )}
+              </div>
             )}
           </>
         )}
@@ -432,5 +450,22 @@ function DownloadIc() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
     </svg>
+  )
+}
+
+function LockIc() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+
+/** Una regla de formato con su check. */
+function FmtRule({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span className={`neo-fmt-rule ${ok ? 'neo-fmt-rule--ok' : ''}`}>
+      <span className="neo-fmt-tick">{ok ? '✓' : '○'}</span> {label}
+    </span>
   )
 }

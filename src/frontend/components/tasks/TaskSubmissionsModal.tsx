@@ -177,7 +177,7 @@ function SubCard({ sub, name, task }: { sub: Submission; name: string; task: Cla
           task={task}
           name={name}
           onClose={() => setPreview(false)}
-          onGraded={(g) => setGrade(g)}
+          onGraded={(g) => { setGrade(g); setPreview(false) }}
         />
       )}
     </article>
