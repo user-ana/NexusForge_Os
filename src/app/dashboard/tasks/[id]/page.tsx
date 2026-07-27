@@ -10,6 +10,7 @@ import {
   saveEvidence,
   uploadEvidence,
   validateDoc,
+  myIdentity,
   progressOf,
   type ClassTask,
   type Deliverable,
@@ -17,6 +18,7 @@ import {
   type Evidence,
   type EvidenceFile,
   type SubmissionStatus,
+  type SubmitRules,
 } from '@/backend/services/classTasks'
 import { verifyGithub } from '@/backend/external/github'
 import TaskInstructions from '@/frontend/components/tasks/TaskInstructions'
@@ -41,6 +43,11 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   const [note, setNote] = useState('')
   const [grade, setGrade] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
+  const [me, setMe] = useState<{ account: string; name: string }>({ account: '', name: '' })
+
+  useEffect(() => {
+    myIdentity().then(setMe)
+  }, [])
 
   useEffect(() => {
     Promise.all([loadTask(params.id), loadMySubmission(params.id)]).then(([t, s]) => {
@@ -114,13 +121,17 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
   const prog = progressOf(task.deliverables, ev)
   const submitted = status === 'submitted'
   const due = task.dueDate
-  // Mínimo de páginas que menciona el enunciado ("documento de 4 páginas") para validar el PDF
-  const minPages = (() => {
+  const rules: SubmitRules = task.rules ?? {}
+  // El mínimo de páginas: la regla, o si no, lo que mencione el enunciado.
+  const minPages = rules.minPages ?? (() => {
     const m = (task.description || '').match(/(\d+)\s*p[aá]ginas?/i)
     return m ? parseInt(m[1], 10) : 0
   })()
-  // ¿Algún archivo entregado NO cumple el formato? Bloquea la entrega.
-  const badFile = (ev.files ?? []).some((f) => f.ok === false)
+  const hasFilesDeliv = task.deliverables.some((d) => d.kind === 'files')
+  // Checklist de reglas: cada una con si se cumple. Solo aplican si piden archivos.
+  const checks = hasFilesDeliv ? buildChecks(rules, ev, me, minPages) : []
+  // No se puede entregar si alguna regla obligatoria no se cumple.
+  const rulesOk = checks.every((c) => c.ok)
 
   return (
     <>
@@ -221,6 +232,16 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
+              {/* Checklist de reglas de entrega */}
+              {!submitted && checks.length > 0 && (
+                <div className="neo-fmt mt-4">
+                  <p className="neo-fmt-title">Requisitos para entregar</p>
+                  {checks.map((c) => (
+                    <FmtRule key={c.label} ok={c.ok} label={c.label} />
+                  ))}
+                </div>
+              )}
+
               <div className="mt-5 border-t border-white/5 pt-5">
                 {submitted ? (
                   <div className="neo-locked">
@@ -232,11 +253,11 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
                   </div>
                 ) : (
                   <>
-                    {badFile && (
-                      <p className="mb-3 text-xs text-amber-400">⚠ Uno de tus archivos no cumple el formato pedido. Corrígelo antes de entregar.</p>
+                    {!rulesOk && (
+                      <p className="mb-3 text-xs text-amber-400">⚠ Aún no cumples todos los requisitos de entrega.</p>
                     )}
                     <div className="flex items-center gap-3">
-                      <button onClick={submit} disabled={saving || badFile} className="neo-btn disabled:opacity-40">
+                      <button onClick={submit} disabled={saving || !rulesOk} className="neo-btn disabled:opacity-40">
                         {saving ? 'Guardando…' : 'Entregar tarea'}
                       </button>
                       <span className="text-xs text-neutral-500">
@@ -349,17 +370,10 @@ function Requirement({
                 </div>
               ))}
             </div>
-            {d.kind === 'files' && (
-              <div className="neo-fmt">
-                <p className="neo-fmt-title">Requisitos de formato</p>
-                <FmtRule ok label="Documento PDF o Word" />
-                {minPages > 0 && <FmtRule ok label={`Mínimo ${minPages} páginas`} />}
-                {check && (
-                  <p className={`mt-1.5 text-xs ${check.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {check.ok ? '✓ ' : '⚠ '}{check.reason}
-                  </p>
-                )}
-              </div>
+            {d.kind === 'files' && check && (
+              <p className={`mt-1.5 text-xs ${check.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {check.ok ? '✓ ' : '⚠ '}{check.reason}
+              </p>
             )}
           </>
         )}
@@ -410,6 +424,41 @@ function Requirement({
       </div>
     </article>
   )
+}
+
+/**
+ * Arma el checklist de reglas y si cada una se cumple, mirando los archivos y el
+ * texto extraído del PDF (ev.docText). Solo devuelve las reglas activadas por el
+ * catedrático; si no marcó ninguna, exige lo mínimo: haber adjuntado un archivo.
+ */
+function buildChecks(
+  rules: SubmitRules,
+  ev: Evidence,
+  me: { account: string; name: string },
+  minPages: number,
+): { label: string; ok: boolean }[] {
+  const files = ev.files ?? []
+  const hasFile = files.length > 0
+  const docText = (ev.docText ?? '').toLowerCase()
+  const out: { label: string; ok: boolean }[] = []
+
+  out.push({ label: 'Adjuntar el documento', ok: hasFile })
+
+  if (rules.onlyPdf) {
+    out.push({ label: 'Debe ser un PDF', ok: hasFile && files.every((f) => f.name.toLowerCase().endsWith('.pdf')) })
+  }
+  if (minPages > 0) {
+    out.push({ label: `Mínimo ${minPages} páginas`, ok: files.some((f) => (f.pages ?? 0) >= minPages) })
+  }
+  if (rules.requireAccount && me.account) {
+    out.push({ label: `Incluir tu número de cuenta (${me.account})`, ok: docText.includes(me.account.toLowerCase()) })
+  }
+  if (rules.requireName && me.name) {
+    const parts = me.name.toLowerCase().split(/\s+/).filter((p) => p.length > 2)
+    const ok = docText.includes(me.name.toLowerCase()) || (parts.length >= 2 && parts.every((p) => docText.includes(p)))
+    out.push({ label: 'Incluir tu nombre completo', ok })
+  }
+  return out
 }
 
 function isDone(d: Deliverable, ev: Evidence): boolean {

@@ -7144,3 +7144,13 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 :root[data-theme="light"] .neo-fmt { background: #f0f3f8; border-color: #dce2eb; }
 :root[data-theme="light"] .neo-fmt-rule--ok { color: #2b3240; }
 :root[data-theme="light"] .neo-locked-ic { color: #fff; }
+
+/* ---- Interruptores de reglas de entrega (modal de publicar) ---- */
+.neo-rule { position: relative; display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px; text-align: left; background: rgba(255,255,255,.02); border: 1.5px solid rgba(255,255,255,.06); transition: border-color .16s ease, background .16s ease; }
+.neo-rule:hover { border-color: rgba(16,137,211,.3); background: rgba(16,137,211,.06); }
+.neo-rule-check { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 6px; font-size: 11px; font-weight: 800; color: #10141a; background: rgba(255,255,255,.06); }
+.neo-rule--on { border-color: rgba(16,137,211,.5); background: rgba(16,137,211,.09); }
+.neo-rule--on .neo-rule-check { background: linear-gradient(145deg,#5fd0f0,#1089d3); }
+:root[data-theme="light"] .neo-rule { background: #f0f3f8; border-color: #dce2eb; }
+:root[data-theme="light"] .neo-rule--on { background: #e3f6fc; border-color: #9adcee; }
+:root[data-theme="light"] .neo-rule-check { color: #fff; }

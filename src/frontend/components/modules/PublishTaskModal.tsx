@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { createClassTask, type Deliverable, type DeliverableKind } from '@/backend/services/classTasks'
+import { createClassTask, type Deliverable, type DeliverableKind, type SubmitRules } from '@/backend/services/classTasks'
 import { PARCIAL_OPTIONS } from '@/shared/parciales'
 import NeoSelect from '@/frontend/components/ui/NeoSelect'
 import NeoDate from '@/frontend/components/ui/NeoDate'
@@ -60,6 +60,19 @@ function cleanMarkdown(text: string): string {
 }
 
 /** Saca un título corto de la primera línea de lo que generó el asistente. */
+/** Un interruptor de regla (chip que se enciende). */
+function RuleToggle({ on, onClick, label, hint }: { on: boolean; onClick: () => void; label: string; hint: string }) {
+  return (
+    <button type="button" onClick={onClick} className={`neo-rule ${on ? 'neo-rule--on' : ''}`}>
+      <span className="neo-rule-check">{on ? '✓' : ''}</span>
+      <span className="min-w-0 text-left">
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-[11px] text-neutral-500">{hint}</span>
+      </span>
+    </button>
+  )
+}
+
 function deriveTitle(text: string, fallback: string): string {
   const first = cleanMarkdown(text).split(/[.\n:]/)[0]?.replace(/\s+/g, ' ').trim() ?? ''
   const clean = first.replace(/^(tarea|actividad|t[ií]tulo|tema)\s*\d*\s*[:\-]?\s*/i, '').trim()
@@ -94,6 +107,11 @@ export default function PublishTaskModal({
   // Entregables elegidos (por defecto: archivos, lo más común)
   const [delivs, setDelivs] = useState<Set<DeliverableKind>>(new Set(['files']))
   const [commitsMin, setCommitsMin] = useState('3')
+  // Reglas de entrega que se validan al alumno
+  const [onlyPdf, setOnlyPdf] = useState(false)
+  const [minPages, setMinPages] = useState('')
+  const [requireAccount, setRequireAccount] = useState(false)
+  const [requireName, setRequireName] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -120,6 +138,13 @@ export default function PublishTaskModal({
       d.kind === 'commits' ? { kind: d.kind, min: Number.isFinite(cm) && cm > 0 ? cm : 1 } : { kind: d.kind },
     )
 
+    const mp = parseInt(minPages, 10)
+    const rules: SubmitRules = {}
+    if (onlyPdf) rules.onlyPdf = true
+    if (Number.isFinite(mp) && mp > 0) rules.minPages = mp
+    if (requireAccount) rules.requireAccount = true
+    if (requireName) rules.requireName = true
+
     const ok = await createClassTask({
       classId,
       title,
@@ -129,6 +154,7 @@ export default function PublishTaskModal({
       points: Number.isFinite(n) && n > 0 ? n : 0,
       deliverables,
       group,
+      rules,
       showOnPublish: true,
     })
     setSaving(false)
@@ -234,6 +260,25 @@ export default function PublishTaskModal({
             </div>
           )}
         </div>
+
+        {/* Reglas de entrega (validan al alumno; solo aplican a documentos) */}
+        {delivs.has('files') && (
+          <div className="space-y-2">
+            <label className="neo-label">Reglas de entrega (se validan al alumno)</label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <RuleToggle on={onlyPdf} onClick={() => setOnlyPdf((v) => !v)} label="Solo PDF" hint="No acepta Word ni otros" />
+              <RuleToggle on={requireAccount} onClick={() => setRequireAccount((v) => !v)} label="Número de cuenta" hint="El PDF debe incluirlo" />
+              <RuleToggle on={requireName} onClick={() => setRequireName((v) => !v)} label="Nombre del alumno" hint="El PDF debe incluirlo" />
+              <div className="neo-rule flex items-center gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-neutral-200">Mínimo de páginas</span>
+                  <span className="block text-[11px] text-neutral-500">0 = sin mínimo</span>
+                </span>
+                <input type="number" min={0} value={minPages} onChange={(e) => setMinPages(e.target.value)} placeholder="0" className="neo-input w-16 text-center" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Entrega grupal */}
         <button type="button" onClick={() => setGroup((v) => !v)} className="flex items-center gap-3">

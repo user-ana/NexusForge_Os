@@ -14,6 +14,14 @@ export type DeliverableKind =
   | 'files' | 'screenshot' | 'github' | 'commits' | 'per_requirement' | 'text'
 export type Deliverable = { kind: DeliverableKind; min?: number } // min: p. ej. commits mínimos
 
+/** Reglas que el catedrático exige a la entrega (todas opcionales). */
+export type SubmitRules = {
+  onlyPdf?: boolean // el documento debe ser PDF (no Word)
+  minPages?: number // mínimo de páginas del PDF
+  requireAccount?: boolean // el PDF debe contener el número de cuenta del alumno
+  requireName?: boolean // el PDF debe contener el nombre del alumno
+}
+
 export type ClassTask = {
   id: string
   classId: string
@@ -27,6 +35,7 @@ export type ClassTask = {
   deliverables: Deliverable[]
   audience: string // 'all'
   group: boolean // entrega grupal
+  rules: SubmitRules
   createdByName: string
   createdAt: number
 }
@@ -92,6 +101,7 @@ function mapTask(row: any): ClassTask {
     deliverables: Array.isArray(row.deliverables) ? (row.deliverables as Deliverable[]) : [],
     audience: row.audience ?? 'all',
     group: !!row.group_submission,
+    rules: (row.submit_rules && typeof row.submit_rules === 'object' ? row.submit_rules : {}) as SubmitRules,
     createdByName: row.created_by_name ?? '',
     createdAt: row.created_at ? new Date(row.created_at).getTime() : 0,
   }
@@ -172,6 +182,7 @@ export async function createClassTask(input: {
   reminders?: boolean
   showOnPublish?: boolean
   group?: boolean
+  rules?: SubmitRules
 }): Promise<boolean> {
   if (!supabase) return false
   const { data, error } = await supabase.rpc('create_class_task', {
@@ -195,6 +206,7 @@ export async function createClassTask(input: {
     if (input.reminders != null) extra.reminders = input.reminders
     if (input.showOnPublish != null) extra.show_on_publish = input.showOnPublish
     if (input.group != null) extra.group_submission = input.group
+    if (input.rules && Object.keys(input.rules).length) extra.submit_rules = input.rules
     if (Object.keys(extra).length) {
       await supabase.from('class_tasks').update(extra).eq('id', data)
     }
@@ -483,6 +495,22 @@ export function compileSubmissionText(ev: Evidence): string {
   const files = [...(ev.files ?? []), ...(ev.screenshot ?? [])]
   if (files.length) partes.push(`Archivos adjuntos: ${files.map((f) => f.name).join(', ')}`)
   return partes.join('\n\n').slice(0, 9000)
+}
+
+/** Mi número de cuenta y nombre (para validar que el PDF entregado los contenga). */
+export async function myIdentity(): Promise<{ account: string; name: string }> {
+  if (!supabase) return { account: '', name: '' }
+  const uid = await currentUid()
+  if (!uid) return { account: '', name: '' }
+  const { data } = await supabase
+    .from('profiles')
+    .select('account_number, full_name, username')
+    .eq('id', uid)
+    .maybeSingle()
+  return {
+    account: (data?.account_number ?? '').trim(),
+    name: (data?.full_name || data?.username || '').trim(),
+  }
 }
 
 /** Una tarea concreta (para el espacio de trabajo). */
