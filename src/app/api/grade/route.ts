@@ -55,13 +55,18 @@ export async function POST(req: Request) {
   }
 
   const system = [
-    'Eres un catedrático calificando una entrega. Sé justo, exigente y honesto.',
-    `La tarea vale ${points} puntos. Evalúa la ENTREGA contra el ENUNCIADO y su rúbrica.`,
+    'Eres un catedrático calificando una entrega. Sé justo y proporcional, no castigues de más.',
+    `La tarea vale ${points} puntos en total. Evalúa la ENTREGA contra el ENUNCIADO y su rúbrica.`,
+    'REGLA DE CALIFICACIÓN, síguela al pie:',
+    `- Da CRÉDITO por lo que sí cumple. Una entrega completa y correcta merece cerca de ${points}.`,
+    `- Una entrega buena pero mejorable va en la parte alta (aprox. ${(points * 0.75).toFixed(1)} a ${points}).`,
+    `- Reserva notas bajas (menos de ${(points * 0.4).toFixed(1)}) SOLO para entregas casi vacías, fuera de tema o sin sustento.`,
+    `- NUNCA pongas 0 si el alumno entregó algo con contenido relacionado.`,
+    `- La NOTA va en la escala de 0 a ${points} (puede tener decimales, p. ej. ${(points * 0.85).toFixed(1)}).`,
     'Responde SIEMPRE en español, EXACTAMENTE en este formato y nada más:',
     `NOTA: <número de 0 a ${points}>`,
-    'FORTALEZAS: <una o dos frases>',
-    'A MEJORAR: <una o dos frases>',
-    'Basa la nota SOLO en lo que el alumno entregó. Si la entrega está casi vacía o no corresponde, pon una nota baja.',
+    'FORTALEZAS: <una o dos frases concretas>',
+    'A MEJORAR: <una o dos frases concretas>',
   ].join('\n')
 
   const userMsg = `ENUNCIADO Y RÚBRICA:\n${enunciado || '(sin enunciado)'}\n\n---\nENTREGA DEL ESTUDIANTE:\n${entrega}`

@@ -198,6 +198,8 @@ function PdfDoc({ url }: { url: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const docRef = useRef<any>(null)
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const taskRef = useRef<any>(null) // render en curso, para cancelarlo si llega otro
   const wrapRef = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(0)
@@ -249,6 +251,9 @@ function PdfDoc({ url }: { url: string }) {
   const draw = useCallback(async () => {
     const doc = docRef.current, canvas = canvasRef.current
     if (!doc || !canvas) return
+    // Cancela el render anterior: dos render() sobre el MISMO canvas corrompen
+    // la imagen (se ve volteada) y pdfjs lanza error. Un solo render a la vez.
+    taskRef.current?.cancel?.()
     const p = await doc.getPage(page)
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const vpCss = p.getViewport({ scale: zoom })
@@ -257,7 +262,14 @@ function PdfDoc({ url }: { url: string }) {
     if (!ctx) return
     canvas.width = vpHi.width; canvas.height = vpHi.height
     canvas.style.width = `${vpCss.width}px`; canvas.style.height = `${vpCss.height}px`
-    await p.render({ canvasContext: ctx, viewport: vpHi }).promise
+    const task = p.render({ canvasContext: ctx, viewport: vpHi })
+    taskRef.current = task
+    try {
+      await task.promise
+    } catch (e) {
+      // Cancelar un render lanza RenderingCancelledException: es esperado.
+      if ((e as { name?: string })?.name !== 'RenderingCancelledException') console.error('render', e)
+    }
   }, [page, zoom])
 
   useEffect(() => { if (!loading && !error) draw() }, [draw, loading, error])

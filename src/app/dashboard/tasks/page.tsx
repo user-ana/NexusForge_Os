@@ -157,7 +157,7 @@ function TaskCard({ task: t, delay }: { task: MyTask; delay: number }) {
         <div className="neo-tk-top">
           {t.parcial && PARCIAL_LABEL[t.parcial] && <span className="neo-tk-parcial">{PARCIAL_LABEL[t.parcial]}</span>}
           {t.points > 0 && <span className="neo-tk-pts">{t.points} pts</span>}
-          <StateBadge state={t.state} />
+          {t.grade != null ? <span className="neo-tk-grade">{t.grade}/{t.points || 100}</span> : <StateBadge state={t.state} />}
         </div>
 
         <h3 className="neo-tk-title">{t.title}</h3>

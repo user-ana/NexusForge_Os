@@ -7124,3 +7124,7 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 /* Nota mostrada en la tarjeta de entrega */
 .neo-subcard-grade { flex-shrink: 0; display: flex; align-items: baseline; gap: 2px; font-size: 19px; font-weight: 800; color: #62d6a2; }
 .neo-subcard-grade small { font-size: 11px; font-weight: 600; color: #8b93a3; }
+
+/* Nota en la tarjeta de Mis tareas */
+.neo-tk-grade { font-size: 11px; font-weight: 800; color: #10141a; padding: 3px 10px; border-radius: 99px; background: linear-gradient(145deg, #68e0b0, #2a9d6e); box-shadow: 0 3px 10px -3px rgba(42,157,110,.6); }
+:root[data-theme="light"] .neo-tk-grade { color: #fff; }

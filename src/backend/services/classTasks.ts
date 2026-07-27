@@ -40,6 +40,8 @@ export type MyTask = ClassTask & {
   myNote: string
   myLink: string
   evidence: Evidence
+  grade: number | null
+  feedback: string
 }
 
 export type Submission = {
@@ -369,6 +371,8 @@ export async function loadMyTasks(): Promise<MyTask[]> {
       myNote: sub?.note ?? '',
       myLink: sub?.link_url ?? '',
       evidence: (sub?.evidence && typeof sub.evidence === 'object' ? sub.evidence : {}) as Evidence,
+      grade: sub?.grade == null ? null : Number(sub.grade),
+      feedback: sub?.feedback ?? '',
     } as MyTask
   })
 }

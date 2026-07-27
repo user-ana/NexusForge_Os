@@ -171,6 +171,8 @@ function PdfCanvas({
   const wrapRef = useRef<HTMLDivElement>(null)
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   const docRef = useRef<any>(null)
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const taskRef = useRef<any>(null) // render en curso, para cancelarlo si llega otro
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(0)
   const [zoom, setZoom] = useState(1)
@@ -251,11 +253,20 @@ function PdfCanvas({
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    // Cancela el render anterior: dos render() sobre el mismo canvas corrompen
+    // la imagen (se ve volteada) y pdfjs lanza error.
+    taskRef.current?.cancel?.()
     canvas.width = vpHi.width
     canvas.height = vpHi.height
     canvas.style.width = `${vpCss.width}px`
     canvas.style.height = `${vpCss.height}px`
-    await p.render({ canvasContext: ctx, viewport: vpHi }).promise
+    const task = p.render({ canvasContext: ctx, viewport: vpHi })
+    taskRef.current = task
+    try {
+      await task.promise
+    } catch (e) {
+      if ((e as { name?: string })?.name !== 'RenderingCancelledException') console.error('render', e)
+    }
 
     const content = await p.getTextContent()
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
