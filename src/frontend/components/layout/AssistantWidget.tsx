@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { useT } from '@/frontend/hooks/useT'
+import { useSpeech } from '@/frontend/hooks/useSpeech'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
 import { supabase } from '@/backend/supabase'
 import { getClasses, loadClasses, createClass, deleteClass } from '@/backend/services/classes'
@@ -73,6 +74,8 @@ export default function AssistantWidget() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [entries, setEntries] = useState<Entry[]>([])
+  const speech = useSpeech('es-ES')
+  const voiceRef = useRef(false) // la última pregunta vino por voz → leer la respuesta
   const [ov, setOv] = useState<AssistantOverview | null>(null)
   const [ctx, setCtx] = useState<string | null>(null)
   const [pending, setPending] = useState<{ toolCall: ToolCall; field: string } | null>(null)
@@ -141,8 +144,8 @@ export default function AssistantWidget() {
     if (open) setTimeout(() => inputRef.current?.focus(), 80)
   }, [open])
 
-  async function submit() {
-    const q = input.trim()
+  async function submit(text?: string) {
+    const q = (text ?? input).trim()
     if (!q || loading || !meId) return
     setInput('')
     setEntries((e) => [...e, { kind: 'query', text: q }])
@@ -202,6 +205,35 @@ export default function AssistantWidget() {
       setLoading(false)
     }
   }
+
+  /** Micrófono: alterna escuchar. Al terminar de hablar, envía y marca voz. */
+  function toggleMic() {
+    if (speech.listening) { speech.stop(); return }
+    speech.shutUp() // corta cualquier lectura en curso antes de escuchar
+    speech.start(
+      (t) => setInput(t), // texto en vivo en el campo
+      (finalText) => { voiceRef.current = true; submit(finalText) },
+      (err) => {
+        const msg = err === 'not-allowed' || err === 'service-not-allowed'
+          ? 'No pude usar el micrófono. Revisa los permisos, o prueba en Chrome o Edge.'
+          : err === 'unsupported'
+            ? 'Este navegador no soporta dictado por voz. Prueba en Chrome o Edge.'
+            : err === 'no-speech'
+              ? 'No te escuché. Intenta de nuevo.'
+              : 'No se pudo usar el reconocimiento de voz aquí. Prueba en Chrome o Edge.'
+        setEntries((e) => [...e, { kind: 'ai', text: msg }])
+      },
+    )
+  }
+
+  // Si la última pregunta vino por voz, lee en voz alta la respuesta de la IA.
+  useEffect(() => {
+    const last = entries[entries.length - 1]
+    if (last?.kind === 'ai' && voiceRef.current) {
+      speech.speak(last.text)
+      voiceRef.current = false
+    }
+  }, [entries, speech])
 
   // Valida la acción: si falta un dato, lo pregunta (queda pendiente); si está completa, muestra la confirmación.
   function proceedWithAction(tc: ToolCall, userText: string) {
@@ -535,7 +567,7 @@ export default function AssistantWidget() {
                 </div>
 
                 <div className="neo-a-in w-full max-w-lg" style={{ animationDelay: '80ms' }}>
-                  <AssistantInput inputRef={inputRef} value={input} onChange={setInput} onSubmit={submit} disabled={loading} placeholder={t('search.placeholder')} />
+                  <AssistantInput inputRef={inputRef} value={input} onChange={setInput} onSubmit={submit} disabled={loading} placeholder={t('search.placeholder')} mic={speech.supported ? { listening: speech.listening, onToggle: toggleMic } : undefined} />
                 </div>
 
                 <div className="flex flex-wrap justify-center gap-2">
@@ -586,7 +618,7 @@ export default function AssistantWidget() {
 
           {!home && !showHistory && (
             <div className="px-4 py-3.5">
-              <AssistantInput inputRef={inputRef} value={input} onChange={setInput} onSubmit={submit} disabled={loading} placeholder={t('search.placeholder')} />
+              <AssistantInput inputRef={inputRef} value={input} onChange={setInput} onSubmit={submit} disabled={loading} placeholder={t('search.placeholder')} mic={speech.supported ? { listening: speech.listening, onToggle: toggleMic } : undefined} />
             </div>
           )}
         </div>
@@ -607,6 +639,7 @@ function AssistantInput({
   disabled,
   placeholder,
   inputRef,
+  mic,
 }: {
   value: string
   onChange: (v: string) => void
@@ -614,22 +647,42 @@ function AssistantInput({
   disabled: boolean
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement>
+  mic?: { listening: boolean; onToggle: () => void }
 }) {
   return (
     <div className="neo-ai-input">
       <div className="neo-ai-input-inner">
+        {mic && (
+          <button
+            onClick={mic.onToggle}
+            className={`neo-ai-mic ${mic.listening ? 'neo-ai-mic--on' : ''}`}
+            aria-label={mic.listening ? 'Detener dictado' : 'Hablar'}
+            title={mic.listening ? 'Escuchando… toca para detener' : 'Hablar por voz'}
+            type="button"
+          >
+            <MicGlyph />
+          </button>
+        )}
         <input
           ref={inputRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-          placeholder={placeholder}
+          placeholder={mic?.listening ? 'Escuchando…' : placeholder}
         />
-        <button onClick={onSubmit} disabled={disabled || !value.trim()} className="neo-assistant-send" aria-label="Buscar">
+        <button onClick={() => onSubmit()} disabled={disabled || !value.trim()} className="neo-assistant-send" aria-label="Buscar">
           <SendGlyph />
         </button>
       </div>
     </div>
+  )
+}
+
+function MicGlyph() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
   )
 }
 
