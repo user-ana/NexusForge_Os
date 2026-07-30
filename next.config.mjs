@@ -21,8 +21,10 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
 
   // Se apagan capacidades del navegador que la plataforma no usa. Si algún día
-  // se colara un script malicioso, no podría encender la cámara ni el micrófono.
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+  // se colara un script malicioso, no podría encender la cámara ni la ubicación.
+  // El MICRÓFONO se permite SOLO al propio sitio (self) para el dictado por voz
+  // del asistente; ningún tercero incrustado puede usarlo.
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(), payment=()' },
 
   // Obliga a usar siempre HTTPS durante un año. Cierra el ataque de bajar la
   // conexión a HTTP para leer el token de sesión en una red WiFi ajena.
