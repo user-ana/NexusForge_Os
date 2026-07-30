@@ -12,6 +12,38 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/**
+ * Limpia el texto antes de leerlo: quita el markdown (**negrita**, ###, `código`,
+ * viñetas, enlaces) y los símbolos sueltos, para que la voz NO lea "asterisco".
+ */
+function forSpeech(text: string): string {
+  return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // enlaces -> solo el texto
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^\s*[-*•]\s+/gm, '')
+    .replace(/[*_#`>|~✓→•]/g, ' ') // símbolos que no se leen
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Elige la mejor voz en español disponible (prefiere las naturales). */
+function pickSpanishVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices()
+  const es = voices.filter((v) => v.lang.toLowerCase().startsWith('es'))
+  if (!es.length) return null
+  // Voces naturales de Microsoft/Google y nombres neutros/femeninos conocidos.
+  const prefer = ['natural', 'dalia', 'sabina', 'elvira', 'paloma', 'helena', 'laura', 'google español', 'español de méxico', 'español (méxico)']
+  for (const p of prefer) {
+    const v = es.find((x) => x.name.toLowerCase().includes(p))
+    if (v) return v
+  }
+  return es[0]
+}
+
 export function useSpeech(lang = 'es-ES') {
   const [listening, setListening] = useState(false)
   const [waking, setWaking] = useState(false) // modo manos libres: escuchando "Nexus"
@@ -19,10 +51,17 @@ export function useSpeech(lang = 'es-ES') {
   const recRef = useRef<any>(null)
   const wakeRef = useRef<any>(null)
   const wakeOnRef = useRef(false) // ¿el modo manos libres sigue activo? (para reiniciar)
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     setSupported(!!SR)
+    // Las voces cargan de forma asíncrona: elegimos la española cuando lleguen.
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const load = () => { voiceRef.current = pickSpanishVoice() }
+      load()
+      window.speechSynthesis.onvoiceschanged = load
+    }
     return () => {
       wakeOnRef.current = false
       try { recRef.current?.abort?.() } catch { /* noop */ }
@@ -68,13 +107,17 @@ export function useSpeech(lang = 'es-ES') {
     setListening(false)
   }, [])
 
-  /** Lee un texto en voz alta (texto → voz). */
+  /** Lee un texto en voz alta (texto → voz), limpio y con voz natural. */
   const speak = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) return
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    const limpio = forSpeech(text)
+    if (!limpio) return
     window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text.slice(0, 500)) // no leer ensayos enteros
-    u.lang = lang
-    u.rate = 1.03
+    const u = new SpeechSynthesisUtterance(limpio.slice(0, 500)) // no leer ensayos enteros
+    const v = voiceRef.current ?? pickSpanishVoice()
+    if (v) { u.voice = v; u.lang = v.lang } else { u.lang = lang }
+    u.rate = 1.0
+    u.pitch = 1.0
     window.speechSynthesis.speak(u)
   }, [lang])
 
