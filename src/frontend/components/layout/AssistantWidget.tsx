@@ -235,24 +235,44 @@ export default function AssistantWidget() {
     }
   }, [entries, speech])
 
-  /** Modo manos libres: alterna escuchar la palabra "Nexus". */
-  function toggleWake() {
-    if (speech.waking) { speech.stopWake(); return }
-    setOpen(true)
+  /** Enciende la escucha continua de "Nexus" (sin abrir el panel a la fuerza). */
+  function enableWake(fromClick: boolean) {
     speech.startWake(
       (cmd) => {
+        setOpen(true) // al oír "Nexus" mostramos el panel para ver la respuesta
         if (!cmd) { voiceRef.current = true; setEntries((e) => [...e, { kind: 'ai', text: 'Aquí estoy. ¿Qué necesitas?' }]); speech.speak('Aquí estoy. ¿Qué necesitas?'); return }
         voiceRef.current = true
         submit(cmd)
       },
       (err) => {
+        // Solo molestamos con el aviso si la persona lo activó a mano.
+        if (!fromClick) return
         const msg = err === 'unsupported'
           ? 'El modo manos libres necesita Chrome o Edge.'
-          : 'No pude activar el micrófono para el modo manos libres. Revisa los permisos.'
+          : 'No pude activar el micrófono. Dale permiso al micrófono e inténtalo otra vez.'
+        setOpen(true)
         setEntries((e) => [...e, { kind: 'ai', text: msg }])
       },
     )
   }
+
+  /** El botón: enciende/apaga y RECUERDA la preferencia (queda como Alexa). */
+  function toggleWake() {
+    if (speech.waking) {
+      speech.stopWake()
+      if (meId) localStorage.setItem(`nf_handsfree:${meId}`, '0')
+      return
+    }
+    if (meId) localStorage.setItem(`nf_handsfree:${meId}`, '1')
+    enableWake(true)
+  }
+
+  // Si ya lo dejó encendido antes, vuelve a escuchar solo al entrar (sin tocar nada).
+  useEffect(() => {
+    if (!meId || !speech.supported || speech.waking) return
+    if (localStorage.getItem(`nf_handsfree:${meId}`) === '1') enableWake(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meId, speech.supported])
 
   // Al desmontar, corta la escucha continua (no dejar el micrófono abierto).
   useEffect(() => () => speech.stopWake(), [speech])
