@@ -235,6 +235,28 @@ export default function AssistantWidget() {
     }
   }, [entries, speech])
 
+  /** Modo manos libres: alterna escuchar la palabra "Nexus". */
+  function toggleWake() {
+    if (speech.waking) { speech.stopWake(); return }
+    setOpen(true)
+    speech.startWake(
+      (cmd) => {
+        if (!cmd) { voiceRef.current = true; setEntries((e) => [...e, { kind: 'ai', text: 'Aquí estoy. ¿Qué necesitas?' }]); speech.speak('Aquí estoy. ¿Qué necesitas?'); return }
+        voiceRef.current = true
+        submit(cmd)
+      },
+      (err) => {
+        const msg = err === 'unsupported'
+          ? 'El modo manos libres necesita Chrome o Edge.'
+          : 'No pude activar el micrófono para el modo manos libres. Revisa los permisos.'
+        setEntries((e) => [...e, { kind: 'ai', text: msg }])
+      },
+    )
+  }
+
+  // Al desmontar, corta la escucha continua (no dejar el micrófono abierto).
+  useEffect(() => () => speech.stopWake(), [speech])
+
   // Valida la acción: si falta un dato, lo pregunta (queda pendiente); si está completa, muestra la confirmación.
   function proceedWithAction(tc: ToolCall, userText: string) {
     const missing = nextMissing(tc, userText)
@@ -476,9 +498,19 @@ export default function AssistantWidget() {
               <p className="text-[11px] text-neutral-500">{t('search.sub')}</p>
             </div>
             <span className="neo-ia-badge">IA</span>
+            {speech.supported && (
+              <button
+                onClick={toggleWake}
+                className={`ml-1 rounded-lg p-1.5 transition ${speech.waking ? 'neo-wake--on' : 'text-neutral-500 hover:bg-white/5 hover:text-neutral-300'}`}
+                title={speech.waking ? 'Manos libres activo — di "Nexus…". Toca para apagar' : 'Modo manos libres: di "Nexus"'}
+                aria-label="Modo manos libres"
+              >
+                <WaveGlyph />
+              </button>
+            )}
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className={`ml-1 rounded-lg p-1.5 transition hover:bg-white/5 ${showHistory ? 'text-accent-violet' : 'text-neutral-500 hover:text-neutral-300'}`}
+              className={`rounded-lg p-1.5 transition hover:bg-white/5 ${showHistory ? 'text-accent-violet' : 'text-neutral-500 hover:text-neutral-300'}`}
               title="Historial"
               aria-label="Historial"
             >
@@ -682,6 +714,14 @@ function MicGlyph() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0" /><line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  )
+}
+
+function WaveGlyph() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="10" x2="4" y2="14" /><line x1="8" y1="7" x2="8" y2="17" /><line x1="12" y1="4" x2="12" y2="20" /><line x1="16" y1="7" x2="16" y2="17" /><line x1="20" y1="10" x2="20" y2="14" />
     </svg>
   )
 }

@@ -14,13 +14,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function useSpeech(lang = 'es-ES') {
   const [listening, setListening] = useState(false)
+  const [waking, setWaking] = useState(false) // modo manos libres: escuchando "Nexus"
   const [supported, setSupported] = useState(false)
   const recRef = useRef<any>(null)
+  const wakeRef = useRef<any>(null)
+  const wakeOnRef = useRef(false) // ¿el modo manos libres sigue activo? (para reiniciar)
 
   useEffect(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     setSupported(!!SR)
-    return () => { try { recRef.current?.abort?.() } catch { /* noop */ } }
+    return () => {
+      wakeOnRef.current = false
+      try { recRef.current?.abort?.() } catch { /* noop */ }
+      try { wakeRef.current?.abort?.() } catch { /* noop */ }
+    }
   }, [])
 
   /**
@@ -75,5 +82,55 @@ export function useSpeech(lang = 'es-ES') {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel()
   }, [])
 
-  return { listening, supported, start, stop, speak, shutUp }
+  /**
+   * MODO MANOS LIBRES: escucha en continuo y, cuando oye "Nexus …", entrega lo
+   * que sigue como comando. Si solo dice "Nexus", entrega '' (para responder
+   * "¿sí?"). Se reinicia solo al cortarse (la API se detiene tras un silencio),
+   * mientras el modo siga activo.
+   */
+  const startWake = useCallback((onCommand: (cmd: string) => void, onError?: (e: string) => void) => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { onError?.('unsupported'); return }
+    wakeOnRef.current = true
+
+    const arrancar = () => {
+      if (!wakeOnRef.current) return
+      const rec = new SR()
+      rec.lang = lang
+      rec.interimResults = false
+      rec.continuous = true
+      rec.onresult = (e: any) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          if (!e.results[i].isFinal) continue
+          const t = String(e.results[i][0].transcript || '').trim()
+          // "nexus", "néxus", "nexo", "next"… seguido del comando
+          const m = t.toLowerCase().match(/\b(n[eé]xus|nexo|nexos|next)\b[\s,:.-]*(.*)$/)
+          if (m) onCommand(m[2].trim())
+        }
+      }
+      rec.onerror = (e: any) => {
+        const err = e?.error ?? 'error'
+        // 'no-speech'/'aborted' son normales en continuo: no molestamos.
+        if (err === 'not-allowed' || err === 'service-not-allowed' || err === 'unsupported') {
+          wakeOnRef.current = false
+          setWaking(false)
+          onError?.(err)
+        }
+      }
+      rec.onend = () => { if (wakeOnRef.current) { try { rec.start() } catch { /* reintento */ } } }
+      wakeRef.current = rec
+      try { rec.start() } catch { /* noop */ }
+    }
+
+    setWaking(true)
+    arrancar()
+  }, [lang])
+
+  const stopWake = useCallback(() => {
+    wakeOnRef.current = false
+    setWaking(false)
+    try { wakeRef.current?.stop?.() } catch { /* noop */ }
+  }, [])
+
+  return { listening, waking, supported, start, stop, speak, shutUp, startWake, stopWake }
 }

@@ -7173,3 +7173,6 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 }
 :root[data-theme="light"] .neo-ai-mic { color: #596273; background: #eef1f6; }
 :root[data-theme="light"] .neo-ai-mic--on { color: #fff; }
+
+/* Modo manos libres activo (botón de onda escuchando "Nexus") */
+.neo-wake--on { color: #10141a; background: linear-gradient(145deg,#5fd0f0,#2494b6); animation: neo-mic-pulse 1.5s ease-in-out infinite; }
