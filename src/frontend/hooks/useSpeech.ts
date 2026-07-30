@@ -91,6 +91,7 @@ export function useSpeech(lang = 'es-ES') {
   const startWake = useCallback((onCommand: (cmd: string) => void, onError?: (e: string) => void) => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) { onError?.('unsupported'); return }
+    if (wakeOnRef.current) return // ya está escuchando: no arranques un segundo reconocedor
     wakeOnRef.current = true
 
     const arrancar = () => {

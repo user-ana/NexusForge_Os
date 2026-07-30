@@ -200,8 +200,14 @@ export default function AssistantWidget() {
         setLoading(false)
         return
       }
-      const dossiers = await searchStudents(meId, q)
-      setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
+      // Búsqueda estructurada como respaldo. Va en su propio try: si Supabase
+      // rechaza, no debe quedar como promesa sin capturar (error en consola).
+      try {
+        const dossiers = await searchStudents(meId, q)
+        setEntries((e) => [...e, { kind: 'result', query: q, dossiers }])
+      } catch {
+        setEntries((e) => [...e, { kind: 'ai', text: 'No pude completar la búsqueda. Intenta de nuevo.' }])
+      }
       setLoading(false)
     }
   }
@@ -240,7 +246,8 @@ export default function AssistantWidget() {
     speech.startWake(
       (cmd) => {
         setOpen(true) // al oír "Nexus" mostramos el panel para ver la respuesta
-        if (!cmd) { voiceRef.current = true; setEntries((e) => [...e, { kind: 'ai', text: 'Aquí estoy. ¿Qué necesitas?' }]); speech.speak('Aquí estoy. ¿Qué necesitas?'); return }
+        // Solo "Nexus", o un fragmento muy corto mal oído: saluda y espera el comando.
+        if (cmd.length < 4) { voiceRef.current = true; setEntries((e) => [...e, { kind: 'ai', text: 'Aquí estoy. Dime, por ejemplo: "crea una clase de Bases de Datos".' }]); speech.speak('Aquí estoy. ¿Qué necesitas?'); return }
         voiceRef.current = true
         submit(cmd)
       },
