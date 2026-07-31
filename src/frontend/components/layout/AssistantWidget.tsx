@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { useT } from '@/frontend/hooks/useT'
 import { useSpeech } from '@/frontend/hooks/useSpeech'
@@ -67,6 +69,7 @@ function saveChats(uid: string, chats: Chat[]) {
  */
 export default function AssistantWidget() {
   const { t } = useT()
+  const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   const [role, setRole] = useState<Role>('student')
   const [meId, setMeId] = useState('')
@@ -247,7 +250,17 @@ export default function AssistantWidget() {
       (cmd) => {
         setOpen(true) // al oír "Nexus" mostramos el panel para ver la respuesta
         // Solo "Nexus", o un fragmento muy corto mal oído: saluda y espera el comando.
-        if (cmd.length < 4) { voiceRef.current = true; setEntries((e) => [...e, { kind: 'ai', text: 'Aquí estoy. Dime, por ejemplo: "crea una clase de Bases de Datos".' }]); speech.speak('Aquí estoy. ¿Qué necesitas?'); return }
+        if (cmd.length < 4) {
+          voiceRef.current = true
+          // No dupliques el saludo si el último mensaje ya es "Aquí estoy…".
+          setEntries((e) => {
+            const last = e[e.length - 1]
+            if (last?.kind === 'ai' && last.text.startsWith('Aquí estoy')) return e
+            return [...e, { kind: 'ai', text: 'Aquí estoy. Dime, por ejemplo: "crea una clase de Bases de Datos".' }]
+          })
+          speech.speak('Aquí estoy. ¿Qué necesitas?')
+          return
+        }
         voiceRef.current = true
         submit(cmd)
       },
@@ -501,7 +514,8 @@ export default function AssistantWidget() {
     updateAction(i, { status: 'cancelled' })
   }
 
-  if (!mounted || role !== 'teacher') return null
+  // En la página del asistente inmersivo el orbe sobra (y se encimaría): se oculta.
+  if (!mounted || role !== 'teacher' || pathname === '/dashboard/asistente') return null
 
   const QUICK = ov
     ? [
@@ -525,6 +539,15 @@ export default function AssistantWidget() {
               <p className="text-[11px] text-neutral-500">{t('search.sub')}</p>
             </div>
             <span className="neo-ia-badge">IA</span>
+            <Link
+              href="/dashboard/asistente"
+              onClick={() => setOpen(false)}
+              className="rounded-lg p-1.5 text-neutral-500 transition hover:bg-white/5 hover:text-neutral-300"
+              title="Abrir el asistente en pantalla completa"
+              aria-label="Pantalla completa"
+            >
+              <ExpandGlyph />
+            </Link>
             {speech.supported && (
               <button
                 onClick={toggleWake}
@@ -1147,6 +1170,14 @@ function PlusGlyph() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
+function ExpandGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" />
     </svg>
   )
 }

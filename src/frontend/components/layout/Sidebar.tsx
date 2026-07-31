@@ -8,6 +8,7 @@ import { getSession, SESSION_EVENT, type Role } from '@/frontend/session/session
 
 const BASE = [
   { href: '/dashboard', key: 'nav.dashboard' },
+  { href: '/dashboard/asistente', key: 'nav.assistant' },
   { href: '/dashboard/chat', key: 'nav.chat' },
 ]
 const NAV_BY_ROLE: Record<Role, { href: string; key: string }[]> = {

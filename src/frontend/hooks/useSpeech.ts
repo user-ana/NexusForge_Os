@@ -30,18 +30,47 @@ function forSpeech(text: string): string {
     .trim()
 }
 
-/** Elige la mejor voz en español disponible (prefiere las naturales). */
-function pickSpanishVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices()
-  const es = voices.filter((v) => v.lang.toLowerCase().startsWith('es'))
-  if (!es.length) return null
-  // Voces naturales de Microsoft/Google y nombres neutros/femeninos conocidos.
-  const prefer = ['natural', 'dalia', 'sabina', 'elvira', 'paloma', 'helena', 'laura', 'google español', 'español de méxico', 'español (méxico)']
-  for (const p of prefer) {
-    const v = es.find((x) => x.name.toLowerCase().includes(p))
+/** Nombres de voces naturales preferidas por idioma (Microsoft/Google). */
+const VOICE_PREFER: Record<'es' | 'en', string[]> = {
+  es: ['natural', 'dalia', 'sabina', 'elvira', 'paloma', 'helena', 'laura', 'google español', 'español de méxico', 'español (méxico)'],
+  en: ['natural', 'google us english', 'aria', 'jenny', 'michelle', 'ava', 'zira', 'david', 'english (united states)', 'english (united kingdom)'],
+}
+
+/**
+ * Detecta si un texto está en español o inglés (heurística ligera). Se usa para
+ * NO leer un texto en inglés con voz española (sonaba "masticado"): cada idioma
+ * se lee con una voz nativa de ese idioma.
+ */
+export function detectLang(text: string): 'es' | 'en' {
+  const t = text.toLowerCase()
+  if (/[ñáéíóú¿¡]/.test(t)) return 'es' // señales inequívocas de español
+  const es = (t.match(/\b(que|de|la|el|los|las|un|una|para|con|como|qué|hola|gracias|ayuda|estudiante|clase|tarea|sí|está|puedo|puedes|necesitas)\b/g) || []).length
+  const en = (t.match(/\b(the|and|you|is|are|to|of|with|for|hello|hi|what|how|can|help|please|this|that|do|does|your|about)\b/g) || []).length
+  return en > es ? 'en' : 'es'
+}
+
+/** La mejor voz disponible para un idioma (prefiere las naturales). */
+function pickVoiceFor(lang: 'es' | 'en'): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis?.getVoices?.() ?? []
+  const cand = voices.filter((v) => v.lang.toLowerCase().startsWith(lang))
+  if (!cand.length) return null
+  for (const p of VOICE_PREFER[lang]) {
+    const v = cand.find((x) => x.name.toLowerCase().includes(p))
     if (v) return v
   }
-  return es[0]
+  return cand[0]
+}
+
+/** Elige voz + idioma según el idioma detectado del texto (para leerlo nativo). */
+export function speechVoiceFor(text: string): { voice: SpeechSynthesisVoice | null; lang: string } {
+  const l = detectLang(text)
+  const voice = pickVoiceFor(l)
+  return { voice, lang: voice?.lang ?? (l === 'en' ? 'en-US' : 'es-ES') }
+}
+
+/** Elige la mejor voz en español disponible (prefiere las naturales). */
+function pickSpanishVoice(): SpeechSynthesisVoice | null {
+  return pickVoiceFor('es')
 }
 
 export function useSpeech(lang = 'es-ES') {
@@ -114,8 +143,10 @@ export function useSpeech(lang = 'es-ES') {
     if (!limpio) return
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(limpio.slice(0, 500)) // no leer ensayos enteros
-    const v = voiceRef.current ?? pickSpanishVoice()
-    if (v) { u.voice = v; u.lang = v.lang } else { u.lang = lang }
+    // La voz se elige por el idioma del TEXTO (no fijo español): así el inglés se
+    // lee con voz inglesa y no con acento español.
+    const { voice, lang: vlang } = speechVoiceFor(limpio)
+    if (voice) { u.voice = voice; u.lang = voice.lang } else { u.lang = vlang }
     u.rate = 1.0
     u.pitch = 1.0
     window.speechSynthesis.speak(u)
@@ -173,7 +204,10 @@ export function useSpeech(lang = 'es-ES') {
   const stopWake = useCallback(() => {
     wakeOnRef.current = false
     setWaking(false)
-    try { wakeRef.current?.stop?.() } catch { /* noop */ }
+    // abort (no stop): suelta el micrófono de inmediato y NO entrega un último
+    // resultado. Así el dictado que abre justo después no choca por el micrófono
+    // ocupado, y la voz del propio asistente no se cuela como comando.
+    try { wakeRef.current?.abort?.() } catch { /* noop */ }
   }, [])
 
   return { listening, waking, supported, start, stop, speak, shutUp, startWake, stopWake }
