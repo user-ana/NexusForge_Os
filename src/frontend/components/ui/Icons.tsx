@@ -237,3 +237,142 @@ export function ExpandIcon(p: P) {
     </svg>
   )
 }
+
+export function UsersIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+      <circle cx="9" cy="7" r="3.2" />
+      <path d="M22 20v-1.5a4 4 0 0 0-3-3.87" />
+      <path d="M16.5 4.2a4 4 0 0 1 0 7.6" />
+    </svg>
+  )
+}
+
+export function CalendarIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+      <line x1="3" y1="9.5" x2="21" y2="9.5" />
+      <line x1="8" y1="2.5" x2="8" y2="6" />
+      <line x1="16" y1="2.5" x2="16" y2="6" />
+    </svg>
+  )
+}
+
+export function ClockIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
+    </svg>
+  )
+}
+
+export function PlusCircleIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="12" cy="12" r="9" />
+      <line x1="12" y1="8.5" x2="12" y2="15.5" />
+      <line x1="8.5" y1="12" x2="15.5" y2="12" />
+    </svg>
+  )
+}
+
+export function UploadIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <path d="M4 15.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.5" />
+      <polyline points="8 8 12 4 16 8" />
+      <line x1="12" y1="4" x2="12" y2="15" />
+    </svg>
+  )
+}
+
+export function InboxIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <path d="M3 13h4.5l1.5 2.5h6L16.5 13H21" />
+      <path d="M5.5 5h13l2.5 8v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5l2.5-8Z" />
+    </svg>
+  )
+}
+
+export function ArrowRightIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <line x1="4" y1="12" x2="19" y2="12" />
+      <polyline points="13 6 19 12 13 18" />
+    </svg>
+  )
+}
+
+export function LayersIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <path d="M12 3 3 7.5 12 12l9-4.5L12 3Z" />
+      <polyline points="3 12.5 12 17 21 12.5" />
+      <polyline points="3 17 12 21.5 21 17" />
+    </svg>
+  )
+}
+
+export function DatabaseIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <ellipse cx="12" cy="5.5" rx="8" ry="3.2" />
+      <path d="M4 5.5v13c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2v-13" />
+      <path d="M4 12c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2" />
+    </svg>
+  )
+}
+
+export function MonitorIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <rect x="2.5" y="3.5" width="19" height="13" rx="2" />
+      <line x1="8" y1="20.5" x2="16" y2="20.5" />
+      <line x1="12" y1="16.5" x2="12" y2="20.5" />
+    </svg>
+  )
+}
+
+export function SparkIcon(p: P) {
+  return (
+    <svg {...base(p)} fill="currentColor" stroke="none">
+      <path d="M12 2.5 13.7 9 20.5 12 13.7 15 12 21.5 10.3 15 3.5 12l6.8-3L12 2.5Z" />
+    </svg>
+  )
+}
+
+export function BoltIcon(p: P) {
+  return (
+    <svg {...base(p)}>
+      <path d="M13.5 2 4 13.5h6.5L10 22l9.5-11.5H13L13.5 2Z" />
+    </svg>
+  )
+}
+
+export function ChevronLeftIcon(p: P) {
+  return (
+    <svg {...base(p)} strokeWidth={2.2}>
+      <polyline points="15 5 8 12 15 19" />
+    </svg>
+  )
+}
+
+export function ChevronRightIcon(p: P) {
+  return (
+    <svg {...base(p)} strokeWidth={2.2}>
+      <polyline points="9 5 16 12 9 19" />
+    </svg>
+  )
+}
+
+export function QuoteIcon(p: P) {
+  return (
+    <svg {...base(p)} fill="currentColor" stroke="none">
+      <path d="M9.4 5.5C6.3 6.9 4.4 9.6 4.4 12.8c0 3.2 1.9 5.4 4.5 5.4 2.1 0 3.7-1.5 3.7-3.5 0-1.9-1.4-3.3-3.2-3.3-.4 0-.8.1-1 .2.4-1.5 1.8-2.9 3.5-3.7l-2.5-2.4ZM18.6 5.5c-3.1 1.4-5 4.1-5 7.3 0 3.2 1.9 5.4 4.5 5.4 2.1 0 3.7-1.5 3.7-3.5 0-1.9-1.4-3.3-3.2-3.3-.4 0-.8.1-1 .2.4-1.5 1.8-2.9 3.5-3.7l-2.5-2.4Z" />
+    </svg>
+  )
+}

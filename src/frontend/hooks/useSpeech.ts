@@ -30,10 +30,10 @@ function forSpeech(text: string): string {
     .trim()
 }
 
-/** Nombres de voces naturales preferidas por idioma (Microsoft/Google). */
+/** Nombres de voces conocidas por idioma, de mejor a peor dentro de su familia. */
 const VOICE_PREFER: Record<'es' | 'en', string[]> = {
-  es: ['natural', 'dalia', 'sabina', 'elvira', 'paloma', 'helena', 'laura', 'google español', 'español de méxico', 'español (méxico)'],
-  en: ['natural', 'google us english', 'aria', 'jenny', 'michelle', 'ava', 'zira', 'david', 'english (united states)', 'english (united kingdom)'],
+  es: ['dalia', 'jorge', 'elvira', 'alvaro', 'paloma', 'helena', 'laura', 'sabina'],
+  en: ['aria', 'jenny', 'michelle', 'ava', 'guy', 'zira', 'david'],
 }
 
 /**
@@ -49,16 +49,35 @@ export function detectLang(text: string): 'es' | 'en' {
   return en > es ? 'en' : 'es'
 }
 
-/** La mejor voz disponible para un idioma (prefiere las naturales). */
+/**
+ * La mejor voz disponible para un idioma.
+ *
+ * Antes devolvía la PRIMERA que coincidiera con la lista, así que bastaba con
+ * que el equipo tuviera una voz vieja con un nombre de la lista para que ganara
+ * a una neuronal mucho mejor. Ahora se puntúan todas y gana la de más nota:
+ * las "Natural"/"Neural" de Microsoft y las de Google suenan como una persona;
+ * las antiguas (Sabina, Helena, Raul) suenan a robot de los noventa.
+ */
 function pickVoiceFor(lang: 'es' | 'en'): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis?.getVoices?.() ?? []
   const cand = voices.filter((v) => v.lang.toLowerCase().startsWith(lang))
   if (!cand.length) return null
-  for (const p of VOICE_PREFER[lang]) {
-    const v = cand.find((x) => x.name.toLowerCase().includes(p))
-    if (v) return v
+
+  const score = (v: SpeechSynthesisVoice): number => {
+    const n = v.name.toLowerCase()
+    let s = 0
+    if (n.includes('natural')) s += 120 // Microsoft neuronal: la mejor con diferencia
+    if (n.includes('neural')) s += 120
+    if (n.includes('online')) s += 40 // servidor de Microsoft, también neuronal
+    if (n.includes('google')) s += 60
+    if (n.includes('premium') || n.includes('enhanced')) s += 50 // Apple
+    const i = VOICE_PREFER[lang].findIndex((p) => n.includes(p))
+    if (i >= 0) s += 20 - i // dentro de la misma familia, el orden de la lista
+    if (v.default) s += 2
+    return s
   }
-  return cand[0]
+
+  return cand.slice().sort((a, b) => score(b) - score(a))[0]
 }
 
 /** Elige voz + idioma según el idioma detectado del texto (para leerlo nativo). */
@@ -80,6 +99,8 @@ export function useSpeech(lang = 'es-ES') {
   const recRef = useRef<any>(null)
   const wakeRef = useRef<any>(null)
   const wakeOnRef = useRef(false) // ¿el modo manos libres sigue activo? (para reiniciar)
+  const dictOnRef = useRef(false) // ¿el dictado sigue abierto? (para relanzarlo)
+  const silenceRef = useRef<number | null>(null) // cierre por silencio tras hablar
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
 
   useEffect(() => {
@@ -93,6 +114,8 @@ export function useSpeech(lang = 'es-ES') {
     }
     return () => {
       wakeOnRef.current = false
+      dictOnRef.current = false
+      if (silenceRef.current) window.clearTimeout(silenceRef.current)
       try { recRef.current?.abort?.() } catch { /* noop */ }
       try { wakeRef.current?.abort?.() } catch { /* noop */ }
     }
@@ -107,31 +130,79 @@ export function useSpeech(lang = 'es-ES') {
     if (!SR) { onError?.('unsupported'); return }
     try { recRef.current?.abort?.() } catch { /* noop */ }
 
-    const rec = new SR()
-    rec.lang = lang
-    rec.interimResults = true
-    rec.continuous = false
-    rec.maxAlternatives = 1
+    // El dictado se cierra SOLO cuando lo pide el usuario o cuando ya recogimos
+    // una frase y llega el silencio. Antes usaba continuous=false y el navegador
+    // lo cortaba a los pocos segundos de no oír nada ("se cierra rápido"), o al
+    // primer respiro en mitad de una frase.
+    dictOnRef.current = true
+    let buffer = ''
 
-    rec.onresult = (e: any) => {
-      let interim = '', final = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript
-        if (e.results[i].isFinal) final += t
-        else interim += t
-      }
-      onText((final || interim).trim())
-      if (final.trim()) onFinal(final.trim())
+    const clearSilence = () => {
+      if (silenceRef.current) { window.clearTimeout(silenceRef.current); silenceRef.current = null }
     }
-    rec.onerror = (e: any) => { setListening(false); onError?.(e?.error ?? 'error') }
-    rec.onend = () => setListening(false)
+    const finish = () => {
+      clearSilence()
+      dictOnRef.current = false
+      try { recRef.current?.stop?.() } catch { /* noop */ }
+      setListening(false)
+      const text = buffer.trim()
+      buffer = ''
+      if (text) onFinal(text)
+    }
 
-    recRef.current = rec
+    const arrancar = () => {
+      if (!dictOnRef.current) return
+      const rec = new SR()
+      rec.lang = lang
+      rec.interimResults = true
+      // continuo: un respiro a mitad de la frase ya no corta el dictado
+      rec.continuous = true
+      rec.maxAlternatives = 1
+
+      rec.onresult = (e: any) => {
+        let interim = ''
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript
+          if (e.results[i].isFinal) buffer += `${t} `
+          else interim += t
+        }
+        onText(`${buffer}${interim}`.trim())
+        // Ya hay algo dicho: al callar un rato, se envía. El margen es amplio a
+        // propósito — con 1,5 s cortaba a mitad de frase en cuanto la persona se
+        // paraba a pensar el nombre de algo ("Creó una tarea llamada…").
+        clearSilence()
+        if (buffer.trim()) silenceRef.current = window.setTimeout(finish, 3200)
+      }
+
+      rec.onerror = (e: any) => {
+        const err = e?.error ?? 'error'
+        // 'no-speech' y 'aborted' son ruido normal: se reintenta en vez de cerrar
+        // la ventana en la cara del usuario mientras piensa qué decir.
+        if (err === 'no-speech' || err === 'aborted') return
+        dictOnRef.current = false
+        clearSilence()
+        setListening(false)
+        onError?.(err)
+      }
+
+      // El navegador corta cada pocos segundos aunque sea continuo: se relanza
+      // mientras el usuario no haya cerrado el dictado.
+      rec.onend = () => {
+        if (!dictOnRef.current) { setListening(false); return }
+        try { rec.start() } catch { try { arrancar() } catch { /* noop */ } }
+      }
+
+      recRef.current = rec
+      try { rec.start() } catch { dictOnRef.current = false; setListening(false) }
+    }
+
     setListening(true)
-    try { rec.start() } catch { setListening(false) }
+    arrancar()
   }, [lang])
 
   const stop = useCallback(() => {
+    dictOnRef.current = false
+    if (silenceRef.current) { window.clearTimeout(silenceRef.current); silenceRef.current = null }
     try { recRef.current?.stop?.() } catch { /* noop */ }
     setListening(false)
   }, [])

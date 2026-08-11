@@ -58,6 +58,18 @@ export function imageToBase64(file: File): Promise<string> {
 }
 
 /** Quita el markdown para mostrar/leer texto limpio (negritas, viñetas, enlaces…). */
+/**
+ * Quita las tildes de un texto para poder compararlo con expresiones regulares.
+ *
+ * Hace falta porque en JavaScript `\b` (frontera de palabra) solo reconoce
+ * caracteres ASCII: `/\bsí\b/` NUNCA casa con "Sí." porque la í no cuenta como
+ * carácter de palabra y la frontera final no existe. Por eso el asistente no
+ * entendía un "Sí" dicho por voz y volvía a preguntar en bucle.
+ */
+export function fold(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 export function toPlain(text: string): string {
   return text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')

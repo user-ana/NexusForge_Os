@@ -17,10 +17,23 @@ import {
   correctTool,
   findClass,
 } from './actions'
-import { LANGUAGES, extractPdfText, readTextFile, imageToBase64, toPlain } from './nexusUtils'
+import { LANGUAGES, extractPdfText, readTextFile, imageToBase64, toPlain, fold } from './nexusUtils'
 import { Icon } from './NexusIcons'
 
-const ROBOT = '/assets/nexus-robot.png'
+/**
+ * Poses del robot. Nexus cambia de postura según lo que está haciendo, así que
+ * el estado del asistente se lee sin necesidad de texto: saluda al recibirte,
+ * se lleva la mano a la sien cuando te escucha y piensa mientras responde.
+ */
+const ROBOT_POSE: Record<string, string> = {
+  idle: '/robot/robot-nexus-saludando-transparente.png',
+  listening: '/robot/robot-nexus-pensando-sien-transparente.png',
+  thinking: '/robot/robot-nexus-pensando-transparente.png',
+  speaking: '/robot/robot-nexus-transparente.png',
+}
+/** Pose neutra: la del avatar pequeño de la cabecera y de los mensajes. */
+const ROBOT = ROBOT_POSE.speaking
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 type ActionState = {
@@ -103,11 +116,47 @@ export default function NexusAssistant() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
+  // Reloj de la cabecera. Se arranca ya montado para que el HTML del servidor
+  // no discuta con el del navegador, y se refresca cada medio minuto.
+  const [clock, setClock] = useState<{ time: string; date: string; zone: string } | null>(null)
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date()
+      const zone = new Intl.DateTimeFormat('es-HN', { timeZoneName: 'short' })
+        .formatToParts(d)
+        .find((p) => p.type === 'timeZoneName')?.value ?? ''
+      setClock({
+        time: new Intl.DateTimeFormat('es-HN', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d).toUpperCase(),
+        date: new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(d).replace(/\./g, '').toUpperCase(),
+        zone,
+      })
+    }
+    tick()
+    const id = window.setInterval(tick, 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
   useEffect(() => {
     if (!toast) return
     const id = window.setTimeout(() => setToast(''), 2800)
     return () => window.clearTimeout(id)
   }, [toast])
+
+  /**
+   * Ficha real de las clases del catedrático (clases, inscritos, grupos,
+   * proyectos y notas). Se carga al entrar, no al preguntar, por dos razones:
+   * la pregunta no paga la espera de las consultas, y Nexus deja de responder
+   * "no tengo acceso a esa información" cuando le preguntas por tus alumnos.
+   * Al quedar en null tras una acción, este efecto la vuelve a traer.
+   */
+  useEffect(() => {
+    if (role !== 'teacher' || !meId || ctx != null) return
+    let alive = true
+    getAssistantContext(meId)
+      .then((c) => { if (alive) setCtx(c) })
+      .catch(() => { /* sin ficha: Nexus sigue respondiendo, solo sin datos */ })
+    return () => { alive = false }
+  }, [role, meId, ctx])
 
   useEffect(() => () => {
     if (dictTimerRef.current) window.clearTimeout(dictTimerRef.current)
@@ -115,24 +164,80 @@ export default function NexusAssistant() {
   }, [foreign.stop, speech.stopWake])
 
   /* ────────── voz ────────── */
+  /**
+   * Lee una respuesta en voz alta, partida en frases.
+   *
+   * El motor de voz de Chrome corta las frases largas: pasado cierto tamaño
+   * deja de hablar a media palabra o se salta trozos (por eso "se entrecortaba
+   * y no decía bien las cosas"). La solución que funciona es no darle nunca un
+   * bloque grande: se trocea por puntuación en pedazos cortos y se encolan uno
+   * tras otro, encadenando cada uno al final del anterior.
+   */
   const speak = useCallback((text: string, onDone?: () => void) => {
     if (mutedRef.current || typeof window === 'undefined' || !('speechSynthesis' in window)) return
     const clean = toPlain(text)
     if (!clean) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(clean.slice(0, 500))
+
+    // Trocea respetando el final de frase; si una frase es larguísima, la parte
+    // por comas para no pasarse del tamaño que el motor aguanta bien.
+    const MAX = 170
+    const trozos: string[] = []
+    for (const frase of clean.match(/[^.!?…]+[.!?…]*\s*/g) ?? [clean]) {
+      if (frase.length <= MAX) { trozos.push(frase.trim()); continue }
+      let resto = frase.trim()
+      while (resto.length > MAX) {
+        const corte = resto.lastIndexOf(',', MAX) > 40 ? resto.lastIndexOf(',', MAX) + 1 : resto.lastIndexOf(' ', MAX)
+        const i = corte > 40 ? corte : MAX
+        trozos.push(resto.slice(0, i).trim())
+        resto = resto.slice(i).trim()
+      }
+      if (resto) trozos.push(resto)
+    }
+    const cola = trozos.filter(Boolean)
+    if (!cola.length) return
+
     // La voz se elige por el idioma del texto (inglés → voz inglesa, etc.).
     const { voice, lang } = speechVoiceFor(clean)
-    if (voice) { u.voice = voice; u.lang = voice.lang } else u.lang = lang
-    u.onstart = () => setSpeaking(true)
-    u.onend = () => { setSpeaking(false); onDone?.() }
-    u.onerror = () => { setSpeaking(false); onDone?.() }
-    window.speechSynthesis.speak(u)
+    window.speechSynthesis.cancel()
+    setSpeaking(true)
+
+    const decir = (i: number) => {
+      // Se vuelve a mirar el silencio en CADA trozo: si lo apagas a mitad de una
+      // respuesta larga, tiene que callarse ahí mismo, no al terminar la cola.
+      if (mutedRef.current) { window.speechSynthesis.cancel(); setSpeaking(false); return }
+      if (i >= cola.length) { setSpeaking(false); onDone?.(); return }
+      const u = new SpeechSynthesisUtterance(cola[i])
+      if (voice) { u.voice = voice; u.lang = voice.lang } else u.lang = lang
+      u.onend = () => decir(i + 1)
+      // Si un trozo falla, se sigue con el siguiente en vez de callarse del todo.
+      u.onerror = () => decir(i + 1)
+      window.speechSynthesis.speak(u)
+    }
+    // Un respiro tras cancel(): si se encola en el mismo instante, Chrome se
+    // come el arranque y la primera frase no suena.
+    window.setTimeout(() => decir(0), 60)
   }, [])
 
   const speakMaybe = useCallback((text: string) => {
     if (voiceRef.current) { speak(text); voiceRef.current = false }
   }, [speak])
+
+  /**
+   * Silenciar tiene que callar lo que ya está sonando, no solo lo siguiente.
+   * mutedRef se actualiza aquí mismo porque el efecto que lo sincroniza corre
+   * después del render, y para entonces el trozo en curso ya habría arrancado.
+   */
+  const toggleMute = useCallback(() => {
+    setMuted((v) => {
+      const next = !v
+      mutedRef.current = next
+      if (next) {
+        window.speechSynthesis?.cancel()
+        setSpeaking(false)
+      }
+      return next
+    })
+  }, [])
 
   /* ────────── mensajes ────────── */
   const push = useCallback((m: Omit<Msg, 'id'>) => {
@@ -163,6 +268,46 @@ export default function NexusAssistant() {
     return { ok: r.ok, data }
   }
 
+  /**
+   * Igual que postJSON pero para respuestas en streaming: crea la burbuja de
+   * Nexus vacía y le va añadiendo el texto tal cual llega del modelo, en vez de
+   * esperar a que termine de generar. Devuelve la respuesta completa.
+   */
+  async function postStream(url: string, body: Record<string, unknown>): Promise<{ ok: boolean; text: string }> {
+    const { data: sess } = supabase ? await supabase.auth.getSession() : { data: { session: null } }
+    const token = sess.session?.access_token
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    })
+
+    // Si algo falla, el servidor responde JSON con el error (no un flujo).
+    if (!r.ok || !r.body || !(r.headers.get('content-type') ?? '').startsWith('text/plain')) {
+      let msg = 'No pude responder ahora. Intenta de nuevo.'
+      try {
+        const j = await r.json()
+        if (typeof j?.error === 'string') msg = j.error
+      } catch { /* sin cuerpo */ }
+      return { ok: false, text: msg }
+    }
+
+    const id = Date.now() + Math.floor(Math.random() * 1000)
+    setMessages((cur) => [...cur, { id, role: 'ai', text: '' }])
+    setLoading(false) // ya hay burbuja: los tres puntitos sobran
+
+    const reader = r.body.getReader()
+    const decoder = new TextDecoder()
+    let full = ''
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      full += decoder.decode(value, { stream: true })
+      setMessages((cur) => cur.map((m) => (m.id === id ? { ...m, text: full } : m)))
+    }
+    return { ok: true, text: full.trim() }
+  }
+
   async function translate(text: string, toName: string, fromName?: string): Promise<string | null> {
     const { ok, data } = await postJSON('/api/translate', { text, to: toName, from: fromName })
     if (ok && typeof data.translation === 'string') return data.translation
@@ -179,17 +324,24 @@ export default function NexusAssistant() {
 
     // Manos libres: si hay una confirmación pendiente y respondiste por voz,
     // interpretamos "sí/no" para confirmar o cancelar sin tocar botones.
-    if (awaitingConfirm && voiceRef.current) {
-      voiceRef.current = false
-      const a = awaitingConfirm
-      setAwaitingConfirm(null)
-      push({ role: 'user', text: q })
-      const yes = /\b(s[ií]|confirm\w*|dale|publica\w*|adelante|hazlo|ok|correcto|claro|as[ií])\b/i.test(q)
-      const no = /\b(no|cancel\w*|mejor no|espera|det[eé]n\w*)\b/i.test(q)
-      if (yes) runAction(a.id, a.tc)
-      else if (no) updateAction(a.id, { status: 'cancelled' })
-      else { push({ role: 'ai', text: '¿Lo confirmo o lo cancelo? Di "sí" o "no".' }); setAwaitingConfirm(a); askByVoice('¿Confirmo o cancelo?') }
-      return
+    if (awaitingConfirm) {
+      // Se compara SIN tildes: en JavaScript `\b` no reconoce la í, así que
+      // /\bsí\b/ jamás casaba con un "Sí." dicho por voz (ver fold()).
+      const plano = fold(q)
+      const yes = /\b(si|confirm\w*|dale|publica\w*|adelante|hazlo|ok|okey|vale|correcto|claro|asi es|de acuerdo)\b/i.test(plano)
+      const no = /\b(no|cancel\w*|mejor no|espera|deten\w*|olvidalo)\b/i.test(plano)
+      // Por voz siempre se interpreta; escrito, solo si de verdad dijo sí o no
+      // (si escribió otra cosa, sigue el flujo normal en vez de trabarse aquí).
+      if (voiceRef.current || yes || no) {
+        voiceRef.current = false
+        const a = awaitingConfirm
+        setAwaitingConfirm(null)
+        push({ role: 'user', text: q })
+        if (yes) runAction(a.id, a.tc)
+        else if (no) updateAction(a.id, { status: 'cancelled' })
+        else { push({ role: 'ai', text: '¿Lo confirmo o lo cancelo? Di "sí" o "no".' }); setAwaitingConfirm(a); askByVoice('¿Confirmo o cancelo?') }
+        return
+      }
     }
 
     if (translateTo && q) {
@@ -230,9 +382,11 @@ export default function NexusAssistant() {
       const payload: Record<string, unknown> = { question: askText, role, history: recentHistory() }
       if (attach?.text) { payload.context = attach.text; payload.contextLabel = attach.name }
       if (attach?.b64) { payload.image = attach.b64 }
-      const { ok, data } = await postJSON('/api/nexus', payload)
-      if (ok && typeof data.answer === 'string') { push({ role: 'ai', text: data.answer }); speakMaybe(data.answer) }
-      else push({ role: 'ai', text: typeof data.error === 'string' ? data.error : 'No pude responder ahora. Intenta de nuevo.' })
+      // Con la ficha cargada, Nexus puede contestar sobre alumnos, grupos y notas.
+      if (role === 'teacher' && ctx) payload.platform = ctx
+      const { ok, text } = await postStream('/api/nexus', payload)
+      if (ok && text) speakMaybe(text)
+      else if (!ok) push({ role: 'ai', text })
     } catch {
       push({ role: 'ai', text: 'No pude conectar con la IA. Verifica que esté activa e inténtalo de nuevo.' })
     } finally {
@@ -421,14 +575,27 @@ export default function NexusAssistant() {
     <div className="neo-nx">
       <div className="neo-nx-main">
         <header className="neo-nx-head">
-          <span className="neo-nx-avatar" data-state={active}><img src={ROBOT} alt="Nexus" /></span>
-          <div className="min-w-0 flex-1">
-            <p className="neo-nx-head-title">Nexus</p>
-            <p className="neo-nx-head-sub">
-              {handsFree ? 'Manos libres · di “Nexus…”' : liveOn ? `Conversación en vivo · ${liveLang.label}` : muted ? 'Silencio · solo texto' : 'Tu asistente inteligente'}
-            </p>
-          </div>
-          <button className={`neo-nx-iconbtn ${muted ? 'neo-nx-iconbtn--muted' : ''}`} onClick={() => setMuted((v) => !v)}
+          {/* Píldora de estado: hora, zona y fecha, como el panel de una cabina */}
+          <span className="neo-nx-status">
+            <span className={`neo-nx-status-dot ${active !== 'idle' ? 'is-busy' : ''}`} />
+            {clock ? (
+              <>
+                {clock.time}
+                <em>·</em>
+                {clock.zone}
+                <em>·</em>
+                {clock.date}
+              </>
+            ) : (
+              <>&nbsp;</>
+            )}
+          </span>
+
+          <span className="neo-nx-head-state">
+            {handsFree ? 'Manos libres · di “Nexus…”' : liveOn ? `En vivo · ${liveLang.label}` : muted ? 'Silencio · solo texto' : ''}
+          </span>
+
+          <button className={`neo-nx-iconbtn ${muted ? 'neo-nx-iconbtn--muted' : ''}`} onClick={toggleMute}
             title={muted ? 'Voz apagada — toca para que lea las respuestas' : 'Silenciar la voz (solo leer)'} aria-label="Silenciar voz">
             <Icon name={muted ? 'mute' : 'sound'} size={18} />
           </button>
@@ -438,6 +605,10 @@ export default function NexusAssistant() {
               <Icon name="wave" size={18} />
             </button>
           )}
+          <button className={`neo-nx-iconbtn ${translateTo ? 'neo-nx-iconbtn--on' : ''}`} onClick={() => setMenu((m) => (m === 'translate' ? null : 'translate'))}
+            title="Traducir mis mensajes" aria-label="Traducir">
+            <Icon name="translate" size={18} />
+          </button>
           <button className={`neo-nx-iconbtn ${liveOn ? 'neo-nx-iconbtn--on' : ''}`} onClick={() => setMenu((m) => (m === 'live' ? null : 'live'))}
             title="Conversación en vivo (traducir lo que otra persona dice)" aria-label="Conversación en vivo">
             <Icon name="globe" size={18} />
@@ -450,20 +621,58 @@ export default function NexusAssistant() {
         <div className="neo-nx-scroll">
           {home ? (
             <div className="neo-nx-hero">
-              <div className="neo-nx-hero-robot" data-state={active}>
-                <span className="neo-nx-hero-glow" />
-                <img src={ROBOT} alt="Nexus" />
+              <div className="neo-nx-hero-l">
+                <span className="neo-nx-badge">
+                  <i />
+                  NEXUS AI ASSISTANT
+                </span>
+
+                <h2 className="neo-nx-hero-title">
+                  Hola, <b>{name || 'de nuevo'}</b>.
+                  <br />
+                  ¿En qué puedo ayudarte hoy?
+                </h2>
+
+                <p className="neo-nx-hero-sub">
+                  {role === 'teacher'
+                    ? 'Tu asistente académico inteligente, siempre a tu lado.'
+                    : 'Tu compañero de estudio, siempre a tu lado.'}
+                </p>
+
+                <div className="neo-nx-cards">
+                  {HERO_CARDS[role].map((c, i) => (
+                    <button
+                      key={c.key}
+                      className="neo-nx-card"
+                      style={{ animationDelay: `${i * 70}ms` }}
+                      onClick={() => (c.tool ? handleTool(c.tool) : send(c.prompt!))}
+                    >
+                      <span className="neo-nx-card-ic"><Icon name={c.icon} size={17} /></span>
+                      <strong>{c.title}</strong>
+                      <small>{c.sub}</small>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <h2>Hola{name ? `, ${name}` : ''}. ¿Cómo puedo ayudarte?</h2>
-              <p>{role === 'teacher'
-                ? 'Pídeme crear clases o tareas, redactar material, traducir o analizar un archivo.'
-                : 'Puedo explicarte un tema, ayudarte a planear, traducir en vivo o analizar tus archivos.'}</p>
-              <div className="neo-nx-sugs">
-                {SUGGESTIONS[role].map((s, i) => (
-                  <button key={s} className="neo-nx-sug" style={{ animationDelay: `${i * 60}ms` }} onClick={() => send(s)}>
-                    <Icon name="sparkles" size={14} />{s}
-                  </button>
-                ))}
+
+              <div className="neo-nx-hero-r">
+                <div className="neo-nx-hero-robot" data-state={active}>
+                  <span className="neo-nx-hero-orbit" />
+                  <span className="neo-nx-hero-glow" />
+                  {/* Las cuatro poses van apiladas y se funden entre sí: así el
+                      navegador ya las tiene cargadas y el cambio de estado no
+                      parpadea (cada PNG pesa cerca de un mega). */}
+                  {Object.keys(ROBOT_POSE).map((pose) => (
+                    <img
+                      key={pose}
+                      src={ROBOT_POSE[pose]}
+                      data-pose={pose}
+                      alt={pose === 'idle' ? 'Nexus' : ''}
+                      aria-hidden={pose !== 'idle'}
+                    />
+                  ))}
+                  <span className="neo-nx-hero-floor" />
+                </div>
               </div>
             </div>
           ) : (
@@ -489,16 +698,6 @@ export default function NexusAssistant() {
         </div>
 
         <div className="neo-nx-composer-zone">
-          <div className="neo-nx-tools">
-            {TOOLS.map((t, i) => (
-              <button key={t.key} className={`neo-nx-tool neo-nx-tool--${t.tone} ${t.key === 'audio' && listening ? 'is-on' : ''}`}
-                style={{ animationDelay: `${i * 0.4}s` }} onClick={() => handleTool(t.key)}>
-                <span className="neo-nx-tool-icon"><Icon name={t.icon} size={20} /></span>
-                <span className="neo-nx-tool-text"><strong>{t.title}</strong><small>{t.sub}</small></span>
-              </button>
-            ))}
-          </div>
-
           {(attachment || translateTo || liveOn) && (
             <div className="neo-nx-chips">
               {attachment && (
@@ -523,17 +722,31 @@ export default function NexusAssistant() {
           )}
 
           <div className={`neo-nx-composer ${listening ? 'is-listening' : ''}`}>
-            <button className="neo-nx-attach" onClick={() => fileRef.current?.click()} aria-label="Adjuntar archivo"><Icon name="paperclip" size={19} /></button>
+            <span className="neo-nx-composer-badge">N</span>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') send() }}
-              placeholder={listening ? 'Te estoy escuchando…' : translateTo ? `Escribe para traducir a ${translateTo.label}…` : 'Pregúntame lo que quieras…'}
+              placeholder={listening ? 'Te estoy escuchando…' : translateTo ? `Escribe para traducir a ${translateTo.label}…` : 'Escribe o pregunta cualquier cosa…'}
               aria-label="Mensaje para Nexus"
             />
+            <button className="neo-nx-attach" onClick={() => fileRef.current?.click()} title="Adjuntar archivo" aria-label="Adjuntar archivo"><Icon name="paperclip" size={19} /></button>
+            <button className="neo-nx-attach" onClick={() => imageRef.current?.click()} title="Analizar una imagen" aria-label="Analizar imagen"><Icon name="image" size={19} /></button>
             <button className={`neo-nx-mic ${listening ? 'is-on' : ''}`} onClick={toggleMic} aria-label="Hablar"><Icon name="mic" size={19} /></button>
             <button className="neo-nx-send" onClick={() => send()} disabled={loading || (!input.trim() && !attachment)} aria-label="Enviar"><Icon name="send" size={18} /></button>
           </div>
+
+          {/* Atajos de conversación: solo mientras no hay charla empezada */}
+          {home && (
+            <div className="neo-nx-sugs">
+              {SUGGESTIONS[role].map((s, i) => (
+                <button key={s} className="neo-nx-sug" style={{ animationDelay: `${i * 60}ms` }} onClick={() => send(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
           <p className="neo-nx-note">Nexus puede cometer errores. Verifica la información importante.</p>
         </div>
 
@@ -596,12 +809,32 @@ export default function NexusAssistant() {
   )
 }
 
-const TOOLS: { key: string; title: string; sub: string; icon: string; tone: string }[] = [
-  { key: 'files', title: 'Archivos', sub: 'PDF, TXT y más', icon: 'file', tone: 'cyan' },
-  { key: 'images', title: 'Imágenes', sub: 'Analiza tus fotos', icon: 'image', tone: 'violet' },
-  { key: 'translate', title: 'Traducir', sub: 'Más de 8 idiomas', icon: 'translate', tone: 'blue' },
-  { key: 'audio', title: 'Hablar', sub: 'Conversa con Nexus', icon: 'wave', tone: 'indigo' },
-]
+/**
+ * Tarjetas de la portada: lo que Nexus puede hacer por ti, por rol. Unas mandan
+ * una orden al asistente y otras abren directamente el selector de archivos.
+ */
+type HeroCard = { key: string; title: string; sub: string; icon: string; prompt?: string; tool?: string }
+
+const HERO_CARDS: Record<Role, HeroCard[]> = {
+  teacher: [
+    { key: 'class', title: 'Crear clase', sub: 'Desde cero', icon: 'sparkles', prompt: 'Crea una clase nueva' },
+    { key: 'task', title: 'Publicar tarea', sub: 'Para mi clase', icon: 'file', prompt: 'Publica una tarea para mi clase' },
+    { key: 'analyze', title: 'Analizar archivo', sub: 'PDF, TXT, etc.', icon: 'paperclip', tool: 'files' },
+    { key: 'write', title: 'Generar contenido', sub: 'Con IA', icon: 'translate', prompt: 'Redáctame material de estudio para mi clase' },
+  ],
+  student: [
+    { key: 'explain', title: 'Explicar tema', sub: 'Paso a paso', icon: 'sparkles', prompt: 'Explícame un tema difícil paso a paso' },
+    { key: 'plan', title: 'Planear proyecto', sub: 'Con guía', icon: 'file', prompt: 'Ayúdame a planear mi proyecto' },
+    { key: 'analyze', title: 'Analizar archivo', sub: 'PDF, TXT, etc.', icon: 'paperclip', tool: 'files' },
+    { key: 'quiz', title: 'Practicar examen', sub: 'Con preguntas', icon: 'translate', prompt: 'Practica un examen conmigo' },
+  ],
+  visitor: [
+    { key: 'what', title: 'Qué es NexusForge', sub: 'Conoce la plataforma', icon: 'sparkles', prompt: '¿Qué es NexusForge OS?' },
+    { key: 'topic', title: 'Explicar tema', sub: 'De ingeniería', icon: 'file', prompt: 'Explícame un tema de ingeniería' },
+    { key: 'analyze', title: 'Analizar archivo', sub: 'PDF, TXT, etc.', icon: 'paperclip', tool: 'files' },
+    { key: 'start', title: 'Cómo empezar', sub: 'Primeros pasos', icon: 'translate', prompt: 'Recomiéndame cómo empezar' },
+  ],
+}
 
 function MessageRow({ m, onSpeak }: { m: Msg; onSpeak: () => void }) {
   if (m.role === 'user') {

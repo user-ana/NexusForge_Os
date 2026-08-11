@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Header from '@/frontend/components/layout/Header'
+import TeacherPanel from '@/frontend/components/dashboard/TeacherPanel'
 import Tilt3DCard from '@/frontend/components/ui/Tilt3DCard'
 import Icon3D from '@/frontend/components/ui/Icon3D'
 import { FlameIcon } from '@/frontend/components/ui/Icons'
@@ -16,7 +17,9 @@ import { levelFromXp, rankFromXp } from '@/shared/gamification'
 
 export default function DashboardPage() {
   const { t } = useT()
-  const [role, setRole] = useState<Role>('student')
+  // null = todavía no se sabe el rol. Sin esto se pinta un frame la vista de
+  // estudiante antes de saber que quien entra es catedrático (parpadeo feo).
+  const [role, setRole] = useState<Role | null>(null)
 
   useEffect(() => {
     const sync = () => setRole(getSession()?.role ?? 'student')
@@ -25,8 +28,12 @@ export default function DashboardPage() {
     return () => window.removeEventListener(SESSION_EVENT, sync)
   }, [])
 
-  const roleLabel =
-    role === 'teacher' ? t('prof.role_teacher') : role === 'visitor' ? t('prof.role_visitor') : t('prof.role_student')
+  if (role === null) return <main className="flex-1" />
+
+  // El catedrático tiene su propio panel completo (cabecera, columnas y agenda).
+  if (role === 'teacher') return <TeacherPanel />
+
+  const roleLabel = role === 'visitor' ? t('prof.role_visitor') : t('prof.role_student')
 
   return (
     <>
@@ -49,7 +56,7 @@ export default function DashboardPage() {
           {t('dash.view_as')} <span className="font-semibold text-accent-violet">{roleLabel}</span>
         </div>
 
-        {role === 'teacher' ? <TeacherView t={t} /> : role === 'visitor' ? <VisitorView t={t} /> : <StudentView t={t} />}
+        {role === 'visitor' ? <VisitorView t={t} /> : <StudentView t={t} />}
       </main>
     </>
   )
@@ -332,96 +339,6 @@ function JoinByCode({
       </div>
       {msg && <p className="mt-2 text-center text-sm text-neutral-400">{msg}</p>}
     </div>
-  )
-}
-
-/* ---------------- Catedrático ---------------- */
-function TeacherView({ t }: { t: T }) {
-  const [classes, setClasses] = useState<Klass[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const sync = () => {
-      const s = getSession()
-      const key = s?.id ?? ''
-      setClasses(getClasses().filter((c) => c.teacher === key))
-    }
-    sync()
-    loadClasses().finally(() => setLoading(false))
-    const unsub = subscribeClasses()
-    window.addEventListener(SESSION_EVENT, sync)
-    window.addEventListener(CLASSES_EVENT, sync)
-    return () => {
-      window.removeEventListener(SESSION_EVENT, sync)
-      window.removeEventListener(CLASSES_EVENT, sync)
-      unsub()
-    }
-  }, [])
-
-  const totalStudents = classes.reduce((a, c) => a + c.students.length, 0)
-
-  return (
-    <>
-      <Section title={t('dash.quickstats')}>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Tilt3DCard className="p-6">
-            <p className="text-xs uppercase tracking-wider text-neutral-500">{t('dash.my_classes')}</p>
-            <p className="mt-2 text-3xl font-bold text-neutral-100">{classes.length}</p>
-          </Tilt3DCard>
-          <Tilt3DCard className="p-6">
-            <p className="text-xs uppercase tracking-wider text-neutral-500">{t('dash.students')}</p>
-            <p className="mt-2 text-3xl font-bold text-neutral-100">{totalStudents}</p>
-          </Tilt3DCard>
-          <Tilt3DCard className="p-6">
-            <p className="text-xs uppercase tracking-wider text-neutral-500">{t('cls.code')}</p>
-            <p className="mt-2 font-mono text-lg font-bold text-accent-violet">{classes.length > 0 ? '✓' : '—'}</p>
-          </Tilt3DCard>
-        </div>
-      </Section>
-
-      <Section title={t('dash.classes_section')}>
-        {loading && classes.length === 0 ? (
-          <div className="neo-panel flex items-center justify-center p-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-violet border-t-transparent" />
-          </div>
-        ) : classes.length === 0 ? (
-          <div className="neo-panel flex flex-col items-center gap-4 p-12 text-center">
-            <Icon3D src="/icons/emblem-1.png" alt="" size={56} fallback="◆" />
-            <p className="max-w-sm text-sm text-neutral-400">{t('cls.no_classes_t')}</p>
-            <Link href="/dashboard/classes?create=1" className="neo-btn">{t('cls.create')}</Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {classes.map((c) => (
-              <Link key={c.id} href={`/aula/${c.id}`}>
-                <Tilt3DCard className="h-full p-6" max={8}>
-                  <div className="flex items-start gap-3">
-                    {c.emblem && <Icon3D src={c.emblem} alt="" size={40} fallback="◆" />}
-                    <div>
-                      <h3 className="text-base font-semibold leading-snug text-white">
-                        {c.name}
-                        {c.section && <span className="text-neutral-400"> ({c.section})</span>}
-                      </h3>
-                      <p className="mt-1 text-xs text-neutral-500">{c.period}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3 text-xs">
-                    <span className="text-neutral-500">{c.students.length} {t('dash.students_count')}</span>
-                    <span className="font-mono text-accent-violet">{c.code}</span>
-                  </div>
-                </Tilt3DCard>
-              </Link>
-            ))}
-            <Link
-              href="/dashboard/classes?create=1"
-              className="neo-panel flex min-h-[120px] items-center justify-center gap-2 p-6 text-sm font-medium text-neutral-500 transition hover:text-accent-violet"
-            >
-              <span className="text-xl">＋</span> {t('cls.create')}
-            </Link>
-          </div>
-        )}
-      </Section>
-    </>
   )
 }
 

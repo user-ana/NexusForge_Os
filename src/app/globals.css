@@ -932,8 +932,8 @@ body {
 }
 
 .neo-app {
-  background: #1f2226;
-  background-image: radial-gradient(circle at 50% -10%, #2b2e34 0%, #191b1f 78%);
+  /* Negro mate y plano: sin degradado radial, sin brillo */
+  background: #06080b;
   /* Sin selección de texto para una UI limpia */
   user-select: none;
   -webkit-user-select: none;
@@ -942,6 +942,9 @@ body {
 /* Scrollbar fino y oscuro para todo el dashboard (reemplaza el blanco ancho del sistema) */
 .neo-app *::-webkit-scrollbar { width: 10px; height: 10px; }
 .neo-app *::-webkit-scrollbar-track { background: transparent; }
+/* Windows dibuja flechitas arriba y abajo de la barra: se quitan, ensucian */
+.neo-app *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.neo-app *::-webkit-scrollbar-corner { background: transparent; }
 .neo-app *::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.09);
   border-radius: 99px;
@@ -966,9 +969,9 @@ body {
 
 /* Barra lateral */
 .neo-sidebar {
-  background: #24262b;
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 6px 0 22px rgba(0, 0, 0, 0.35);
+  background: #08090d;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 6px 0 26px rgba(0, 0, 0, 0.5);
 }
 
 /* Marca en el sidebar (cuadro con relieve) */
@@ -979,7 +982,7 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(145deg, #31343a, #25282d);
+  background: linear-gradient(145deg, #161b23, #0c0f14);
   box-shadow:
     -3px -3px 8px rgba(255, 255, 255, 0.03),
     4px 4px 10px rgba(0, 0, 0, 0.5),
@@ -1002,19 +1005,19 @@ body {
 }
 .neo-navlink:hover {
   color: #eceef2;
-  background: #2c2f35;
+  background: #12161c;
   transform: translateX(4px);
 }
 .neo-navlink:active {
-  background: #303338;
+  background: #161b22;
   transform: translateX(4px) scale(0.985);
 }
 .neo-navlink--active {
   color: #ffffff;
-  background: linear-gradient(145deg, #2f3238, #25272c);
+  background: linear-gradient(145deg, #161b23, #0d1116);
   box-shadow:
-    inset 2px 2px 5px rgba(0, 0, 0, 0.45),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.03);
+    inset 2px 2px 5px rgba(0, 0, 0, 0.55),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.025);
 }
 /* Indicador violeta que crece suave al activarse */
 .neo-navlink--active::before {
@@ -1035,20 +1038,20 @@ body {
 
 /* Topbar / header */
 .neo-topbar {
-  background: rgba(36, 38, 43, 0.55);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(10px);
+  background: rgba(8, 10, 14, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
 }
 
 /* Paneles / tarjetas con relieve mate */
 .neo-panel {
-  background: #2a2d32;
+  background: #0e1116;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
-    -5px -5px 14px rgba(255, 255, 255, 0.02),
-    7px 8px 20px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    -5px -5px 14px rgba(255, 255, 255, 0.014),
+    7px 9px 24px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 .neo-panel--hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -1067,7 +1070,7 @@ body {
   transition: background 0.2s ease;
 }
 .neo-row:hover {
-  background: #25282d;
+  background: #12161c;
   box-shadow:
     inset 2px 2px 5px rgba(0, 0, 0, 0.4),
     inset -2px -2px 5px rgba(255, 255, 255, 0.02);
@@ -7202,12 +7205,30 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 }
 .neo-nx-main { position: relative; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
-/* ── Encabezado ── */
-.neo-nx-head { display: flex; align-items: center; gap: 0.7rem; padding: 1rem 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-.neo-nx-head-badge { position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; color: #8fdcf5; background: rgba(53, 198, 240, 0.12); }
-.neo-nx-head-badge::after { content: ''; position: absolute; inset: -5px; border-radius: 16px; background: radial-gradient(circle, rgba(53, 198, 240, 0.4), transparent 70%); z-index: -1; animation: neo-a-breathe 3.6s ease-in-out infinite; }
-.neo-nx-head-title { font-weight: 700; color: #fff; font-size: 0.98rem; line-height: 1.1; }
-.neo-nx-head-sub { font-size: 11px; color: #7c8698; }
+/* ── Encabezado: marca · píldora de estado · controles ── */
+/* Sin línea inferior: la marca ya vive en la barra de navegación y una regla
+   aquí solo parte la pantalla en dos. */
+.neo-nx-head { display: flex; align-items: center; gap: 0.7rem; padding: 0.9rem 1.5rem; }
+
+/* Píldora de hora / zona / fecha, centrada como el marcador de una cabina */
+.neo-nx-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 auto;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: #b6c0cf;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.neo-nx-status em { font-style: normal; color: #4c5566; }
+.neo-nx-status-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; }
+.neo-nx-status-dot.is-busy { background: #5fd0f0; animation: neo-a-breathe 1.4s ease-in-out infinite; }
+.neo-nx-head-state { font-size: 0.72rem; color: #7c8698; white-space: nowrap; }
 .neo-nx-iconbtn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: #94a3b8; transition: background 0.18s, color 0.18s; }
 .neo-nx-iconbtn:hover { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; }
 .neo-nx-iconbtn--on { color: #0b0e14; background: linear-gradient(145deg, #5fd0f0, #2494b6); }
@@ -7217,14 +7238,97 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 .neo-nx-scroll::-webkit-scrollbar { width: 8px; }
 .neo-nx-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
 
-.neo-nx-hero { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 0.5rem; }
-.neo-nx-hero-icon { position: relative; display: flex; align-items: center; justify-content: center; width: 66px; height: 66px; border-radius: 20px; color: #8fdcf5; background: rgba(53, 198, 240, 0.14); margin-bottom: 0.6rem; }
-.neo-nx-hero-icon::after { content: ''; position: absolute; inset: -9px; border-radius: 28px; background: radial-gradient(circle, rgba(53, 198, 240, 0.4), transparent 70%); z-index: -1; animation: neo-a-breathe 3.6s ease-in-out infinite; }
-.neo-nx-hero h2 { font-size: 1.5rem; font-weight: 700; color: #fff; }
-.neo-nx-hero p { color: #94a3b8; font-size: 0.9rem; max-width: 30rem; line-height: 1.5; }
-.neo-nx-sugs { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 1.1rem; }
-.neo-nx-sug { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 999px; font-size: 0.82rem; color: #cbd5e1; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.18s, border-color 0.2s, color 0.2s; animation: neo-a-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* ── Portada: texto a la izquierda, robot a la derecha ── */
+.neo-nx-hero {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: 2rem;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.neo-nx-hero-l { min-width: 0; }
+.neo-nx-hero-r { position: relative; min-width: 0; display: flex; justify-content: center; }
+
+.neo-nx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #cfe9f5;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.neo-nx-badge i { width: 7px; height: 7px; border-radius: 50%; background: #5fd0f0; animation: neo-a-breathe 2.6s ease-in-out infinite; }
+
+.neo-nx-hero-title {
+  margin-top: 1.3rem;
+  font-size: clamp(2rem, 4.2vw, 3.3rem);
+  font-weight: 300;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: #f2f6fa;
+}
+.neo-nx-hero-title b { font-weight: 600; color: #5fd0f0; }
+/* Barra cian a la izquierda del subtítulo, como en el resto del sistema */
+.neo-nx-hero-sub {
+  position: relative;
+  max-width: 30rem;
+  margin-top: 1.4rem;
+  padding-left: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #9aa5b5;
+}
+.neo-nx-hero-sub::before { content: ''; position: absolute; left: 0; top: 0.25em; bottom: 0.25em; width: 2px; border-radius: 99px; background: rgba(95, 208, 240, 0.55); }
+
+/* Tarjetas de acción */
+.neo-nx-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 0.7rem; margin-top: 2rem; max-width: 34rem; }
+.neo-nx-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.9rem 0.95rem 1rem;
+  border-radius: 15px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  animation: neo-a-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.neo-nx-card:hover { transform: translateY(-3px); border-color: rgba(53, 198, 240, 0.42); background: rgba(53, 198, 240, 0.07); }
+.neo-nx-card-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.55rem;
+  border-radius: 11px;
+  color: #5fd0f0;
+  background: rgba(53, 198, 240, 0.13);
+  border: 1px solid rgba(53, 198, 240, 0.2);
+}
+.neo-nx-card strong { font-size: 0.86rem; font-weight: 600; color: #f2f6fa; line-height: 1.25; }
+.neo-nx-card small { font-size: 0.7rem; color: #7c8698; }
+
+/* Atajos bajo el compositor */
+.neo-nx-sugs { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-top: 0.75rem; }
+.neo-nx-sug { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.95rem; border-radius: 999px; font-size: 0.8rem; color: #b6c0cf; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.08); transition: transform 0.18s, border-color 0.2s, color 0.2s; animation: neo-a-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .neo-nx-sug:hover { transform: translateY(-2px); border-color: rgba(53, 198, 240, 0.4); color: #fff; }
+
+@media (max-width: 980px) {
+  .neo-nx-hero { grid-template-columns: minmax(0, 1fr); text-align: center; gap: 1rem; }
+  .neo-nx-hero-r { order: -1; }
+  .neo-nx-hero-sub { margin-left: auto; margin-right: auto; text-align: left; }
+  .neo-nx-cards { margin-left: auto; margin-right: auto; }
+}
 
 .neo-nx-msgs { display: flex; flex-direction: column; gap: 1rem; max-width: 840px; margin: 0 auto; }
 .neo-nx-row { display: flex; gap: 0.6rem; }
@@ -7248,25 +7352,11 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 @keyframes neo-nx-typing { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
 
 /* ── Compositor + herramientas ── */
-.neo-nx-composer-zone { padding: 0 1.6rem 1rem; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-.neo-nx-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.7rem; max-width: 840px; margin: 1rem auto 0.85rem; }
+/* Sin regla superior: el compositor flota sobre el fondo, no va encajonado */
+.neo-nx-composer-zone { padding: 0 1.6rem 1.2rem; }
 /* Tarjetas que levitan (translate animado) + leve zoom al pasar (transform aparte
    para que no choquen). */
-.neo-nx-tool { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.8rem; border-radius: 14px; text-align: left; background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 12px 26px -18px rgba(0, 0, 0, 0.85); transition: transform 0.2s ease, border-color 0.2s, box-shadow 0.2s; animation: neo-nx-levitate 6s ease-in-out infinite; }
-.neo-nx-tool:hover { transform: scale(1.035); border-color: rgba(53, 198, 240, 0.4); box-shadow: 0 18px 34px -14px rgba(0, 0, 0, 0.8); }
-.neo-nx-tool.is-on { border-color: rgba(53, 198, 240, 0.5); box-shadow: 0 0 0 2px rgba(53, 198, 240, 0.15), 0 18px 34px -14px rgba(0, 0, 0, 0.8); }
-.neo-nx-tool:nth-child(2) { animation-duration: 6.6s; }
-.neo-nx-tool:nth-child(3) { animation-duration: 5.6s; }
-.neo-nx-tool:nth-child(4) { animation-duration: 6.2s; }
 @keyframes neo-nx-levitate { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
-.neo-nx-tool-icon { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 11px; }
-.neo-nx-tool-text { display: flex; flex-direction: column; min-width: 0; }
-.neo-nx-tool-text strong { font-size: 0.82rem; color: #fff; }
-.neo-nx-tool-text small { font-size: 0.68rem; color: #7c8698; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.neo-nx-tool--cyan .neo-nx-tool-icon { color: #5fd0f0; background: rgba(53, 198, 240, 0.14); }
-.neo-nx-tool--violet .neo-nx-tool-icon { color: #a5b4fc; background: rgba(129, 140, 248, 0.14); }
-.neo-nx-tool--blue .neo-nx-tool-icon { color: #60a5fa; background: rgba(96, 165, 250, 0.14); }
-.neo-nx-tool--indigo .neo-nx-tool-icon { color: #818cf8; background: rgba(99, 102, 241, 0.14); }
 
 .neo-nx-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; max-width: 840px; margin: 0.2rem auto 0.7rem; padding-left: 0.15rem; }
 .neo-nx-chip { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.75rem; border-radius: 999px; font-size: 0.76rem; color: #cbd5e1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.8); }
@@ -7277,10 +7367,83 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 .neo-nx-live-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: neo-nx-dot 1.5s ease-in-out infinite; }
 @keyframes neo-nx-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.8); } }
 
-.neo-nx-composer { display: flex; align-items: center; gap: 0.4rem; max-width: 840px; margin: 0 auto; padding: 0.4rem 0.5rem 0.4rem 0.7rem; border-radius: 16px; background: rgba(21, 26, 34, 0.92); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 44px -22px rgba(0, 0, 0, 0.9); transition: border-color 0.2s, box-shadow 0.2s; animation: neo-nx-levitate 7s ease-in-out infinite; }
-.neo-nx-composer:focus-within { border-color: rgba(53, 198, 240, 0.4); box-shadow: 0 0 0 3px rgba(53, 198, 240, 0.1), 0 20px 44px -20px rgba(0, 0, 0, 0.9); }
-.neo-nx-composer.is-listening { border-color: rgba(53, 198, 240, 0.6); box-shadow: 0 0 0 3px rgba(53, 198, 240, 0.12); }
-.neo-nx-composer input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #e2e8f0; font-size: 0.92rem; }
+/* ── Compositor flotante ──
+   Una cápsula que levita sobre el fondo, con un barrido de luz cian girando por
+   el canto. El barrido es un cono que rota bajo la máscara del borde: se ve el
+   filo encendiéndose por tramos, no un aro fijo. */
+.neo-nx-composer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0.55rem 0.6rem;
+  border-radius: 999px;
+  box-shadow: 0 26px 54px -20px rgba(0, 0, 0, 0.95), 0 0 40px -22px rgba(53, 198, 240, 0.55);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  animation: neo-nx-levitate 7s ease-in-out infinite;
+}
+/* Cono de luz que da la vuelta */
+.neo-nx-composer::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(95, 208, 240, 0.9) 28deg,
+    rgba(120, 175, 255, 0.35) 62deg,
+    transparent 110deg,
+    transparent 250deg,
+    rgba(95, 208, 240, 0.4) 296deg,
+    transparent 340deg
+  );
+  animation: neo-nx-sweep 6s linear infinite;
+}
+/* Cuerpo opaco por dentro: deja el cono asomando solo por el canto */
+.neo-nx-composer::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 1.5px;
+  border-radius: inherit;
+  background: rgba(13, 17, 24, 0.96);
+  backdrop-filter: blur(10px);
+}
+.neo-nx-composer > * { position: relative; z-index: 1; }
+@keyframes neo-nx-sweep { to { transform: translate(-50%, -50%) rotate(360deg); } }
+/* Marca de Nexus al inicio de la barra: el asistente "firma" el compositor */
+.neo-nx-composer-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #8fdcf5;
+  background: rgba(53, 198, 240, 0.13);
+  border: 1px solid rgba(53, 198, 240, 0.28);
+}
+/* Al escribir sube un poco, el halo crece y el barrido acelera */
+.neo-nx-composer:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.95), 0 0 56px -18px rgba(53, 198, 240, 0.8);
+}
+.neo-nx-composer:focus-within::before { animation-duration: 3.5s; }
+.neo-nx-composer.is-listening { box-shadow: 0 26px 54px -20px rgba(0, 0, 0, 0.95), 0 0 64px -14px rgba(53, 198, 240, 0.95); }
+.neo-nx-composer.is-listening::before { animation-duration: 2s; }
+.neo-nx-composer input { flex: 1; min-width: 0; padding: 0.35rem 0; background: transparent; border: none; outline: none; color: #e2e8f0; font-size: 0.97rem; }
 .neo-nx-composer input::placeholder { color: #64748b; }
 .neo-nx-attach, .neo-nx-mic { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; color: #94a3b8; transition: background 0.18s, color 0.18s; }
 .neo-nx-attach:hover, .neo-nx-mic:hover { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; }
@@ -7330,11 +7493,61 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 .neo-nx-avatar[data-state="speaking"]::after { opacity: 0.75; animation-duration: 0.9s; }
 .neo-nx-avatar[data-state="listening"]::after { opacity: 0.6; background: radial-gradient(circle, rgba(96, 165, 250, 0.5), transparent 70%); }
 
-.neo-nx-hero-robot { position: relative; width: 210px; max-width: 44vw; margin: 0 auto 0.6rem; }
-.neo-nx-hero-robot img { position: relative; z-index: 2; width: 100%; height: auto; display: block; filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.5)); animation: neo-nx-floaty 7s ease-in-out infinite; }
-.neo-nx-hero-glow { position: absolute; inset: 8% 12% 2%; border-radius: 50%; background: radial-gradient(circle, rgba(53, 198, 240, 0.32), transparent 65%); filter: blur(24px); z-index: 1; animation: neo-a-breathe 4.2s ease-in-out infinite; }
-.neo-nx-hero-robot[data-state="speaking"] .neo-nx-hero-glow { background: radial-gradient(circle, rgba(53, 198, 240, 0.5), transparent 65%); animation-duration: 1s; }
-.neo-nx-hero-robot[data-state="listening"] .neo-nx-hero-glow { background: radial-gradient(circle, rgba(96, 165, 250, 0.46), transparent 65%); }
+.neo-nx-hero-robot { position: relative; width: 420px; max-width: 100%; }
+/* Las cuatro poses ocupan el mismo hueco. La de saludo queda en el flujo para
+   fijar la altura; las otras van encima en absoluto. Solo se ve la del estado
+   actual, y el cambio es un fundido. */
+.neo-nx-hero-robot img {
+  z-index: 2;
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0;
+  filter: drop-shadow(0 30px 44px rgba(0, 0, 0, 0.65));
+  transition: opacity 0.45s ease;
+  animation: neo-nx-floaty 7s ease-in-out infinite;
+}
+.neo-nx-hero-robot img[data-pose='idle'] { position: relative; }
+.neo-nx-hero-robot img:not([data-pose='idle']) { position: absolute; inset: 0; }
+.neo-nx-hero-robot[data-state='idle'] img[data-pose='idle'],
+.neo-nx-hero-robot[data-state='listening'] img[data-pose='listening'],
+.neo-nx-hero-robot[data-state='thinking'] img[data-pose='thinking'],
+.neo-nx-hero-robot[data-state='speaking'] img[data-pose='speaking'] { opacity: 1; }
+.neo-nx-hero-glow { position: absolute; inset: 6% 10% 6%; border-radius: 50%; background: radial-gradient(circle, rgba(53, 198, 240, 0.3), transparent 66%); filter: blur(38px); z-index: 1; animation: neo-a-breathe 4.2s ease-in-out infinite; }
+.neo-nx-hero-robot[data-state="speaking"] .neo-nx-hero-glow { background: radial-gradient(circle, rgba(53, 198, 240, 0.46), transparent 66%); animation-duration: 1s; }
+.neo-nx-hero-robot[data-state="listening"] .neo-nx-hero-glow { background: radial-gradient(circle, rgba(96, 165, 250, 0.42), transparent 66%); }
+
+/* Anillo de órbita detrás del robot: da escala y sugiere que está "encendido" */
+.neo-nx-hero-orbit {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: 108%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(-14deg);
+  border-radius: 50%;
+  border: 1px solid rgba(120, 200, 235, 0.16);
+  border-top-color: rgba(120, 200, 235, 0.42);
+  border-bottom-color: transparent;
+  animation: neo-nx-orbit 22s linear infinite;
+}
+@keyframes neo-nx-orbit {
+  from { transform: translate(-50%, -50%) rotate(-14deg); }
+  to { transform: translate(-50%, -50%) rotate(346deg); }
+}
+/* Reflejo bajo los pies, para que no parezca flotando en el vacío */
+.neo-nx-hero-floor {
+  position: absolute;
+  z-index: 1;
+  left: 18%;
+  right: 18%;
+  bottom: 2%;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(53, 198, 240, 0.28), transparent 70%);
+  filter: blur(12px);
+}
 @keyframes neo-nx-floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
 
 /* ── Overlay de escucha (dictado en español) — oscuro, acentos cian ── */
@@ -7389,9 +7602,714 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
   .neo-nx-robot, .neo-nx-robot-glow, .neo-nx-hero-robot img, .neo-nx-hero-glow, .neo-nx-avatar::after,
   .neo-nx-eq.is-active i, .neo-nx-wave i, .neo-nx-live-dot, .neo-nx-head-badge::after,
   .neo-nx-hero-icon::after, .neo-nx-sug, .neo-nx-bubble, .neo-nx-listen-robot img,
-  .neo-nx-tool, .neo-nx-composer, .neo-nx-term-cursor { animation: none !important; }
+  .neo-nx-card, .neo-nx-composer, .neo-nx-composer::before, .neo-nx-term-cursor, .neo-nx-hero-orbit { animation: none !important; }
 }
 
 /* Tema claro: mantener el asistente en modo oscuro (estilo "cabina"), solo
    suavizar el fondo para que no corte con el resto de la interfaz clara. */
 :root[data-theme="light"] .neo-nx { background: radial-gradient(1100px 560px at 12% -12%, rgba(53, 198, 240, 0.12), transparent 60%), #0e1420; }
+
+/* =====================================================================
+   PANEL DEL CATEDRÁTICO — /dashboard con rol "teacher"   (prefijo .neo-tp-)
+   ---------------------------------------------------------------------
+   Armazón de dos carriles, cada uno con su propio desplazamiento: zona de
+   trabajo a la izquierda y agenda fija a la derecha. Base negra; el cian es
+   acento (chips, iconos, día activo), nunca un borde luminoso alrededor de
+   todo. Los colores viven en variables --tp-* para que el tema claro sea una
+   redefinición y no una copia de la hoja.
+   ===================================================================== */
+
+:root {
+  --tp-panel: #0b0e13;
+  --tp-panel-2: #10141b;
+  --tp-sunken: #070a0e;
+  --tp-line: rgba(255, 255, 255, 0.07);
+  --tp-line-soft: rgba(255, 255, 255, 0.045);
+  --tp-txt: #eef1f6;
+  --tp-txt-2: #99a1af;
+  --tp-txt-3: #6a7280;
+  --tp-cyan: #3fc3e8;
+  --tp-cyan-soft: rgba(63, 195, 232, 0.13);
+  --tp-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+}
+:root[data-theme="light"] {
+  --tp-panel: #ffffff;
+  --tp-panel-2: #f4f7fb;
+  --tp-sunken: #eef2f8;
+  --tp-line: #dce2eb;
+  --tp-line-soft: #e6eaf1;
+  --tp-txt: #171b25;
+  --tp-txt-2: #596273;
+  --tp-txt-3: #79818f;
+  --tp-cyan: #1189b7;
+  --tp-cyan-soft: rgba(17, 137, 183, 0.11);
+  --tp-shadow: 0 10px 26px -16px rgba(33, 42, 59, 0.35);
+}
+
+/* ---------------- Armazón: dos carriles con scroll propio ---------------- */
+.neo-tp { position: relative; isolation: isolate; display: flex; flex: 1; min-height: 0; }
+
+/* Rejilla técnica apenas insinuada. Es textura, no luz: sin halos de color y
+   en blanco muy bajo, para que el fondo siga leyéndose como negro mate. */
+.neo-tp-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 62%);
+}
+:root[data-theme="light"] .neo-tp-grid { opacity: 0.45; }
+
+.neo-tp-work { position: relative; z-index: 1; display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.neo-tp-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.9rem;
+  /* El pie deja aire para que la última tarjeta no muera contra el borde */
+  padding: 1.7rem 2.1rem 3.5rem;
+}
+.neo-tp-rail {
+  position: relative;
+  z-index: 1;
+  width: 384px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  /* El botón flotante del asistente vive abajo a la derecha: este hueco evita
+     que se coma el último bloque del carril */
+  padding: 0 1.5rem 6.5rem;
+  border-left: 1px solid var(--tp-line-soft);
+  background: rgba(255, 255, 255, 0.012);
+}
+.neo-tp-rail-body { display: flex; flex-direction: column; gap: 1.9rem; padding-top: 0.4rem; }
+
+/* Barra de desplazamiento oculta del todo en las dos columnas: la del sistema
+   traía flechas y se pegaba al borde del carril formando una doble línea. El
+   contenido sigue desplazándose con rueda, teclado y gesto. */
+.neo-tp-main,
+.neo-tp-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.neo-tp-main::-webkit-scrollbar,
+.neo-tp-rail::-webkit-scrollbar { width: 0; height: 0; display: none; }
+:root[data-theme="light"] .neo-tp-rail { background: rgba(255, 255, 255, 0.6); }
+.neo-tp-rail-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.9rem 0 1rem;
+  background: rgba(5, 7, 10, 0.92);
+  backdrop-filter: blur(12px);
+}
+:root[data-theme="light"] .neo-tp-rail-top { background: rgba(250, 251, 253, 0.92); }
+
+/* El perfil viene del armazón general: en el carril flotaban tres controles
+   sueltos y el nombre se partía en dos líneas. Aquí se agrupan en una sola
+   pieza con marco propio y se les baja el tamaño. */
+.neo-tp-rail-top > div {
+  width: 100%;
+  min-width: 0;
+  gap: 0.45rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.75rem;
+  border-radius: 16px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+}
+.neo-tp-rail-top .neo-theme { width: 40px; height: 22px; }
+.neo-tp-rail-top .neo-theme-knob { width: 16px; height: 16px; }
+.neo-tp-rail-top .neo-theme--light .neo-theme-knob { transform: translateX(18px); }
+.neo-tp-rail-top .neo-bell { width: 34px; height: 34px; border-radius: 11px; box-shadow: none; background: var(--tp-panel-2); }
+.neo-tp-rail-top .neo-profile-chip { min-width: 0; margin-left: auto; gap: 9px; padding: 2px 2px 2px 8px; }
+.neo-tp-rail-top .neo-profile-chip > div:first-child { min-width: 0; }
+.neo-tp-rail-top .neo-profile-chip p {
+  max-width: 132px;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neo-tp-rail-top .neo-avatar { width: 36px !important; height: 36px !important; border-radius: 12px; box-shadow: none; }
+
+/* ---------------- Cabecera: título + buscador ---------------- */
+.neo-tp-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2.5rem;
+  padding: 1.7rem 2.1rem 0.4rem;
+}
+.neo-tp-top-l { min-width: 0; }
+/* Barra cian encendida a la izquierda del título: marca de "consola" */
+.neo-tp-title {
+  position: relative;
+  padding-left: 1rem;
+  font-size: 2.05rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--tp-txt);
+}
+.neo-tp-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.14em;
+  bottom: 0.14em;
+  width: 4px;
+  border-radius: 99px;
+  background: var(--tp-cyan);
+}
+.neo-tp-hello { margin-top: 0.45rem; padding-left: 1rem; font-size: 0.92rem; color: var(--tp-txt-2); }
+.neo-tp-hello b { font-weight: 600; color: var(--tp-txt); }
+.neo-tp-tag { margin-top: 0.15rem; padding-left: 1rem; font-size: 0.78rem; color: var(--tp-txt-3); }
+
+.neo-tp-search-wrap { position: relative; width: min(420px, 42vw); margin-top: 0.35rem; }
+.neo-tp-search {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 44px;
+  padding: 0 0.6rem 0 0.9rem;
+  border-radius: 999px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.neo-tp-search:focus-within {
+  border-color: color-mix(in srgb, var(--tp-cyan) 45%, transparent);
+  box-shadow: 0 0 0 3px var(--tp-cyan-soft);
+}
+.neo-tp-search-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-left: -0.25rem;
+  border-radius: 9px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+  transition: background 0.2s ease;
+}
+.neo-tp-search:focus-within .neo-tp-search-ic { background: color-mix(in srgb, var(--tp-cyan) 24%, transparent); }
+.neo-tp-search input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 0.85rem; color: var(--tp-txt); }
+.neo-tp-search input::placeholder { color: var(--tp-txt-3); }
+.neo-tp-kbd {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--tp-txt-3);
+  background: var(--tp-panel-2);
+  border: 1px solid var(--tp-line-soft);
+}
+
+.neo-tp-results {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 0.4rem;
+  border-radius: 16px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line);
+  box-shadow: 0 26px 54px -20px rgba(0, 0, 0, 0.85);
+  animation: neo-tp-drop 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes neo-tp-drop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.neo-tp-results-empty { padding: 0.9rem; text-align: center; font-size: 0.82rem; color: var(--tp-txt-3); }
+.neo-tp-result { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.55rem 0.6rem; border-radius: 12px; transition: background 0.15s ease; }
+.neo-tp-result:hover { background: var(--tp-panel-2); }
+.neo-tp-result-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+}
+.neo-tp-result-ic--student { color: #6fd8ae; background: rgba(111, 216, 174, 0.13); }
+.neo-tp-result-ic--task { color: #d9b56b; background: rgba(217, 181, 107, 0.13); }
+.neo-tp-result-t { display: block; font-size: 0.85rem; font-weight: 500; color: var(--tp-txt); }
+.neo-tp-result-s { display: block; font-size: 0.72rem; color: var(--tp-txt-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-tp-result-kind { flex-shrink: 0; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tp-txt-3); }
+
+/* ---------------- Etiquetas y cabeceras de sección ---------------- */
+.neo-tp-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--tp-txt-2);
+}
+.neo-tp-kicker svg { color: var(--tp-cyan); }
+.neo-tp-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.1rem; }
+/* Tick que prolonga la etiqueta: lenguaje de panel de instrumentos */
+.neo-tp-sec-head .neo-tp-kicker::after,
+.neo-tp-panel-head .neo-tp-kicker::after {
+  content: '';
+  width: 56px;
+  height: 1px;
+  margin-left: 0.3rem;
+  background: linear-gradient(90deg, var(--tp-line), transparent);
+}
+.neo-tp-sec-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--tp-txt-3);
+  transition: color 0.18s ease, gap 0.18s ease;
+}
+.neo-tp-sec-link:hover { color: var(--tp-cyan); gap: 0.55rem; }
+
+/* ---------------- Cápsulas de cifras (pulso de la academia) ---------------- */
+.neo-tp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 0.9rem; }
+.neo-tp-stat {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 0.8rem;
+  padding: 1rem 1.15rem;
+  border-radius: 16px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+  box-shadow: var(--tp-shadow);
+}
+/* Marca lateral mate, no un filo encendido: identifica sin brillar */
+.neo-tp-stat::before {
+  content: '';
+  position: absolute;
+  top: 1.1rem;
+  bottom: 1.1rem;
+  left: 0;
+  width: 2px;
+  border-radius: 0 99px 99px 0;
+  background: color-mix(in srgb, var(--tp-cyan) 55%, transparent);
+}
+.neo-tp-stat--alert::before { background: rgba(200, 160, 90, 0.6); }
+.neo-tp-stat-ic {
+  grid-row: 1 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+  border: 1px solid color-mix(in srgb, var(--tp-cyan) 22%, transparent);
+}
+.neo-tp-stat--alert .neo-tp-stat-ic { color: #c8a05a; background: rgba(200, 160, 90, 0.1); border-color: rgba(200, 160, 90, 0.2); }
+.neo-tp-stat-v {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--tp-txt);
+}
+.neo-tp-stat-l { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--tp-txt-3); }
+
+/* Panel base */
+.neo-tp-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 1.35rem 1.4rem 1.4rem;
+  border-radius: 20px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+  box-shadow: var(--tp-shadow);
+}
+.neo-tp-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+
+/* ---------------- Mis clases ----------------
+   Tarjetas mate, sin fondo de imagen. La identidad de cada materia se lleva
+   solo con el color de acento (--accent): icono, código y borde al pasar. */
+.neo-tp-classes { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 1.2rem; }
+.neo-tp-class {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.4rem;
+  min-height: 182px;
+  padding: 1.4rem;
+  border-radius: 20px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+  box-shadow: var(--tp-shadow);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease, background 0.25s ease;
+}
+/* Rejilla interior tenue: la misma textura mate del fondo, sin color */
+.neo-tp-class::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 23px 23px;
+  -webkit-mask-image: linear-gradient(160deg, #000 0%, transparent 58%);
+  mask-image: linear-gradient(160deg, #000 0%, transparent 58%);
+}
+.neo-tp-class:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--tp-cyan) 28%, transparent);
+  background: var(--tp-panel-2);
+}
+
+/* El contenido va por encima de la rejilla interior */
+.neo-tp-class-head,
+.neo-tp-class-row,
+.neo-tp-class-foot { position: relative; z-index: 1; }
+.neo-tp-class-head { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; }
+.neo-tp-code {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+  border: 1px solid color-mix(in srgb, var(--tp-cyan) 20%, transparent);
+}
+.neo-tp-class-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+  border: 1px solid color-mix(in srgb, var(--tp-cyan) 18%, transparent);
+  transition: transform 0.22s ease;
+}
+.neo-tp-class:hover .neo-tp-class-ic { transform: scale(1.05); }
+
+.neo-tp-class-row { display: block; min-width: 0; }
+.neo-tp-class-name {
+  display: -webkit-box;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--tp-txt);
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.neo-tp-class-meta {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: var(--tp-txt-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neo-tp-class-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--tp-line-soft);
+}
+.neo-tp-class-students { font-size: 0.75rem; color: var(--tp-txt-2); }
+.neo-tp-class-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--tp-txt-2);
+  background: var(--tp-panel-2);
+  border: 1px solid var(--tp-line-soft);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.neo-tp-class:hover .neo-tp-class-go {
+  color: #04121a;
+  background: var(--tp-cyan);
+  border-color: transparent;
+  transform: translateX(2px);
+}
+
+/* ---------------- Acceso rápido + próximos eventos ---------------- */
+.neo-tp-duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.3rem; }
+@media (min-width: 980px) { .neo-tp-duo { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); } }
+
+.neo-tp-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.neo-tp-action {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 0.85rem;
+  border-radius: 15px;
+  background: var(--tp-panel-2);
+  border: 1px solid var(--tp-line-soft);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.neo-tp-action:hover { border-color: color-mix(in srgb, var(--tp-cyan) 34%, transparent); transform: translateY(-2px); }
+.neo-tp-action-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+}
+.neo-tp-action-t { display: block; font-size: 0.82rem; font-weight: 600; color: var(--tp-txt); }
+.neo-tp-action-s { display: block; font-size: 0.68rem; line-height: 1.35; color: var(--tp-txt-3); }
+.neo-tp-action-go { display: flex; flex-shrink: 0; color: var(--tp-txt-3); transition: transform 0.2s ease, color 0.2s ease; }
+.neo-tp-action:hover .neo-tp-action-go { color: var(--tp-cyan); transform: translateX(3px); }
+
+.neo-tp-events { display: flex; flex-direction: column; gap: 0.15rem; }
+.neo-tp-event { display: flex; align-items: center; gap: 0.85rem; padding: 0.55rem 0.5rem; border-radius: 13px; transition: background 0.18s ease; }
+.neo-tp-event:hover { background: var(--tp-panel-2); }
+.neo-tp-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: var(--tp-sunken);
+  border: 1px solid var(--tp-line-soft);
+}
+.neo-tp-date b { font-size: 0.98rem; font-weight: 700; line-height: 1; color: var(--tp-txt); }
+.neo-tp-date i { font-style: normal; font-size: 0.53rem; font-weight: 700; letter-spacing: 0.1em; color: var(--tp-txt-3); }
+.neo-tp-event-t { display: block; font-size: 0.85rem; font-weight: 500; color: var(--tp-txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-tp-event-s { display: block; font-size: 0.71rem; color: var(--tp-txt-3); }
+
+/* Punto y chip de urgencia. Los tres tonos son semánticos (vence hoy / pronto /
+   más adelante), no decorativos: por eso se quedan, pero apagados y sin halo. */
+.neo-tp-dot { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: var(--tp-cyan); }
+.neo-tp-dot--now { background: #c86b66; }
+.neo-tp-dot--soon { background: #c8a05a; }
+.neo-tp-dot--mid { background: var(--tp-cyan); }
+.neo-tp-dot--far { background: #4e5666; }
+.neo-tp-when {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--tp-txt-2);
+  background: var(--tp-sunken);
+  border: 1px solid var(--tp-line-soft);
+}
+.neo-tp-when--now { color: #d68b86; border-color: rgba(200, 107, 102, 0.24); background: rgba(200, 107, 102, 0.08); }
+.neo-tp-when--soon { color: #c8a05a; border-color: rgba(200, 160, 90, 0.24); background: rgba(200, 160, 90, 0.08); }
+.neo-tp-when--mid { color: var(--tp-cyan); border-color: color-mix(in srgb, var(--tp-cyan) 22%, transparent); background: var(--tp-cyan-soft); }
+
+/* ---------------- Frase del día ---------------- */
+/* Marco común de los tres bloques del carril. Antes la frase era una tarjeta y
+   la agenda y los pendientes iban sueltos: esa mezcla es lo que hacía que el
+   carril se leyera sin terminar. */
+.neo-tp-quote,
+.neo-tp-agenda,
+.neo-tp-review {
+  position: relative;
+  overflow: hidden;
+  padding: 1.3rem 1.3rem 1.4rem;
+  border-radius: 18px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+  box-shadow: var(--tp-shadow);
+}
+/* Misma marca lateral mate que las cápsulas: el carril habla el mismo idioma */
+.neo-tp-quote::before {
+  content: '';
+  position: absolute;
+  top: 1.3rem;
+  bottom: 1.3rem;
+  left: 0;
+  width: 2px;
+  border-radius: 0 99px 99px 0;
+  background: color-mix(in srgb, var(--tp-cyan) 55%, transparent);
+}
+.neo-tp-quote-head { display: flex; align-items: center; gap: 0.5rem; }
+.neo-tp-quote-ic { display: flex; flex-shrink: 0; color: var(--tp-cyan); opacity: 0.65; }
+.neo-tp-quote-txt { margin-top: 0.75rem; font-size: 0.94rem; font-weight: 500; line-height: 1.55; color: var(--tp-txt); }
+.neo-tp-quote-by { margin-top: 0.6rem; font-size: 0.74rem; color: var(--tp-txt-3); }
+
+/* ---------------- Agenda (carril derecho) ---------------- */
+.neo-tp-agenda { display: flex; flex-direction: column; }
+.neo-tp-agenda-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.neo-tp-agenda-date { margin-top: 0.55rem; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; color: var(--tp-txt); }
+.neo-tp-nav { display: flex; gap: 0.3rem; }
+.neo-tp-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  color: var(--tp-txt-3);
+  border: 1px solid var(--tp-line-soft);
+  transition: color 0.18s ease, background 0.18s ease;
+}
+.neo-tp-nav button:hover { color: var(--tp-cyan); background: var(--tp-cyan-soft); }
+
+.neo-tp-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.2rem; margin: 1.1rem 0 1.3rem; }
+.neo-tp-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0;
+  border-radius: 11px;
+  transition: background 0.18s ease;
+}
+.neo-tp-day:hover { background: var(--tp-panel-2); }
+.neo-tp-day-l { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; color: var(--tp-txt-3); }
+.neo-tp-day-n {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--tp-txt-2);
+}
+.neo-tp-day--today .neo-tp-day-n { color: var(--tp-cyan); }
+.neo-tp-day--sel .neo-tp-day-n { color: #041017; background: var(--tp-cyan); }
+
+.neo-tp-slots { display: flex; flex-direction: column; gap: 0.55rem; }
+.neo-tp-slot { display: flex; align-items: stretch; gap: 0.6rem; }
+.neo-tp-slot-time { display: flex; flex-direction: column; align-items: flex-end; width: 48px; flex-shrink: 0; padding-top: 0.7rem; }
+.neo-tp-slot-time b { font-size: 0.78rem; font-weight: 600; color: var(--tp-txt-2); }
+.neo-tp-slot-time i { font-style: normal; font-size: 0.6rem; color: var(--tp-txt-3); }
+.neo-tp-slot-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 15px;
+  background: var(--tp-panel);
+  border: 1px solid var(--tp-line-soft);
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+.neo-tp-slot:hover .neo-tp-slot-card { transform: translateX(3px); border-color: color-mix(in srgb, var(--tp-cyan) 30%, transparent); }
+.neo-tp-slot-t { display: block; font-size: 0.82rem; font-weight: 600; color: var(--tp-txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-tp-slot-s { display: block; font-size: 0.68rem; color: var(--tp-txt-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------- Pendientes de revisar (carril derecho) ---------------- */
+.neo-tp-review { display: flex; flex-direction: column; }
+.neo-tp-review-empty { margin-top: 0.9rem; font-size: 0.79rem; line-height: 1.5; color: var(--tp-txt-3); }
+.neo-tp-review-list { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 1rem; }
+/* Filas planas dentro de la tarjeta: anidar tarjeta sobre tarjeta ensucia */
+.neo-tp-review-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: var(--tp-panel-2);
+  /* La barra de color es el estado de un vistazo, sin leer nada */
+  border-left: 3px solid var(--tp-txt-3);
+  transition: background 0.18s ease;
+}
+.neo-tp-review-row:hover { background: color-mix(in srgb, var(--tp-cyan) 8%, var(--tp-panel-2)); }
+.neo-tp-review-row--now { border-left-color: #c86b66; }
+.neo-tp-review-row--soon { border-left-color: #c8a05a; }
+.neo-tp-review-row--far { border-left-color: color-mix(in srgb, var(--tp-cyan) 65%, transparent); }
+.neo-tp-review-t { display: block; font-size: 0.81rem; font-weight: 600; color: var(--tp-txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-tp-review-s { display: block; margin-top: 0.1rem; font-size: 0.68rem; color: var(--tp-txt-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neo-tp-review-when { flex-shrink: 0; font-size: 0.66rem; font-weight: 600; color: var(--tp-txt-2); }
+.neo-tp-review-when--now { color: #d68b86; }
+.neo-tp-review-when--soon { color: #c8a05a; }
+.neo-tp-review-when--far { color: var(--tp-txt-3); }
+
+/* ---------------- Vacíos y carga ---------------- */
+.neo-tp-loading { display: flex; align-items: center; justify-content: center; padding: 3rem; }
+.neo-tp-spin { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--tp-cyan-soft); border-top-color: var(--tp-cyan); animation: neo-tp-spin 0.8s linear infinite; }
+@keyframes neo-tp-spin { to { transform: rotate(360deg); } }
+.neo-tp-empty { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 2.4rem 1.5rem; text-align: center; }
+/* En el carril el vacío iba en bloque centrado y dejaba un hueco enorme:
+   aquí se resuelve en una línea. */
+.neo-tp-empty--sm {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 0.9rem;
+  text-align: left;
+  border-radius: 12px;
+  background: var(--tp-panel-2);
+}
+.neo-tp-empty--sm .neo-tp-empty-ic { width: 34px; height: 34px; margin-bottom: 0; border-radius: 11px; }
+.neo-tp-empty--sm .neo-tp-empty-ic svg { width: 16px; height: 16px; }
+.neo-tp-empty-ic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 0.2rem;
+  border-radius: 15px;
+  color: var(--tp-cyan);
+  background: var(--tp-cyan-soft);
+}
+.neo-tp-empty-t { font-size: 0.95rem; font-weight: 600; color: var(--tp-txt); }
+.neo-tp-empty-s { max-width: 32ch; font-size: 0.8rem; color: var(--tp-txt-3); }
+
+/* ---------------- Adaptable ---------------- */
+@media (max-width: 1180px) {
+  .neo-tp { flex-direction: column; overflow-y: auto; }
+  .neo-tp-work { min-height: auto; }
+  .neo-tp-main { overflow: visible; }
+  .neo-tp-rail { width: auto; overflow: visible; border-left: none; border-top: 1px solid var(--tp-line-soft); padding: 0 2.1rem 6rem; }
+  .neo-tp-rail-top { position: static; justify-content: flex-start; }
+}
+@media (max-width: 760px) {
+  .neo-tp-top { flex-direction: column; gap: 1.1rem; padding: 1.2rem 1.3rem 0.4rem; }
+  .neo-tp-search-wrap { width: 100%; }
+  .neo-tp-main { padding: 1.3rem 1.3rem 3rem; }
+  .neo-tp-rail { padding: 0 1.3rem 6rem; }
+  .neo-tp-actions { grid-template-columns: minmax(0, 1fr); }
+  .neo-tp-quote-txt { font-size: 0.9rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .neo-tp-results { animation: none !important; }
+  .neo-tp-class:hover, .neo-tp-action:hover, .neo-tp-review-row:hover { transform: none; }
+}
