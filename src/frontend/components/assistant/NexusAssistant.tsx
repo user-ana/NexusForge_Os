@@ -7,6 +7,7 @@ import { useForeignListen } from './useForeignListen'
 import { getSession, displayName, SESSION_EVENT, type Role } from '@/frontend/session/session'
 import { supabase } from '@/backend/supabase'
 import { getAssistantContext } from '@/backend/services/studentSearch'
+import { getStudentContext } from '@/backend/services/studentContext'
 import { generateTaskDescription } from '@/backend/services/classTasks'
 import {
   type ToolCall,
@@ -150,9 +151,15 @@ export default function NexusAssistant() {
    * Al quedar en null tras una acción, este efecto la vuelve a traer.
    */
   useEffect(() => {
-    if (role !== 'teacher' || !meId || ctx != null) return
+    if (!meId || ctx != null) return
+    if (role !== 'teacher' && role !== 'student') return
     let alive = true
-    getAssistantContext(meId)
+    // Cada rol trae SU ficha: el catedrático la de sus clases, el estudiante la
+    // suya (sus tareas, su grupo, su proyecto, sus notas). Las dos se arman en
+    // el navegador con la sesión de quien pregunta, así que RLS decide qué se
+    // puede leer.
+    const cargar = role === 'teacher' ? getAssistantContext(meId) : getStudentContext(meId)
+    cargar
       .then((c) => { if (alive) setCtx(c) })
       .catch(() => { /* sin ficha: Nexus sigue respondiendo, solo sin datos */ })
     return () => { alive = false }
@@ -379,11 +386,13 @@ export default function NexusAssistant() {
       }
 
       const askText = q || (attach?.text ? 'Resume y explica el documento adjunto.' : '')
-      const payload: Record<string, unknown> = { question: askText, role, history: recentHistory() }
+      const payload: Record<string, unknown> = { question: askText, history: recentHistory() }
       if (attach?.text) { payload.context = attach.text; payload.contextLabel = attach.name }
       if (attach?.b64) { payload.image = attach.b64 }
-      // Con la ficha cargada, Nexus puede contestar sobre alumnos, grupos y notas.
-      if (role === 'teacher' && ctx) payload.platform = ctx
+      // Con la ficha cargada, Nexus contesta con datos reales: el catedrático
+      // sobre sus alumnos y notas, el estudiante sobre lo suyo. El rol lo
+      // vuelve a resolver el servidor; aquí no se manda.
+      if (ctx) payload.platform = ctx
       const { ok, text } = await postStream('/api/nexus', payload)
       if (ok && text) speakMaybe(text)
       else if (!ok) push({ role: 'ai', text })
@@ -823,8 +832,11 @@ const HERO_CARDS: Record<Role, HeroCard[]> = {
     { key: 'write', title: 'Generar contenido', sub: 'Con IA', icon: 'translate', prompt: 'Redáctame material de estudio para mi clase' },
   ],
   student: [
+    // Va primero porque es lo que más se pregunta, y ahora Nexus lo sabe de
+    // verdad: la ficha del estudiante trae sus tareas, fechas y notas.
+    { key: 'pending', title: 'Mis pendientes', sub: 'Qué debo entregar', icon: 'file', prompt: '¿Qué tareas tengo pendientes y cuándo vence cada una?' },
     { key: 'explain', title: 'Explicar tema', sub: 'Paso a paso', icon: 'sparkles', prompt: 'Explícame un tema difícil paso a paso' },
-    { key: 'plan', title: 'Planear proyecto', sub: 'Con guía', icon: 'file', prompt: 'Ayúdame a planear mi proyecto' },
+    { key: 'plan', title: 'Planear proyecto', sub: 'Con guía', icon: 'file', prompt: 'Ayúdame a planear mi proyecto de clase' },
     { key: 'analyze', title: 'Analizar archivo', sub: 'PDF, TXT, etc.', icon: 'paperclip', tool: 'files' },
     { key: 'quiz', title: 'Practicar examen', sub: 'Con preguntas', icon: 'translate', prompt: 'Practica un examen conmigo' },
   ],

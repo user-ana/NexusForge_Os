@@ -65,9 +65,11 @@ async function handler(req: Request) {
   // venia en el cuerpo (body.role) y bastaba con mandar "teacher" para recibir
   // el prompt y las herramientas de catedratico.
   const esProfe = user.role === 'teacher'
-  // Solo el catedrático recibe la ficha, y solo de SUS clases: la arma el
-  // cliente con su propia sesión, así que nadie puede pedir datos ajenos.
-  const platform = esProfe ? (body.platform ?? '').trim().slice(0, MAX_PLATFORM) : ''
+  // La ficha la arma el cliente con SU propia sesión, así que las políticas RLS
+  // deciden qué datos puede leer: el catedrático los de sus clases, el
+  // estudiante los suyos. El visitante no tiene datos que consultar.
+  const conFicha = esProfe || user.role === 'student'
+  const platform = conFicha ? (body.platform ?? '').trim().slice(0, MAX_PLATFORM) : ''
   const image = typeof body.image === 'string' && body.image.length <= MAX_IMAGE ? body.image : ''
 
   if (!question && !image) return NextResponse.json({ error: 'Falta la pregunta.' }, { status: 400 })
@@ -96,12 +98,16 @@ async function handler(req: Request) {
     // La regla cambia según haya o no ficha: sin datos hay que decir que no se
     // saben (y no inventarlos); con datos, hay que usarlos en vez de negarse.
     platform
-      ? 'Abajo tienes los DATOS REALES de las clases de este catedrático. Úsalos para responder sobre sus clases, estudiantes, grupos, proyectos y notas. Nunca digas que no tienes acceso a esa información: la tienes ahí. Si algo concreto no aparece en los datos, dilo, pero no lo inventes.'
+      ? esProfe
+        ? 'Abajo tienes los DATOS REALES de las clases de este catedrático. Úsalos para responder sobre sus clases, estudiantes, grupos, proyectos y notas. Nunca digas que no tienes acceso a esa información: la tienes ahí. Si algo concreto no aparece en los datos, dilo, pero no lo inventes.'
+        : 'Abajo tienes los DATOS REALES de ESTE estudiante: sus clases, su grupo, su proyecto, sus tareas y sus notas. Úsalos para responder qué tiene pendiente, qué ya entregó, cuándo vence algo o cómo va. Nunca digas que no tienes acceso: lo tienes ahí. Si algo concreto no aparece, dilo, pero no lo inventes. Son datos solo de esta persona; no sabes nada de sus compañeros más allá de con quiénes comparte grupo.'
       : 'No inventes datos de la plataforma (clases, notas, estudiantes): no los conoces desde aquí.',
     'Si adjuntan un archivo o imagen, apóyate en su contenido.',
   ]
 
-  const datos = platform ? ['', 'DATOS REALES DE SUS CLASES:', platform] : []
+  const datos = platform
+    ? ['', esProfe ? 'DATOS REALES DE SUS CLASES:' : 'DATOS REALES DE ESTE ESTUDIANTE:', platform]
+    : []
 
   const adjunto = context
     ? ['', `CONTENIDO ADJUNTO${contextLabel ? ` (${contextLabel})` : ''}:`, context]
