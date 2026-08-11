@@ -44,6 +44,9 @@ const FLUSH_EVERY_MS = 20_000
  */
 const LOAD_METRICS = new Set(['LCP', 'FCP', 'TTFB', 'FID', 'CLS', 'Next.js-hydration'])
 
+/** De las anteriores, las que son un INSTANTE en milisegundos (CLS es un score). */
+const TIMING_METRICS = new Set(['LCP', 'FCP', 'TTFB', 'FID', 'Next.js-hydration'])
+
 export default function WebVitalsReporter() {
   const pathname = usePathname()
   const buffer = useRef<Sample[]>([])
@@ -51,6 +54,27 @@ export default function WebVitalsReporter() {
   const route = useRef(pathname)
   /** Ruta con la que se cargó el documento. No cambia al navegar. */
   const entryRoute = useRef(pathname)
+  /**
+   * Momento en que la pestaña se ocultó por primera vez (Infinity si nunca).
+   *
+   * Si la página se carga en una pestaña que el usuario no está mirando, el
+   * navegador APLAZA el pintado hasta que la trae al frente, y luego reporta
+   * ese retraso como si la página hubiera tardado en cargar. Así aparecen
+   * valores absurdos —90 segundos de LCP— que no describen la aplicación sino
+   * el comportamiento del navegador. Se descartan.
+   */
+  const firstHidden = useRef(Infinity)
+
+  useEffect(() => {
+    if (document.visibilityState === 'hidden') firstHidden.current = 0
+    const marcar = () => {
+      if (document.visibilityState === 'hidden') {
+        firstHidden.current = Math.min(firstHidden.current, performance.now())
+      }
+    }
+    document.addEventListener('visibilitychange', marcar, true)
+    return () => document.removeEventListener('visibilitychange', marcar, true)
+  }, [])
 
   route.current = pathname
 
@@ -97,6 +121,14 @@ export default function WebVitalsReporter() {
   }, [])
 
   useReportWebVitals((metric) => {
+    // Si la pestaña estuvo oculta antes de que esto se midiera, el dato no
+    // describe la aplicación: describe que el navegador aplazó el pintado.
+    // Guardarlo contaminaría el percentil de todos los demás.
+    const enSegundoPlano =
+      firstHidden.current === 0 ||
+      (TIMING_METRICS.has(metric.name) && metric.value > firstHidden.current)
+    if (LOAD_METRICS.has(metric.name) && enSegundoPlano) return
+
     buffer.current.push({
       kind: 'web_vital',
       name: metric.name,
