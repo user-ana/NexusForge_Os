@@ -7583,8 +7583,43 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
 .neo-nx-iconbtn--muted { color: #fca5a5; background: rgba(244, 63, 94, 0.1); }
 
 /* ── Terminal flotante (crear/eliminar en tiempo real) ── */
-.neo-nx-term { position: fixed; right: 26px; bottom: 26px; z-index: 84; width: min(440px, 92vw); border-radius: 14px; overflow: hidden; background: rgba(10, 13, 18, 0.98); backdrop-filter: blur(12px); border: 1px solid rgba(53, 198, 240, 0.28); box-shadow: 0 26px 60px -18px rgba(0, 0, 0, 0.85); animation: neo-nx-rise-r 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
-@keyframes neo-nx-rise-r { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+/* Terminal de ejecución: entra subiendo desde abajo y luego queda levitando.
+   La entrada anima `transform` y la levitación anima `translate` (propiedad
+   independiente): si las dos usaran transform, la segunda pisaría a la primera
+   y el efecto de entrada se perdería. */
+.neo-nx-term {
+  position: fixed;
+  right: 26px;
+  bottom: 34px;
+  z-index: 84;
+  width: min(440px, 92vw);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(10, 13, 18, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(53, 198, 240, 0.28);
+  box-shadow: 0 26px 60px -18px rgba(0, 0, 0, 0.85);
+  animation:
+    neo-nx-term-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both,
+    neo-nx-term-float 4.5s ease-in-out 0.5s infinite;
+}
+@keyframes neo-nx-term-in {
+  from { opacity: 0; transform: translateY(38px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes neo-nx-term-float {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -7px; }
+}
+/* Salida: se va hacia arriba, al revés de como entró. Una sola declaración de
+   animation reemplaza a las dos de arriba, así la levitación se detiene. */
+.neo-nx-term.is-closing {
+  animation: neo-nx-term-out 0.28s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes neo-nx-term-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(-22px) scale(0.97); }
+}
 .neo-nx-term-bar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.8rem; background: rgba(255, 255, 255, 0.04); border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
 .neo-nx-term-dot { width: 10px; height: 10px; border-radius: 50%; }
 .neo-nx-term-dot.r { background: #ff5f57; }
@@ -7606,7 +7641,8 @@ body.neo-resizing { cursor: col-resize; user-select: none; }
   .neo-nx-robot, .neo-nx-robot-glow, .neo-nx-hero-robot img, .neo-nx-hero-glow, .neo-nx-avatar::after,
   .neo-nx-eq.is-active i, .neo-nx-wave i, .neo-nx-live-dot, .neo-nx-head-badge::after,
   .neo-nx-hero-icon::after, .neo-nx-sug, .neo-nx-bubble, .neo-nx-listen-robot img,
-  .neo-nx-card, .neo-nx-composer, .neo-nx-composer::before, .neo-nx-term-cursor, .neo-nx-hero-orbit { animation: none !important; }
+  .neo-nx-card, .neo-nx-composer, .neo-nx-composer::before, .neo-nx-term-cursor, .neo-nx-hero-orbit,
+  .neo-nx-term { animation: none !important; }
 }
 
 /* Tema claro: mantener el asistente en modo oscuro (estilo "cabina"), solo

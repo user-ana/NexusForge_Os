@@ -57,7 +57,12 @@ type Msg = {
 
 type Attachment = { name: string; kind: 'file' | 'image'; text?: string; b64?: string; dataUrl?: string }
 type TermLine = { t: string; kind: 'in' | 'run' | 'ok' | 'err' }
-type Term = { title: string; lines: TermLine[]; done: boolean }
+/** `ok` solo existe cuando `done`: dice si la acción salió bien (decide el cierre solo). */
+type Term = { title: string; lines: TermLine[]; done: boolean; ok?: boolean }
+
+/** Cuánto se queda la terminal en pantalla tras un final feliz, antes de irse sola. */
+const TERM_AUTOCLOSE_MS = 4000
+const TERM_EXIT_MS = 280
 
 const ACTION_RE = /\b(crea|crear|cre[aá]|agrega|agregar|a[ñn]ade|a[ñn]adir|arma|armar|genera|generar|asigna|asignar|registra|registrar|nuev[oa]s?|elimina|eliminar|borra|borrar|quita|quitar|da de baja|haz(?:me)?)\b/i
 
@@ -83,6 +88,7 @@ export default function NexusAssistant() {
   const [pending, setPending] = useState<{ tc: ToolCall; field: string } | null>(null)
   const [ctx, setCtx] = useState<string | null>(null)
   const [term, setTerm] = useState<Term | null>(null)
+  const [termClosing, setTermClosing] = useState(false)
   const [awaitingConfirm, setAwaitingConfirm] = useState<{ id: number; tc: ToolCall } | null>(null)
 
   const [translateTo, setTranslateTo] = useState<{ label: string; name: string } | null>(null)
@@ -429,6 +435,29 @@ export default function NexusAssistant() {
     if (handsFree) { setAwaitingConfirm({ id, tc }); askByVoice(isTask ? 'Preparé la tarea. ¿La publico? Di sí o no.' : '¿Lo confirmo? Di sí o no.') }
   }
 
+  /**
+   * La terminal se cierra sola cuando la acción SALIÓ BIEN: ya cumplió su
+   * función de contar lo que pasó. Si algo falló se queda hasta que la cierres,
+   * porque ahí sí hay un mensaje que leer con calma.
+   */
+  useEffect(() => {
+    if (!term?.done || !term.ok) return
+    const irse = window.setTimeout(() => setTermClosing(true), TERM_AUTOCLOSE_MS)
+    const quitar = window.setTimeout(() => {
+      setTerm(null)
+      setTermClosing(false)
+    }, TERM_AUTOCLOSE_MS + TERM_EXIT_MS)
+    return () => {
+      window.clearTimeout(irse)
+      window.clearTimeout(quitar)
+    }
+  }, [term?.done, term?.ok])
+
+  function closeTerm() {
+    setTerm(null)
+    setTermClosing(false)
+  }
+
   async function termLine(t: string, kind: TermLine['kind'], delay: number) {
     setTerm((cur) => (cur ? { ...cur, lines: [...cur.lines, { t, kind }] } : cur))
     await sleep(delay)
@@ -446,7 +475,7 @@ export default function NexusAssistant() {
     const { ok, message } = await executeToolCall(meId, tc)
     await termLine(`${ok ? '✓' : '✗'} ${message}`, ok ? 'ok' : 'err', 240)
     await termLine('> Proceso finalizado.', 'in', 150)
-    setTerm((t) => (t ? { ...t, done: true } : t))
+    setTerm((t) => (t ? { ...t, done: true, ok } : t))
     updateAction(id, { status: ok ? 'done' : 'error', message })
     if (ok) setCtx(null)
   }
@@ -793,11 +822,11 @@ export default function NexusAssistant() {
       )}
 
       {term && (
-        <div className="neo-nx-term">
+        <div className={`neo-nx-term ${termClosing ? 'is-closing' : ''}`}>
           <div className="neo-nx-term-bar">
             <span className="neo-nx-term-dot r" /><span className="neo-nx-term-dot y" /><span className="neo-nx-term-dot g" />
             <span className="neo-nx-term-title">{term.title}</span>
-            <button className="neo-nx-term-x" onClick={() => setTerm(null)} aria-label="Cerrar"><Icon name="close" size={14} /></button>
+            <button className="neo-nx-term-x" onClick={closeTerm} aria-label="Cerrar"><Icon name="close" size={14} /></button>
           </div>
           <div className="neo-nx-term-body">
             {term.lines.map((l, i) => <div key={i} className={`neo-nx-term-line ${l.kind}`}>{l.t}</div>)}
