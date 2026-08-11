@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import os from 'os'
 import { createClient } from '@supabase/supabase-js'
-import { ollamaBase, ollamaModel } from '@/backend/ollama'
+import { ollamaBase, ollamaModel, ollamaHeaders } from '@/backend/ollama'
 import { rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 
 /**
@@ -65,7 +65,13 @@ async function checkAI(): Promise<Check> {
   const base = ollamaBase()
   const started = Date.now()
   try {
-    const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(AI_TIMEOUT_MS) })
+    // Con ollamaHeaders(): si el servidor de IA está detrás del candado del
+    // túnel, una consulta sin token recibe 401 y la sonda reportaría la IA como
+    // caída estando perfectamente viva.
+    const res = await fetch(`${base}/api/tags`, {
+      headers: ollamaHeaders(),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    })
     const ms = Date.now() - started
     if (!res.ok) return { name: 'ai', ok: false, ms, detail: `HTTP ${res.status}` }
     const data = (await res.json()) as { models?: { name: string }[] }
