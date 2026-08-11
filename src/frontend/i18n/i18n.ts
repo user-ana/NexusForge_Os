@@ -415,6 +415,8 @@ const es: Dict = {
   'onb.teacher_code_ph': 'Ingresa tu código institucional',
   'onb.bad_code': 'Código de docente inválido.',
   'onb.continue': 'Continuar',
+  'cls.search_ph': 'Buscar por nombre, código o período…',
+  'cls.no_match': 'Ninguna clase coincide con la búsqueda.',
   // Panel del estudiante
   'sp.tagline': 'Tus clases, tus entregas y tu avance.',
   'sp.kpi_classes': 'Mis clases',
@@ -900,6 +902,8 @@ const en: Dict = {
   'onb.teacher_code_ph': 'Enter your institutional code',
   'onb.bad_code': 'Invalid teacher code.',
   'onb.continue': 'Continue',
+  'cls.search_ph': 'Search by name, code or term…',
+  'cls.no_match': 'No class matches your search.',
   // Student panel
   'sp.tagline': 'Your classes, your submissions and your progress.',
   'sp.kpi_classes': 'My classes',

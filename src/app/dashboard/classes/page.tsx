@@ -44,6 +44,8 @@ export default function ClassesPage() {
   const [me, setMe] = useState('')
   const [all, setAll] = useState<Klass[]>([])
   const [creating, setCreating] = useState(false)
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
   const [joinCode, setJoinCode] = useState('')
   const [joinMsg, setJoinMsg] = useState('')
 
@@ -105,6 +107,26 @@ export default function ClassesPage() {
   const isTeacher = role === 'teacher'
   // loadClasses ya trae solo las clases del usuario: el profe filtra las suyas; el alumno ve todas (sus inscritas)
   const myClasses = isTeacher ? all.filter((c) => c.teacher === me) : all
+
+  /* ---- Buscador y paginado ----
+   * Los dos aparecen solo cuando aportan algo: el buscador a partir de 7 clases,
+   * el paginado a partir de 13. Con pocas clases, un paginado solo añade clics
+   * para ver lo que ya cabía en pantalla. */
+  const SEARCH_FROM = 7
+  const PER_PAGE = 12
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? myClasses.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.code.toLowerCase().includes(q) ||
+          (c.section ?? '').toLowerCase().includes(q) ||
+          (c.period ?? '').toLowerCase().includes(q),
+      )
+    : myClasses
+  const pages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
+  const pageSafe = Math.min(page, pages) // al filtrar, la página actual puede quedar fuera de rango
+  const visibles = filtered.slice((pageSafe - 1) * PER_PAGE, pageSafe * PER_PAGE)
 
   async function submitCreate() {
     if (!name.trim()) return
@@ -200,52 +222,96 @@ export default function ClassesPage() {
             {isTeacher ? t('cls.no_classes_t') : t('cls.no_classes_s')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {myClasses.map((cls) => (
-              <div key={cls.id} className="neo-panel neo-panel--hover h-full p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    {cls.emblem && <Icon3D src={cls.emblem} alt="" size={40} fallback="◆" />}
-                    <div>
-                      <h3 className="text-base font-semibold leading-snug text-white">
-                        {cls.name}
-                        {cls.section && <span className="text-neutral-400"> ({cls.section})</span>}
-                      </h3>
-                      <p className="mt-1 text-xs text-neutral-500">{t('cls.period')}: {cls.period}</p>
-                      <p className="mt-0.5 text-xs text-neutral-600">
-                        {t('cls.code')}: <span className="font-mono text-accent-violet">{cls.code}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <span className="neo-live"><span className="neo-live-dot" />{t('status.active')}</span>
-                </div>
-                <div className="mt-4 flex items-end justify-between border-t border-white/5 pt-4">
-                  <div className="flex gap-6 text-sm">
-                    <div>
-                      <p className="text-xs text-neutral-600">{t('cls.enrolled')}</p>
-                      <p className="text-lg font-bold text-neutral-100">{cls.students.length}</p>
-                    </div>
-                    {!isTeacher && (
-                      <div>
-                        <p className="text-xs text-neutral-600">{t('cls.instructor')}</p>
-                        <p className="font-medium text-neutral-200">{cls.teacherName ?? cls.teacher}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isTeacher && (
-                      <Link href={`/dashboard/classes/${cls.id}`} className="neo-btn-ghost text-sm">
-                        {t('cls.projects')}
-                      </Link>
-                    )}
-                    <Link href={`/aula/${cls.id}`} className="neo-btn text-sm">
-                      {t('cls.enter')} →
-                    </Link>
-                  </div>
-                </div>
+          <>
+            {/* Buscador: aparece solo cuando hay suficientes clases para perderse */}
+            {myClasses.length >= SEARCH_FROM && (
+              <div className="flex items-center gap-3">
+                <input
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    setPage(1) // al cambiar el filtro, volver al principio
+                  }}
+                  placeholder={t('cls.search_ph')}
+                  className="neo-input max-w-sm flex-1"
+                  aria-label={t('cls.search_ph')}
+                />
+                <span className="text-xs text-neutral-500">
+                  {filtered.length} / {myClasses.length}
+                </span>
               </div>
-            ))}
-          </div>
+            )}
+
+            {filtered.length === 0 ? (
+              <div className="neo-panel p-10 text-center text-sm text-neutral-500">{t('cls.no_match')}</div>
+            ) : (
+              /* Tarjetas compactas: 3 por fila, 4 en pantallas anchas. Antes eran 2
+                 grandes, y con siete clases obligaban a desplazarse. */
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {visibles.map((cls) => (
+                  <div key={cls.id} className="neo-panel neo-panel--hover flex h-full flex-col p-4">
+                    <div className="flex items-start gap-2.5">
+                      {cls.emblem && <Icon3D src={cls.emblem} alt="" size={32} fallback="◆" />}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-semibold leading-snug text-white" title={cls.name}>
+                          {cls.name}
+                          {cls.section && <span className="text-neutral-400"> ({cls.section})</span>}
+                        </h3>
+                        <p className="mt-0.5 truncate text-[11px] text-neutral-500">
+                          {cls.period ? `${cls.period} · ` : ''}
+                          <span className="font-mono text-accent-violet">{cls.code}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
+                      <span className="text-[11px] text-neutral-500">
+                        {isTeacher
+                          ? `${cls.students.length} ${t('cls.enrolled').toLowerCase()}`
+                          : (cls.teacherName ?? '')}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {isTeacher && (
+                          <Link
+                            href={`/dashboard/classes/${cls.id}`}
+                            className="neo-btn-ghost !px-2.5 !py-1 text-[11px]"
+                          >
+                            {t('cls.projects')}
+                          </Link>
+                        )}
+                        <Link href={`/aula/${cls.id}`} className="neo-btn !px-2.5 !py-1 text-[11px]">
+                          {t('cls.enter')} →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Paginado: solo si de verdad hay más de una página */}
+            {pages > 1 && (
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={pageSafe === 1}
+                  className="neo-btn-ghost !px-3 !py-1 text-xs disabled:opacity-35"
+                >
+                  ←
+                </button>
+                <span className="text-xs text-neutral-500">
+                  {pageSafe} / {pages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                  disabled={pageSafe === pages}
+                  className="neo-btn-ghost !px-3 !py-1 text-xs disabled:opacity-35"
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Unirse por código (estudiante) */}
