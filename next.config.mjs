@@ -37,6 +37,16 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // Next da 60 segundos por defecto a cada worker para recolectar los datos de
+  // página, y luego lo mata con SIGTERM. En una máquina de desarrollo sobra;
+  // en el servidor propio —con el modelo de IA ocupando CPU y un escritorio
+  // gráfico encima— no alcanza, y la construcción falla con
+  // "Collecting page data for /_app is still timing out".
+  //
+  // Lo que se agota no es un cálculo pesado: es esperar en una máquina cargada.
+  // Cinco minutos le dan aire sin esconder un problema real, porque una
+  // construcción sana termina muy por debajo de ese límite.
+  staticPageGenerationTimeout: 300,
   // Permite compilar en una carpeta aparte (NEXT_DIST_DIR=.next-check) para
   // verificar que todo compila SIN pisar el .next que está usando `npm run dev`.
   // Si se pisa, el servidor de desarrollo se rompe con "Cannot find module".

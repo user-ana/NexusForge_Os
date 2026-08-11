@@ -400,7 +400,15 @@ function PanelSearch({ classes, tasks, t }: { classes: Klass[]; tasks: ClassTask
 
 /* --------------------------------------------------------------- mis clases */
 
+/**
+ * Cuántas clases caben en el panel sin obligar a desplazarse. El panel es un
+ * resumen, no un listado: lo que no cabe vive en «Mis clases».
+ */
+const PANEL_MAX_CLASSES = 6
+
 function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loading: boolean }) {
+  const visibles = classes.slice(0, PANEL_MAX_CLASSES)
+  const ocultas = classes.length - visibles.length
   return (
     <section>
       <div className="neo-tp-sec-head">
@@ -409,7 +417,7 @@ function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loadi
           {t('tp.my_classes')}
         </span>
         <Link href="/dashboard/classes" className="neo-tp-sec-link">
-          {t('tp.see_all')}
+          {ocultas > 0 ? `${t('tp.see_all')} (+${ocultas})` : t('tp.see_all')}
           <ArrowRightIcon size={14} />
         </Link>
       </div>
@@ -431,7 +439,7 @@ function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loadi
         </div>
       ) : (
         <div className="neo-tp-classes">
-          {classes.map((c) => {
+          {visibles.map((c) => {
             const subject = subjectFor(c.name, c.id)
             return (
               <Link key={c.id} href={`/aula/${c.id}`} className="neo-tp-class">

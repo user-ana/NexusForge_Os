@@ -226,9 +226,14 @@ function TasksSection({
 
 /* ------------------------------------------------------- clases */
 
+/** El panel es un resumen: lo que no cabe vive en «Mis clases». */
+const PANEL_MAX_CLASSES = 6
+
 function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loading: boolean }) {
   const [code, setCode] = useState('')
   const [msg, setMsg] = useState('')
+  const visibles = classes.slice(0, PANEL_MAX_CLASSES)
+  const ocultas = classes.length - visibles.length
 
   async function join() {
     if (!code.trim()) return
@@ -241,6 +246,12 @@ function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loadi
     <section>
       <div className="neo-tp-sec-head">
         <h2 className="neo-tp-kicker">{t('nav.classes')}</h2>
+        {classes.length > 0 && (
+          <Link href="/dashboard/classes" className="neo-tp-sec-link">
+            {ocultas > 0 ? `${t('sp.see_all_classes')} (+${ocultas})` : t('sp.see_all_classes')}
+            <ArrowRightIcon size={13} />
+          </Link>
+        )}
       </div>
 
       {loading && classes.length === 0 ? (
@@ -255,7 +266,7 @@ function ClassesSection({ t, classes, loading }: { t: T; classes: Klass[]; loadi
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {classes.map((c) => (
+          {visibles.map((c) => (
             <Link key={c.id} href={`/aula/${c.id}`}>
               <div className="neo-panel neo-panel--hover h-full p-5">
                 <div className="flex items-start gap-3">
