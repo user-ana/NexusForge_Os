@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
 
 /**
@@ -51,7 +52,10 @@ function pickTools(question: string, tools: Tool[]): Tool[] {
   return tools // mensaje ambiguo: que elija el modelo
 }
 
-export async function POST(req: Request) {
+// Instrumentado para el panel de monitoreo (ver src/backend/metrics.ts)
+export const POST = withMetrics('/api/assistant', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   // 1) Límite por IP (antes de tocar nada más)

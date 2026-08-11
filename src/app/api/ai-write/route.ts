@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 
 /**
  * Redacción con IA (generativa). Recibe una instrucción y devuelve el texto que
@@ -14,7 +15,10 @@ export const maxDuration = 120
 
 const MAX_PROMPT = 2000
 
-export async function POST(req: Request) {
+// Instrumentado para el panel de monitoreo (ver src/backend/metrics.ts)
+export const POST = withMetrics('/api/ai-write', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   const ip = clientIp(req)

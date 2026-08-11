@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel } from '@/backend/ollama'
 
 /**
@@ -25,7 +26,11 @@ const MAX_CONTEXT = 9000
 const MAX_PLATFORM = 12_000 // ficha de clases: más holgada, es texto ya resumido
 const MAX_IMAGE = 4_000_000 // ~4 MB en base64
 
-export async function POST(req: Request) {
+// Instrumentado: withMetrics cronometra la respuesta y la guarda para el
+// panel de monitoreo (/dashboard/metrics). Ver src/backend/metrics.ts
+export const POST = withMetrics('/api/nexus', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   const ip = clientIp(req)

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel } from '@/backend/ollama'
 
 /**
@@ -50,7 +51,10 @@ const PRESETS: Record<string, string> = {
   ].join('\n'),
 }
 
-export async function POST(req: Request) {
+// Instrumentado para el panel de monitoreo (ver src/backend/metrics.ts)
+export const POST = withMetrics('/api/study', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   const ip = clientIp(req)

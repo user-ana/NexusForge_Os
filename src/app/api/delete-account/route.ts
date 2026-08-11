@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 
 /**
  * Elimina la cuenta del usuario AUTENTICADO (solo la suya).
@@ -11,7 +12,10 @@ import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGua
  *    nadie pueda borrar la cuenta de otra persona.
  *  - Rate limit por IP (anti abuso).
  */
-export async function POST(req: Request) {
+// Instrumentado para el panel de monitoreo (ver src/backend/metrics.ts)
+export const POST = withMetrics('/api/delete-account', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   // 1) Limite de intentos por IP

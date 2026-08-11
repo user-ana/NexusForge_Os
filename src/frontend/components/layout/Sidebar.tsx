@@ -21,6 +21,7 @@ const NAV_BY_ROLE: Record<Role, { href: string; key: string }[]> = {
     { href: '/dashboard/activities/new', key: 'nav.publish' },
     { href: '/dashboard/classes', key: 'nav.classes' },
     { href: '/dashboard/periods', key: 'nav.periods' },
+    { href: '/dashboard/metrics', key: 'nav.metrics' },
   ],
   visitor: [
     { href: '/dashboard/classes', key: 'nav.classes' },

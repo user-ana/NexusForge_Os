@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import WebVitalsReporter from '@/frontend/components/layout/WebVitalsReporter'
 
 export const metadata: Metadata = {
   title: 'NexusForge OS',
@@ -23,6 +24,8 @@ export default function RootLayout({
         />
       </head>
       <body>
+        {/* Mide el rendimiento real de cada visita (Core Web Vitals) */}
+        <WebVitalsReporter />
         {children}
       </body>
     </html>

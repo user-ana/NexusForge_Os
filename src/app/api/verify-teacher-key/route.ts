@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createHash, timingSafeEqual } from 'crypto'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { withMetrics } from '@/backend/metrics'
 
 /**
  * Verifica la CLAVE DE DOCENTE en el SERVIDOR y, si es correcta, otorga el rol
@@ -30,7 +31,10 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ba, bb)
 }
 
-export async function POST(req: Request) {
+// Instrumentado para el panel de monitoreo (ver src/backend/metrics.ts)
+export const POST = withMetrics('/api/verify-teacher-key', handler)
+
+async function handler(req: Request) {
   sweepBuckets()
 
   // 1) ANTI FUERZA BRUTA: pocos intentos por IP en una ventana amplia
