@@ -82,9 +82,32 @@ install -o "$APP_USER" -g "$APP_USER" -m 600 "$ENV_SRC" "$APP_DIR/.env.local"
 # ---------------------------------------------------------------------------
 log "5/9  Dependencias y construccion (esto tarda unos minutos)"
 # ---------------------------------------------------------------------------
-# 'npm ci' y no 'npm install': instala exactamente lo del package-lock.json.
 cd "$APP_DIR"
-sudo -H -u "$APP_USER" npm ci
+
+# Ajustes de red antes de instalar. Con los valores por defecto, npm se rinde
+# con ETIMEDOUT en un enlace de alta latencia o con microcortes (satelital,
+# red compartida del campus): abre demasiadas conexiones en paralelo y espera
+# poco. Menos paralelismo y mas paciencia hacen la descarga mas lenta pero
+# mucho mas confiable.
+sudo -H -u "$APP_USER" npm config set fetch-timeout 600000
+sudo -H -u "$APP_USER" npm config set fetch-retries 5
+sudo -H -u "$APP_USER" npm config set fetch-retry-maxtimeout 120000
+sudo -H -u "$APP_USER" npm config set maxsockets 4
+
+# 'npm ci' y no 'npm install': instala exactamente lo del package-lock.json.
+# Con reintentos porque en un enlace inestable una sola pasada puede no bastar;
+# la cache de npm conserva lo ya descargado, asi que cada intento avanza mas.
+npm_ci_con_reintentos() {
+  local intento
+  for intento in 1 2 3; do
+    if sudo -H -u "$APP_USER" npm ci; then return 0; fi
+    echo "  npm ci fallo (intento $intento/3). La cache conserva lo descargado; reintentando..."
+    sleep 15
+  done
+  return 1
+}
+npm_ci_con_reintentos || fail "npm ci fallo tres veces seguidas. Revisa la conexion a internet."
+
 sudo -H -u "$APP_USER" env NEXT_TELEMETRY_DISABLED=1 npm run build
 
 # ---------------------------------------------------------------------------

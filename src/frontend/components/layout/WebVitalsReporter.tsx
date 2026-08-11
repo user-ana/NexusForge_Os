@@ -33,11 +33,24 @@ type Sample = {
 
 const FLUSH_EVERY_MS = 20_000
 
+/**
+ * Métricas que describen la CARGA DEL DOCUMENTO, no la navegación actual.
+ *
+ * El navegador no las da por cerradas hasta que se oculta la pestaña, y para
+ * entonces el usuario ya navegó a otra ruta (la navegación dentro del panel no
+ * recarga la página). Si se les pega la ruta del momento del reporte, todas las
+ * mediciones de una misma carga aterrizan sobre la última ruta visitada — y la
+ * tabla por ruta deja de significar nada.
+ */
+const LOAD_METRICS = new Set(['LCP', 'FCP', 'TTFB', 'FID', 'CLS', 'Next.js-hydration'])
+
 export default function WebVitalsReporter() {
   const pathname = usePathname()
   const buffer = useRef<Sample[]>([])
   const token = useRef<string | null>(null)
   const route = useRef(pathname)
+  /** Ruta con la que se cargó el documento. No cambia al navegar. */
+  const entryRoute = useRef(pathname)
 
   route.current = pathname
 
@@ -90,7 +103,9 @@ export default function WebVitalsReporter() {
       // CLS es un score sin unidad y muy pequeño: se guarda x1000 para no
       // perderlo al redondear. El panel lo vuelve a dividir al mostrarlo.
       value: metric.name === 'CLS' ? metric.value * 1000 : metric.value,
-      route: route.current,
+      // Carga del documento -> ruta de entrada. Interacción (INP) -> ruta donde
+      // ocurrió el clic, que es la que de verdad respondió lento.
+      route: LOAD_METRICS.has(metric.name) ? entryRoute.current : route.current,
       rating: (metric as { rating?: string }).rating,
       role: getSession()?.role ?? '',
     })
