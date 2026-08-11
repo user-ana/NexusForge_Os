@@ -22,16 +22,7 @@ import { useT } from '@/frontend/hooks/useT'
 import { supabase } from '@/backend/supabase'
 import { getAssistantOverview, type AssistantOverview } from '@/backend/services/studentSearch'
 import { syncStudentStats, syncStudentGroup } from '@/frontend/session/gamificationSync'
-import { RANKS, levelFromXp, rankFromXp } from '@/shared/gamification'
-
-const ACHIEVEMENTS = [
-  { name: 'First Commit', icon: '/icons/ach-commit.png', emoji: '◆', unlocked: true },
-  { name: 'Code Master', icon: '/icons/ach-code.png', emoji: '◆', unlocked: true },
-  { name: 'Champion', icon: '/icons/ach-trophy.png', emoji: '◆', unlocked: false },
-  { name: 'Team Player', icon: '/icons/ach-team.png', emoji: '◆', unlocked: true },
-  { name: 'Bug Slayer', icon: '/icons/ach-slots.png', emoji: '◆', unlocked: true },
-  { name: 'Top Earner', icon: '/icons/ach-gold.png', emoji: '◆', unlocked: false },
-]
+import { levelFromXp, rankFromXp } from '@/shared/gamification'
 
 export default function ProfilePage() {
   const { t, lang, setLang } = useT()
@@ -268,60 +259,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Progreso de rango (carrusel) — solo estudiante */}
-        {isStudent && (
-        <section>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-neutral-500 mb-4">{t('prof.rank_progress')}</h3>
-          <div className="neo-panel p-6">
-            <div className="neo-scroll-x">
-              {RANKS.map((r, i) => (
-                <div key={r.key} className="flex min-w-[92px] flex-col items-center gap-2">
-                  <div className={`neo-gem ${i <= rk.index ? 'neo-gem--active' : 'neo-gem--locked'}`}>
-                    <Icon3D src={`/icons/rank-${r.key}.png`} alt={r.label} size={38} fallback="◆" />
-                  </div>
-                  <span className={`text-[11px] ${i === rk.index ? 'text-white font-semibold' : 'text-neutral-500'}`}>
-                    {r.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 h-2 w-full overflow-hidden rounded-full bg-black/40 shadow-[inset_2px_2px_5px_rgba(0,0,0,0.5)]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#4fc9f0] to-[#1089d3]" style={{ width: '58%' }} />
-            </div>
-          </div>
-        </section>
-        )}
-
-        {/* Logros (carrusel) — solo estudiante */}
-        {isStudent && (
-        <section>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.15em] text-neutral-500">{t('prof.achievements')}</h3>
-            <Link href="/dashboard/rewards" className="text-xs text-accent-violet hover:text-accent-violetBright">
-              {t('prof.view_all')} →
-            </Link>
-          </div>
-          <div className="neo-panel p-6">
-            <div className="neo-marquee">
-              <div className="neo-marquee-track">
-                {Array.from({ length: 6 })
-                  .flatMap(() => ACHIEVEMENTS)
-                  .map((a, idx) => (
-                    <div
-                      key={idx}
-                      className={`neo-ach min-w-[100px] ${a.unlocked ? '' : 'neo-ach--locked'}`}
-                    >
-                      <div className="neo-ach-circle">
-                        <Icon3D src={a.icon} alt={a.name} size={44} fallback={a.emoji} />
-                      </div>
-                      <span className="neo-ach-label">{a.name}</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </section>
-        )}
+        {/* El carrusel de rangos y el de logros vivían aquí. Se retiraron junto
+            con la página de Recompensas: el modo estudiante es profesional y no
+            lleva capa de juego. */}
       </main>
 
       {picker && <AvatarPicker current={avatar} onClose={() => setPicker(false)} />}

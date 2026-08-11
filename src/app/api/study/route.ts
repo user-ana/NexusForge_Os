@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { requireUserWithRole, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
 import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel } from '@/backend/ollama'
 
@@ -61,7 +61,7 @@ async function handler(req: Request) {
   const byIp = rateLimit(`study:ip:${ip}`, 30, 60 * 1000)
   if (!byIp.ok) return NextResponse.json({ error: `Vas muy rápido. Espera ${byIp.retryAfter} s.` }, { status: 429 })
 
-  const user = await requireUser(req)
+  const user = await requireUserWithRole(req)
   if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
 
   const byUser = rateLimit(`study:user:${user.id}`, 20, 60 * 1000)
@@ -71,7 +71,6 @@ async function handler(req: Request) {
     text?: string
     question?: string
     mode?: string
-    role?: string
     title?: string
     image?: string
     history?: { role: string; content: string }[]
@@ -84,7 +83,8 @@ async function handler(req: Request) {
 
   const material = (body.text ?? '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_TEXT)
   const title = (body.title ?? '').trim().slice(0, 200)
-  const esProfe = body.role === 'teacher'
+  // Rol resuelto en el servidor (profiles.role), no declarado por el navegador.
+  const esProfe = user.role === 'teacher'
   const preset = PRESETS[body.mode ?? '']
   const question = (body.question ?? '').trim().slice(0, MAX_QUESTION)
 

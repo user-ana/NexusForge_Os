@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
+import { requireUserWithRole, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
 import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel } from '@/backend/ollama'
 
@@ -37,7 +37,7 @@ async function handler(req: Request) {
   const byIp = rateLimit(`nexus:ip:${ip}`, 30, 60 * 1000)
   if (!byIp.ok) return NextResponse.json({ error: `Vas muy rápido. Espera ${byIp.retryAfter} s.` }, { status: 429 })
 
-  const user = await requireUser(req)
+  const user = await requireUserWithRole(req)
   if (!user) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
 
   const byUser = rateLimit(`nexus:user:${user.id}`, 20, 60 * 1000)
@@ -45,7 +45,6 @@ async function handler(req: Request) {
 
   let body: {
     question?: string
-    role?: string
     context?: string
     contextLabel?: string
     /** Ficha real de las clases del catedrático (clases, alumnos, grupos, notas). */
@@ -62,7 +61,10 @@ async function handler(req: Request) {
   const question = (body.question ?? '').trim().slice(0, MAX_QUESTION)
   const context = (body.context ?? '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_CONTEXT)
   const contextLabel = (body.contextLabel ?? '').trim().slice(0, 120)
-  const esProfe = body.role === 'teacher'
+  // El rol lo resuelve el SERVIDOR desde profiles.role, no el navegador. Antes
+  // venia en el cuerpo (body.role) y bastaba con mandar "teacher" para recibir
+  // el prompt y las herramientas de catedratico.
+  const esProfe = user.role === 'teacher'
   // Solo el catedrático recibe la ficha, y solo de SUS clases: la arma el
   // cliente con su propia sesión, así que nadie puede pedir datos ajenos.
   const platform = esProfe ? (body.platform ?? '').trim().slice(0, MAX_PLATFORM) : ''
