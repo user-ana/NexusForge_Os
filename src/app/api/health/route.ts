@@ -109,8 +109,13 @@ export async function GET(req: Request) {
     checks: [database, ai],
     version: {
       env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development',
-      commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7),
-      branch: process.env.VERCEL_GIT_COMMIT_REF || '',
+      // En Vercel la variable la pone la plataforma. En un servidor propio no
+      // existe, asi que deploy-rocky.sh escribe APP_COMMIT en la unidad de
+      // systemd. Sin esto, una instalacion autohospedada no sabe decir que
+      // version esta corriendo — y con dos despliegues en paralelo, esa
+      // pregunta importa.
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA || process.env.APP_COMMIT || '').slice(0, 7),
+      branch: process.env.VERCEL_GIT_COMMIT_REF || process.env.APP_BRANCH || '',
     },
   }
 

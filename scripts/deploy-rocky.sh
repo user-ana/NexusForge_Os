@@ -74,6 +74,9 @@ else
   sudo -H -u "$APP_USER" git clone --branch "$BRANCH" "$REPO" "$APP_DIR"
 fi
 
+APP_COMMIT="$(sudo -H -u "$APP_USER" git -C "$APP_DIR" rev-parse --short HEAD)"
+echo "  desplegando commit $APP_COMMIT ($BRANCH)"
+
 # ---------------------------------------------------------------------------
 log "4/9  Variables de entorno"
 # ---------------------------------------------------------------------------
@@ -126,6 +129,10 @@ User=$APP_USER
 WorkingDirectory=$APP_DIR
 Environment=NODE_ENV=production
 Environment=NEXT_TELEMETRY_DISABLED=1
+# Que version corre: en Vercel lo dice la plataforma, aqui lo escribimos nosotros.
+# Lo publica /api/health, para poder comparar los dos despliegues de un vistazo.
+Environment=APP_COMMIT=$APP_COMMIT
+Environment=APP_BRANCH=$BRANCH
 EnvironmentFile=$APP_DIR/.env.local
 # --hostname 127.0.0.1 es lo que deja la aplicacion inalcanzable desde fuera:
 # sin esa bandera Next escucha en 0.0.0.0 y el puerto $PORT quedaria expuesto.
