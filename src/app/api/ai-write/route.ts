@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
+import { ollamaBase, ollamaModel, ollamaHeaders } from '@/backend/ollama'
 
 /**
  * Redacción con IA (generativa). Recibe una instrucción y devuelve el texto que
@@ -42,12 +43,14 @@ async function handler(req: Request) {
     (body.system ?? '').trim() ||
     'Eres un asistente docente que redacta enunciados claros y motivadores para estudiantes universitarios de ingeniería. Escribe en español, directo y bien estructurado. No inventes fechas ni datos que no te den.'
 
-  const base = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-  const model = process.env.OLLAMA_MODEL || 'llama3.2'
+  // Leía las variables por su cuenta; ahora usa el módulo compartido, que es
+  // el único sitio donde se decide cómo se habla con el servidor de IA.
+  const base = ollamaBase()
+  const model = ollamaModel()
   try {
     const r = await fetch(`${base}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({
         model,
         stream: false,

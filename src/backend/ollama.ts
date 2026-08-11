@@ -17,6 +17,27 @@ export function ollamaModel(): string {
 }
 
 /**
+ * Cabeceras para hablar con el servidor de IA.
+ *
+ * Ollama NO tiene autenticación: quien alcance el puerto puede usar la GPU
+ * para lo que quiera, y además borrar o descargar modelos. Mientras vive en
+ * `localhost` o en la red de casa da igual, pero en cuanto se publica por un
+ * túnel para que otros lo prueben, deja de dar igual.
+ *
+ * Por eso delante va `scripts/ollama-proxy.mjs`, que exige este token y solo
+ * deja pasar las rutas de lectura y generación. Si OLLAMA_AUTH_TOKEN no está
+ * definida, no se manda nada y todo funciona igual que antes: en local no
+ * hace falta.
+ */
+export function ollamaHeaders(): Record<string, string> {
+  const token = process.env.OLLAMA_AUTH_TOKEN
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
+
+/**
  * Modelo con VISIÓN, para cuando el estudiante adjunta una captura
  * (OLLAMA_VISION_MODEL, p. ej. 'moondream' o 'llava'). El modelo de texto no
  * puede leer imágenes, así que sin esta variable esa función queda apagada

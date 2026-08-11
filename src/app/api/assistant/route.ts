@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
-import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
+import { ollamaBase, ollamaModel, ollamaOptions, ollamaHeaders } from '@/backend/ollama'
 
 /**
  * Asistente con IA (Fase 3a — solo lectura). Recibe la pregunta del catedrático
@@ -160,7 +160,7 @@ async function handler(req: Request) {
 
     const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify(payload),
       // el modelo puede tardar bastante en CPU (VM). Margen amplio.
       signal: AbortSignal.timeout(280_000),

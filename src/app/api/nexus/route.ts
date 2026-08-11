@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUserWithRole, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
-import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel } from '@/backend/ollama'
+import { ollamaBase, ollamaModel, ollamaOptions, ollamaVisionModel, ollamaHeaders } from '@/backend/ollama'
 
 /**
  * NEXUS — conversación general del asistente inmersivo, para AMBOS roles.
@@ -131,7 +131,7 @@ async function handler(req: Request) {
   try {
     const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({
         model,
         // En streaming la primera palabra sale en menos de un segundo. Sin él

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser, rateLimit, clientIp, sweepBuckets } from '@/backend/apiGuard'
 import { withMetrics } from '@/backend/metrics'
-import { ollamaBase, ollamaModel, ollamaOptions } from '@/backend/ollama'
+import { ollamaBase, ollamaModel, ollamaOptions, ollamaHeaders } from '@/backend/ollama'
 
 /**
  * Resume el texto de un enunciado con la IA (Ollama/Llama).
@@ -51,7 +51,7 @@ async function handler(req: Request) {
   try {
     const r = await fetch(`${ollamaBase()}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: ollamaHeaders(),
       body: JSON.stringify({
         model: ollamaModel(),
         stream: false,
