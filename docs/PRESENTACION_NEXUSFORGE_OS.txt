@@ -8,7 +8,7 @@
 
    Autora:      Ana Leticia Montes Sarmiento
    Catedra:     Sistemas Abiertos 2
-   Docente:     Ing. Renato Adolfo Cruz Pineda
+   Docente:     Ing. Luis Henriquez Valle Yanes
    Repositorio: github.com/user-ana/NexusForge_Os
    Despliegue:  https://nexusforgeos.vercel.app
 

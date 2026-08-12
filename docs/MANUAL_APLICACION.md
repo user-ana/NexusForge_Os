@@ -7,7 +7,8 @@ tags: []
 # Manual de aplicación — NexusForge OS
 
 **Asignatura:** Programación para Sistemas Abiertos II · **Entregable:** Tercer Parcial
-**Estudiante:** Ana Leticia Montes Sarmiento · Cuenta 202120030068
+**Catedrático:** Ing. Luis Henríquez Valle Yanes · Universidad Tecnológica de Honduras
+**Estudiantes:** Ana Leticia Montes Sarmiento (202120030068) · Brayan Josué Villars Martínez (202220060347)
 **Repositorio:** https://github.com/user-ana/NexusForge_Os
 
 Documentación técnica del sistema: para quien tenga que **mantenerlo, desplegarlo o extenderlo**.

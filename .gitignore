@@ -52,3 +52,6 @@ public/avatars/_orig/
 
 # .next-check: build de verificacion (no toca el .next del dev server)
 .next-check/
+
+# Logo con canal alfa que genera scripts/build-presentacion.py (derivado de imgs/)
+docs/assets/
